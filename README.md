@@ -1,5 +1,7 @@
 # Individual Tree Segmentation Benchmarks
 
+[![Tests](https://github.com/EwanMoorcroft/individual-tree-segmentation-benchmarks/actions/workflows/tests.yml/badge.svg)](https://github.com/EwanMoorcroft/individual-tree-segmentation-benchmarks/actions/workflows/tests.yml)
+
 ## Purpose
 
 This repository collects reproducible workflows for benchmarking individual

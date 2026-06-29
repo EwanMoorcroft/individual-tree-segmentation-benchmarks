@@ -1,17 +1,22 @@
-# FRDR TLS2trees Benchmark Protocol
+# Individual Tree Segmentation Benchmarks
 
 ## Purpose
 
-This repository documents a reproducible workflow for running TLS2trees
-instance segmentation on the FRDR treeiso terrestrial laser scanning dataset
-using the University of Liverpool Barkla2 HPC system.
+This repository collects reproducible workflows for benchmarking individual
+tree segmentation methods across LiDAR datasets using the University of
+Liverpool Barkla2 HPC system.
 
-No FRDR data, converted point clouds, predictions, scheduler logs or external
-method repositories are included.
+The first implemented benchmark uses TLS2trees instance segmentation with the
+FRDR treeiso terrestrial laser scanning dataset. Additional dataset and method
+combinations can be added through new configs, data adapters, method wrappers,
+Slurm jobs and evaluation modules without creating separate repositories.
+
+No source datasets, converted point clouds, predictions, scheduler logs or
+external method repositories are included.
 
 ## Scope
 
-The protocol covers:
+The current FRDR/TLS2trees protocol covers:
 
 - FRDR dataset inventory and field inspection;
 - conversion of the FRDR `woods` field to TLS2trees semantic labels;
@@ -21,6 +26,9 @@ The protocol covers:
 - runtime, memory and output metadata collection;
 - output validation and per-tree summary tables;
 - a reusable IoU/F1 evaluator for future reference instance labels.
+
+See [`BENCHMARKS.md`](BENCHMARKS.md) for the benchmark registry and extension
+requirements.
 
 ## Important Limitation
 
@@ -107,6 +115,7 @@ applies the documented `clstr` compatibility correction for newer pandas
 ```text
 .
 ├── README.md
+├── BENCHMARKS.md
 ├── requirements.txt
 ├── configs/
 │   └── frdr_tls2trees_benchmark.yml
@@ -205,10 +214,10 @@ python -m pytest
 
 ## Data And Citation
 
-FRDR data must be obtained from its original source and must not be
-redistributed through this repository. Follow the dataset's licence and
-citation requirements. Cite TLS2trees and its associated research according to
-the upstream repository guidance.
+Each dataset must be obtained from its original source and must not be
+redistributed through this repository. Follow each dataset's licence and
+citation requirements. Cite every benchmarked method and its associated
+research according to the upstream project guidance.
 
 ## Licence
 

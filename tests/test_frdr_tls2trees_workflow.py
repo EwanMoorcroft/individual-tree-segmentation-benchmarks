@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import csv
 import importlib.util
+import json
 import shutil
 import sys
 from pathlib import Path
@@ -259,3 +261,33 @@ def test_evaluator_refuses_missing_reference(monkeypatch, capsys) -> None:
 
     assert evaluator.main() == 2
     assert evaluator.NO_REFERENCE_MESSAGE in capsys.readouterr().err
+
+
+def test_synthetic_examples_are_parseable() -> None:
+    examples = ROOT / "examples"
+    conversion = json.loads(
+        (examples / "tls2trees_conversion_metadata_example.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    run = json.loads(
+        (examples / "tls2trees_run_metadata_example.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    with (examples / "frdr_dataset_inventory_example.csv").open(
+        encoding="utf-8", newline=""
+    ) as handle:
+        inventory = list(csv.DictReader(handle))
+    with (examples / "tls2trees_prediction_summary_example.csv").open(
+        encoding="utf-8", newline=""
+    ) as handle:
+        predictions = list(csv.DictReader(handle))
+
+    assert conversion["original_point_count"] == 800
+    assert conversion["retained_point_count"] == 795
+    assert run["status"] == "completed"
+    assert run["return_code"] == 0
+    assert len(inventory) == 2
+    assert inventory[1]["unknown_woods_values"] == '["0.0"]'
+    assert predictions[0]["status"] == "complete"

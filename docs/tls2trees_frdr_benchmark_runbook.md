@@ -29,7 +29,7 @@ FRDR provides the semantic field `woods`:
 - `woods = 1` means wood and is converted to TLS2trees `label = 3`.
 - `woods = 2` means non-wood and is converted to TLS2trees `label = 1`.
 
-Each plot is converted into a single numeric tile named `001.downsample.segmented.ply`, with columns `x`, `y`, `z`, `n_z`, and `label`. `tile_index.dat` contains the tested five-field layout: tile ID, X centre, Y centre, Z centre, and PLY path. The PLY deliberately excludes `buffer` and `fn`; the instance script creates those fields internally.
+Each plot is converted into a single numeric tile named `001.downsample.segmented.ply`, with columns `x`, `y`, `z`, `n_z`, and `label`. The tile name must be numeric because TLS2trees parses it as an integer. `tile_index.dat` contains the tested five-field layout: tile ID, X centre, Y centre, Z centre, and PLY path. The PLY deliberately excludes `buffer` and `fn`; the instance script creates those fields internally.
 
 `n_z` currently uses `z - min(z)` for each plot. This local-minimum normalisation is a feasibility approximation, not terrain normalisation. Record it with every result and revisit it before treating outputs as final benchmark predictions.
 
@@ -80,6 +80,7 @@ Check available project-filesystem space before submitting arrays:
 
 ```bash
 df -h ~/scratch/tree-seg-benchmark
+du -h --max-depth=2 ~/scratch/tree-seg-benchmark/data 2>/dev/null | sort -h
 export TLS2TREES_MIN_FREE_GB=50
 ```
 
@@ -229,7 +230,7 @@ Coordinates are matched after quantisation at the selected tolerance. Document t
 Run locally:
 
 ```bash
-cd /path/to/frdr-tls2trees-benchmark-protocol
+cd /path/to/individual-tree-segmentation-benchmarks
 
 rsync -av \
   barkla:~/scratch/tree-seg-benchmark/results/metadata/ \

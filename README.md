@@ -42,6 +42,17 @@ The workflow preserves predicted instances so these metrics can be calculated
 later if suitable reference tree instance labels are supplied. The evaluator
 exits with a clear error when no reference labels are provided.
 
+## Known Limitations
+
+- FRDR `woods` labels are semantic wood/non-wood labels, not tree-instance
+  labels.
+- `n_z` uses plot-local minimum Z, not terrain-normalised height.
+- The patched TLS2trees instance script is a compatibility adaptation for newer
+  pandas `groupby.apply` behaviour.
+- The configured parameters reproduce a successful feasibility run and require
+  visual validation before being treated as final benchmark parameters.
+- Runtime and predicted tree count depend on plot size and point density.
+
 ## FRDR Label Mapping
 
 | FRDR value | Class | TLS2trees label |
@@ -57,6 +68,9 @@ The full benchmark uses `drop` because one plot, `NSpruce_plot2`, contains
 The current conversion calculates `n_z` by subtracting the retained
 plot-local minimum Z. This is a documented feasibility approximation rather
 than terrain normalisation.
+
+The configured tile name, `001`, must remain numeric because TLS2trees parses
+tile identifiers as integers.
 
 ## Barkla Environment
 
@@ -123,6 +137,12 @@ applies the documented `clstr` compatibility correction for newer pandas
 │   └── frdr_tls2trees_benchmark.yml
 ├── docs/
 │   └── tls2trees_frdr_benchmark_runbook.md
+├── examples/
+│   ├── README.md
+│   ├── frdr_dataset_inventory_example.csv
+│   ├── tls2trees_conversion_metadata_example.json
+│   ├── tls2trees_prediction_summary_example.csv
+│   └── tls2trees_run_metadata_example.json
 ├── scripts/
 │   ├── data/
 │   │   ├── convert_frdr_woods_to_tls2trees_ply.py
@@ -147,24 +167,46 @@ applies the documented `clstr` compatibility correction for newer pandas
     └── test_frdr_tls2trees_workflow.py
 ```
 
-## Run Order
+## Synthetic Examples
 
-Create the log directory before submission because Slurm opens its output files
-before the job script starts:
+The [`examples/`](examples/) directory contains tiny, explicitly synthetic
+inventory, conversion, run and prediction-summary records. They illustrate the
+generated schemas without publishing FRDR data or Barkla outputs.
+
+## Recommended Pilot First
+
+Create the log directory and check project storage before submitting jobs.
+Slurm opens its output files before the job script starts:
 
 ```bash
 cd ~/scratch/tree-seg-benchmark
 mkdir -p logs/tls2trees_frdr_full
 
-sbatch scripts/slurm/inspect_frdr_inventory.sbatch
-sbatch scripts/slurm/convert_frdr_to_tls2trees_array.sbatch
-sbatch scripts/slurm/run_tls2trees_frdr_array.sbatch
-sbatch scripts/slurm/summarise_tls2trees_frdr_outputs.sbatch
+df -h ~/scratch/tree-seg-benchmark
+du -h --max-depth=2 ~/scratch/tree-seg-benchmark/data 2>/dev/null | sort -h
+
+sbatch --array=0-0 scripts/slurm/convert_frdr_to_tls2trees_array.sbatch
 ```
 
-See
+Wait for conversion task `0` to finish successfully, inspect its metadata, and
+then submit only the matching instance task:
+
+```bash
+sbatch --array=0-0 scripts/slurm/run_tls2trees_frdr_array.sbatch
+```
+
+After the instance task finishes successfully:
+
+```bash
+python scripts/methods/summarise_tls2trees_outputs.py \
+  --plot-name LPine_plot1 \
+  --output-dir data/predictions/tls2trees/frdr_full/LPine_plot1
+```
+
+Do not submit the full arrays as independent jobs. Follow the dependency-chained
+commands in
 [`docs/tls2trees_frdr_benchmark_runbook.md`](docs/tls2trees_frdr_benchmark_runbook.md)
-for preflight checks, dependencies and job sequencing.
+for the complete preflight, inventory and remaining plots.
 
 ## Recommended Staged Execution
 

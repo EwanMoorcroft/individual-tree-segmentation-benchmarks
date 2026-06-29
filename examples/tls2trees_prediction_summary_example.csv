@@ -1,0 +1,2 @@
+plot_name,input_point_count,retained_point_count,dropped_unknown_count,wood_point_count,nonwood_point_count,predicted_tree_count,predicted_tree_points,min_tree_points,max_tree_points,mean_tree_points,runtime_seconds,peak_memory_gb,return_code,status,output_dir
+Synthetic_plot2,800,795,5,300,495,4,700,100,250,175.0,12.5,0.42,0,complete,/path/to/tree-seg-benchmark/data/predictions/tls2trees/frdr_full/Synthetic_plot2

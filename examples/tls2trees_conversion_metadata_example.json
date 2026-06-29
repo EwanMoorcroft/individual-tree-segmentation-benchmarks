@@ -1,0 +1,69 @@
+{
+  "chunk_size_points": 1000000,
+  "dropped_unknown_count": 5,
+  "input_dimensions": [
+    "x",
+    "y",
+    "z",
+    "intensity",
+    "woods"
+  ],
+  "input_path": "synthetic/frdr_treeiso/Synthetic_plot2.laz",
+  "label_counts": {
+    "1": 495,
+    "3": 300
+  },
+  "label_mapping": {
+    "1": 3,
+    "2": 1
+  },
+  "local_min_z": 100.0,
+  "n_z_range": [
+    0.0,
+    25.0
+  ],
+  "nonwood_point_count": 495,
+  "nonwood_value": 2,
+  "original_point_count": 800,
+  "output_columns": [
+    "x",
+    "y",
+    "z",
+    "n_z",
+    "label"
+  ],
+  "output_dir": "data/interim/tls2trees/frdr_full/Synthetic_plot2",
+  "output_path": "data/interim/tls2trees/frdr_full/Synthetic_plot2/001.downsample.segmented.ply",
+  "output_ply": "data/interim/tls2trees/frdr_full/Synthetic_plot2/001.downsample.segmented.ply",
+  "point_count": 795,
+  "retained_point_count": 795,
+  "tile_centre_xyz": [
+    10.0,
+    20.0,
+    111.0
+  ],
+  "tile_id": "001",
+  "tile_index": "data/interim/tls2trees/frdr_full/Synthetic_plot2/tile_index.dat",
+  "tile_name": "001",
+  "tile_number": 1,
+  "timestamp_utc": "2000-01-01T00:00:00+00:00",
+  "unknown_point_count": 5,
+  "unknown_policy": "drop",
+  "unknown_woods_values": [
+    "0.0"
+  ],
+  "warning": "n_z uses the input cloud's local minimum z. This is a feasibility approximation and is not terrain or ground normalisation.",
+  "wood_field": "woods",
+  "wood_point_count": 300,
+  "wood_value": 1,
+  "woods_counts": {
+    "0.0": 5,
+    "1.0": 300,
+    "2.0": 495
+  },
+  "z_normalisation": "local_minimum",
+  "z_range": [
+    100.0,
+    125.0
+  ]
+}

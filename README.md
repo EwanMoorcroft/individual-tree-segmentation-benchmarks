@@ -1,49 +1,56 @@
 # FRDR TLS2trees Benchmark Protocol
 
-This repository contains scripts and Slurm workflows for running TLS2trees
+## Purpose
+
+This repository documents a reproducible workflow for running TLS2trees
 instance segmentation on the FRDR treeiso terrestrial laser scanning dataset
-on the University of Liverpool Barkla2 HPC.
+using the University of Liverpool Barkla2 HPC system.
+
+No FRDR data, converted point clouds, predictions, scheduler logs or external
+method repositories are included.
 
 ## Scope
 
 The protocol covers:
 
-- inventorying FRDR LAZ files;
-- converting the FRDR `woods` field to TLS2trees semantic labels;
-- running per-plot predictions through a Slurm array;
-- validating and summarising predicted tree files;
-- a reusable IoU/F1 evaluator for future use when reference instance labels
-  become available.
+- FRDR dataset inventory and field inspection;
+- conversion of the FRDR `woods` field to TLS2trees semantic labels;
+- patched TLS2trees instance-stage execution;
+- Slurm array conversion and prediction workflows;
+- preservation of per-tree predictions;
+- runtime, memory and output metadata collection;
+- output validation and per-tree summary tables;
+- a reusable IoU/F1 evaluator for future reference instance labels.
 
-This is a prediction benchmark workflow. It does not redistribute the FRDR
-dataset or vendor the TLS2trees source repository.
+## Important Limitation
 
-## Accuracy Limitation
+The FRDR LAZ files contain a `woods` scalar field for wood/non-wood
+classification, not individual-tree reference instance labels. IoU, precision,
+recall and F1 therefore cannot be computed from the FRDR LAZ files alone.
 
-FRDR LAZ files contain a `woods` field for wood/non-wood classification, not
-individual-tree reference instance labels. Instance IoU, precision, recall and
-F1 therefore cannot be reported from these files alone. The evaluator refuses
-to calculate these metrics unless an external instance reference is supplied.
+The workflow preserves predicted instances so these metrics can be calculated
+later if suitable reference tree instance labels are supplied. The evaluator
+exits with a clear error when no reference labels are provided.
 
-## FRDR Mapping
+## FRDR Label Mapping
 
-| FRDR value | Meaning | TLS2trees label |
+| FRDR value | Class | TLS2trees label |
 | --- | --- | --- |
 | `woods = 1` | wood | `3` |
 | `woods = 2` | non-wood | `1` |
 
-Unknown values are handled according to `conversion.unknown_policy` in the
-configuration. The full benchmark uses `drop` because `NSpruce_plot2` contains
-`woods = 0.0`; dropped points are counted in conversion metadata.
+Unknown `woods` values are handled by `conversion.unknown_policy` in
+[`configs/frdr_tls2trees_benchmark.yml`](configs/frdr_tls2trees_benchmark.yml).
+The full benchmark uses `drop` because one plot, `NSpruce_plot2`, contains
+`woods = 0.0`. Conversion metadata records all unknown and dropped point counts.
 
-Each converted plot is written as one binary PLY tile containing exactly:
-`x`, `y`, `z`, `n_z`, and `label`. The current `n_z` calculation subtracts the
-plot-local minimum Z and is recorded as a feasibility approximation rather
+The current conversion calculates `n_z` by subtracting the retained
+plot-local minimum Z. This is a documented feasibility approximation rather
 than terrain normalisation.
 
 ## Barkla Environment
 
-The tested environment used Python 3.12.10 in the existing `treebench` venv.
+The tested Barkla environment used Python 3.12.10 with:
 
 ```bash
 module purge
@@ -51,7 +58,8 @@ module load miniforge3/25.3.0-python3.12.10
 source ~/fastscratch/venvs/treebench/bin/activate
 ```
 
-Do not use `conda activate` for this venv.
+The environment at `~/fastscratch/venvs/treebench` is a Python venv. Do not use
+`conda activate` for it.
 
 Install the protocol dependencies where required:
 
@@ -64,7 +72,7 @@ python -m pip install -r requirements.txt
 | Purpose | Path |
 | --- | --- |
 | Project root | `~/scratch/tree-seg-benchmark` |
-| FRDR dataset | `~/data/datasets/frdr_treeiso` |
+| Dataset root | `~/data/datasets/frdr_treeiso` |
 | TLS2trees checkout | `external/TLS2trees` |
 | Converted inputs | `data/interim/tls2trees/frdr_full/<plot_name>/` |
 | Predictions | `data/predictions/tls2trees/frdr_full/<plot_name>/` |
@@ -72,12 +80,16 @@ python -m pip install -r requirements.txt
 | Metadata | `results/metadata/` |
 | Tables | `results/tables/` |
 
-The dataset path may resolve to a mounted filesystem path on Barkla2. Scripts
-use the configured path and do not modify source LAZ files.
+The configured dataset path may resolve to a mounted Barkla2 filesystem path.
+The inventory and conversion scripts do not modify source LAZ files.
 
-## TLS2trees Checkout
+## TLS2trees
 
-TLS2trees is not included in this repository. Clone and pin it separately:
+- Repository: <https://github.com/tls-tools-ucl/TLS2trees>
+- Tested commit: `ca12cb73b2c736d80b020e8025f8d975d42e6f01`
+- Local checkout: `external/TLS2trees`
+
+TLS2trees is not vendored in this repository. Clone and pin it separately:
 
 ```bash
 mkdir -p external
@@ -85,16 +97,49 @@ git clone https://github.com/tls-tools-ucl/TLS2trees.git external/TLS2trees
 git -C external/TLS2trees checkout ca12cb73b2c736d80b020e8025f8d975d42e6f01
 ```
 
-The tested commit is:
-`ca12cb73b2c736d80b020e8025f8d975d42e6f01`.
+The included
+[`instance_patched.py`](scripts/methods/tls2trees_patched/instance_patched.py)
+applies the documented `clstr` compatibility correction for newer pandas
+`groupby.apply` behaviour without changing the external checkout.
 
-The included `instance_patched.py` wrapper applies the documented pandas
-compatibility fix at runtime without modifying the external checkout.
+## Repository Layout
+
+```text
+.
+├── README.md
+├── requirements.txt
+├── configs/
+│   └── frdr_tls2trees_benchmark.yml
+├── docs/
+│   └── tls2trees_frdr_benchmark_runbook.md
+├── scripts/
+│   ├── data/
+│   │   ├── convert_frdr_woods_to_tls2trees_ply.py
+│   │   └── inspect_frdr_dataset_inventory.py
+│   ├── evaluation/
+│   │   └── instance_iou_f1.py
+│   ├── methods/
+│   │   ├── run_tls2trees_instance_for_plot.py
+│   │   ├── summarise_tls2trees_outputs.py
+│   │   └── tls2trees_patched/
+│   │       └── instance_patched.py
+│   └── slurm/
+│       ├── convert_frdr_to_tls2trees_array.sbatch
+│       ├── inspect_frdr_inventory.sbatch
+│       ├── run_tls2trees_frdr_array.sbatch
+│       └── summarise_tls2trees_frdr_outputs.sbatch
+├── src/
+│   └── benchmark/
+│       ├── __init__.py
+│       └── ply_io.py
+└── tests/
+    └── test_frdr_tls2trees_workflow.py
+```
 
 ## Run Order
 
-Create the log directory before submission because Slurm opens log files
-before job scripts start:
+Create the log directory before submission because Slurm opens its output files
+before the job script starts:
 
 ```bash
 cd ~/scratch/tree-seg-benchmark
@@ -106,36 +151,52 @@ sbatch scripts/slurm/run_tls2trees_frdr_array.sbatch
 sbatch scripts/slurm/summarise_tls2trees_frdr_outputs.sbatch
 ```
 
-Use the staged procedure in
-[`docs/tls2trees_frdr_benchmark_runbook.md`](docs/tls2trees_frdr_benchmark_runbook.md):
+See
+[`docs/tls2trees_frdr_benchmark_runbook.md`](docs/tls2trees_frdr_benchmark_runbook.md)
+for preflight checks, dependencies and job sequencing.
 
-1. Run and review the inventory.
-2. Convert one small plot selected from the inventory.
-3. Dry-run and execute that plot.
-4. Repeat with one large plot.
-5. Submit the remaining conversion and prediction array tasks only after both
-   pilots succeed.
+## Recommended Staged Execution
 
-The array scripts check available disk space before heavy work. The threshold
-can be overridden with `TLS2TREES_MIN_FREE_GB`.
+1. Run and review the dataset inventory.
+2. Run conversion for one small plot selected from the inventory.
+3. Dry-run and execute the instance stage for that plot.
+4. Repeat conversion and execution for one large plot.
+5. Submit the remaining Slurm array tasks only after both pilots succeed.
+6. Summarise all completed predictions.
+
+The conversion and prediction arrays check available project-filesystem space
+before heavy work. Set `TLS2TREES_MIN_FREE_GB` to change the configured reserve.
 
 ## Outputs
 
-Generated outputs are excluded from version control:
+The workflow writes:
 
-- per-plot `*.leafoff.ply` tree predictions;
-- conversion and run metadata JSON;
+- `*.leafoff.ply` files containing individual predicted trees;
+- per-plot conversion metadata JSON;
+- per-plot run metadata JSON, including runtime and peak memory when available;
 - per-plot output summary JSON;
 - per-tree CSV summaries;
 - `results/tables/tls2trees_frdr_prediction_summary.csv`.
 
-The combined table records input and retained point counts, dropped unknown
-points, predicted tree counts and points, runtime, peak memory when available,
-return code and status.
+These outputs are intentionally excluded from Git.
+
+## Version-Control Exclusions
+
+The `.gitignore` excludes:
+
+- raw and derived data under `Datasets/` and `data/`;
+- the external TLS2trees checkout;
+- scheduler and method logs;
+- result metadata, tables and prediction artefacts;
+- LAS, LAZ, PLY, NumPy and image files;
+- virtual environments and Python/test caches.
+
+No raw data or predictions are included in this repository.
 
 ## Tests
 
-Tests use small synthetic LAS/PLY data and do not require the FRDR dataset:
+The test suite uses small synthetic point clouds and does not require the FRDR
+dataset or a TLS2trees checkout:
 
 ```bash
 python -m pip install pytest
@@ -144,7 +205,11 @@ python -m pytest
 
 ## Data And Citation
 
-Do not redistribute FRDR data through this repository. Obtain the dataset from
-its original FRDR source and follow the dataset's licence and citation
-requirements. Cite TLS2trees and its associated research according to the
-upstream project guidance.
+FRDR data must be obtained from its original source and must not be
+redistributed through this repository. Follow the dataset's licence and
+citation requirements. Cite TLS2trees and its associated research according to
+the upstream repository guidance.
+
+## Licence
+
+No licence has been selected yet; contact the repository owner before reuse.

@@ -1,0 +1,126 @@
+project:
+  name: tree-seg-benchmark
+  barkla_root: "~/scratch/tree-seg-benchmark"
+  mode: frdr_tls2trees_prediction_benchmark
+
+environment:
+  module: "miniforge3/25.3.0-python3.12.10"
+  python_environment: "~/fastscratch/venvs/treebench"
+  type: venv
+  activation: "source ~/fastscratch/venvs/treebench/bin/activate"
+  python_version_tested: "3.12.10"
+  pandas_version_tested: "3.0.3"
+  numpy_version_tested: "2.5.0"
+
+dataset:
+  name: frdr_treeiso
+  root: "~/data/datasets/frdr_treeiso"
+  input_extension: ".laz"
+  inventory:
+    file_count: 16
+    total_points: 205602855
+    all_files_have_woods: true
+    known_anomaly: "NSpruce_plot2 contains woods=0.0; conversion drops this unknown value."
+  plots:
+    - LPine_plot1
+    - LPine_plot2
+    - Mixed_plot1
+    - NPoplar_plot1
+    - NPoplar_plot2
+    - NSpruce_plot1
+    - NSpruce_plot2
+    - NSpruce_plot3
+    - RPine_plot1
+    - SBirch_plot1
+    - SMaple_plot1
+    - SPine_plot1
+    - SPine_plot2
+    - SPine_plot3
+    - TAspen_plot1
+    - TAspen_plot2
+  field_mapping:
+    woods:
+      wood_value: 1
+      nonwood_value: 2
+      tls2trees_wood_label: 3
+      tls2trees_nonwood_label: 1
+
+conversion:
+  output_root: "data/interim/tls2trees/frdr_full"
+  tile_name: "001"
+  tile_filename: "001.downsample.segmented.ply"
+  wood_field: "woods"
+  unknown_policy: drop
+  unknown_value_note: "NSpruce_plot2 contains woods=0.0; those points are dropped and counted in metadata."
+  local_z_normalisation: true
+  chunk_size_points: 1000000
+  output_format: binary_little_endian_ply
+  columns:
+    - x
+    - y
+    - z
+    - n_z
+    - label
+  warning: "Local minimum z normalisation is a feasibility approximation, not terrain normalisation."
+
+method:
+  name: tls2trees
+  repo_url: "https://github.com/tls-tools-ucl/TLS2trees.git"
+  repo_path: "external/TLS2trees"
+  tested_commit: "ca12cb73b2c736d80b020e8025f8d975d42e6f01"
+  require_tested_commit: true
+  patched_instance_script: "scripts/methods/tls2trees_patched/instance_patched.py"
+  semantic_stage:
+    enabled: false
+    reason: "FRDR woods values are mapped directly to tested TLS2trees semantic labels."
+  parameter_provenance: "Parameters reproduced from the successful Barkla r8m spatial-crop feasibility run."
+  successful_crop_result:
+    predicted_tree_count: 28
+    predicted_tree_points: 846038
+    runtime_seconds: 158
+    peak_memory_gb: 2.26
+  instance_parameters:
+    n_tiles: 1
+    n_zeros: 3
+    overlap: false
+    slice_thickness: 0.5
+    find_stems_boundary:
+      - 1.5
+      - 2.0
+    find_stems_min_radius: 0.025
+    find_stems_min_points: 50
+    graph_edge_length: 1.0
+    graph_maximum_cumulative_gap: 3.0
+    min_points_per_tree: 100
+    add_leaves: false
+    add_leaves_voxel_length: 0.5
+    add_leaves_edge_length: 1.0
+    save_diameter_class: false
+    ignore_missing_tiles: true
+    pandarallel: false
+    verbose: true
+
+outputs:
+  converted_root: "data/interim/tls2trees/frdr_full"
+  predictions_root: "data/predictions/tls2trees/frdr_full"
+  logs_root: "logs/tls2trees_frdr_full"
+  metadata_root: "results/metadata"
+  conversion_metadata_root: "results/metadata/tls2trees_conversions"
+  run_metadata_root: "results/metadata/tls2trees_runs"
+  output_metadata_root: "results/metadata/tls2trees_outputs"
+  tables_root: "results/tables"
+  combined_prediction_summary: "results/tables/tls2trees_frdr_prediction_summary.csv"
+
+evaluation:
+  enabled: false
+  note: "IoU/F1 requires external individual-tree reference instance labels, which FRDR LAZ files do not provide."
+  default_iou_threshold: 0.5
+
+runtime:
+  overwrite: false
+  capture_stdout_stderr: true
+  slurm_partition: "nodes"
+  slurm_time_limit: "06:00:00"
+  slurm_tasks: 1
+  slurm_memory: "32G"
+  min_free_disk_gb: 50

@@ -33,6 +33,11 @@ cannot identify individual trees. FOR-instance uses `classification` values
 `4`, `5` and `6` for stem, live branches and woody branches respectively; the
 initial tree-only evaluation ignores classes `0`, `1`, `2` and `3`.
 
+The first FOR-instance/TLS2trees pilot is narrower: its leaf-off reference uses
+classes `4` and `6` only. Class `5` is excluded to avoid penalising leaf-off
+predictions for missing live-branch points. A future leaf-on experiment must be
+configured and reported separately.
+
 ## Instance Accuracy Readiness
 
 | Dataset | Reference representation | Instance accuracy status |
@@ -96,3 +101,6 @@ Every labelled accuracy run must record:
 
 No FRDR instance accuracy value should be reported unless an external,
 documented individual-tree reference is supplied and evaluated.
+
+The evaluator also writes matched-pair, unmatched-prediction and
+unmatched-reference tables so TP, FP and FN assignments can be reviewed.

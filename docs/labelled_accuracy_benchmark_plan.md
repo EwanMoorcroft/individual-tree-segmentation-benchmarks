@@ -12,9 +12,13 @@ Expected fields:
 
 - `treeID`: plot-wise individual-tree reference identifier;
 - `classification`: semantic point class;
-- tree material classes: `4`, `5`, `6`;
-- ignored semantic classes for the initial tree-only evaluation: `0`, `1`, `2`,
-  `3`.
+- first leaf-off reference classes: `4` (stem) and `6` (woody branches);
+- ignored classes for the first leaf-off evaluation: `0`, `1`, `2`, `3`, `5`.
+
+Class `5` contains live branches. It is excluded from the first pilot because
+the configured TLS2trees instance stage produces leaf-off predictions. Future
+leaf-on experiments may include class `5`, but they require a separate
+configuration and result label.
 
 ## Split Control
 
@@ -88,3 +92,6 @@ methods. Reference IDs must not leak into method features.
 
 No accuracy claim is valid until predictions have been matched against the
 held-out reference instances using the documented evaluator settings.
+
+The implemented first workflow is documented in
+[`for_instance_tls2trees_pilot.md`](for_instance_tls2trees_pilot.md).

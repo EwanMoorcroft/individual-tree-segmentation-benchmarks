@@ -21,7 +21,9 @@ external method repositories are included.
 - FRDR/TLS2trees: completed prediction and operational benchmark across 16
   plots; no reference instance accuracy is reported.
 - FOR-instance: downloaded and inspected; selected as the immediate next
-  accuracy dataset because its annotated point clouds include `treeID`.
+  accuracy dataset because its annotated point clouds include `treeID`. The
+  first TLS2trees leaf-off pilot workflow is implemented for
+  `CULS/plot_1_annotated.las` but has not yet produced an accuracy result.
 - Wytham Woods: downloaded and inspected; retained as a strong TLS reference
   dataset after plot-level reference reconstruction from per-tree files.
 
@@ -29,6 +31,11 @@ See the [benchmark registry](BENCHMARKS.md),
 [dataset feasibility assessment](docs/dataset_feasibility.md), and
 [labelled accuracy preparation plan](docs/labelled_accuracy_benchmark_plan.md)
 for current and candidate dataset-method combinations.
+
+The [FOR-instance TLS2trees pilot runbook](docs/for_instance_tls2trees_pilot.md)
+defines the first labelled run. It evaluates semantic classes `4` and `6`
+against positive `treeID` references. Class `5` is reserved for separately
+labelled future leaf-on work.
 
 ## Important Limitation
 
@@ -159,11 +166,13 @@ responsibilities separate:
 ├── requirements.txt
 ├── configs/
 │   ├── for_instance_accuracy_benchmark.yml
+│   ├── for_instance_tls2trees_accuracy.yml
 │   ├── frdr_tls2trees_benchmark.yml
 │   └── wytham_accuracy_benchmark.yml
 ├── docs/
 │   ├── dataset_feasibility.md
 │   ├── evaluation_metrics.md
+│   ├── for_instance_tls2trees_pilot.md
 │   ├── frdr_tls2trees_results.md
 │   ├── labelled_accuracy_benchmark_plan.md
 │   └── tls2trees_frdr_benchmark_runbook.md
@@ -178,17 +187,24 @@ responsibilities separate:
 ├── scripts/
 │   ├── data/
 │   │   ├── convert_frdr_woods_to_tls2trees_ply.py
+│   │   ├── convert_for_instance_to_tls2trees_ply.py
+│   │   ├── inspect_for_instance_inventory.py
 │   │   └── inspect_frdr_dataset_inventory.py
 │   ├── evaluation/
 │   │   └── instance_iou_f1.py
 │   ├── methods/
 │   │   ├── run_tls2trees_instance_for_plot.py
+│   │   ├── run_tls2trees_for_instance_plot.py
 │   │   ├── summarise_tls2trees_outputs.py
 │   │   └── tls2trees_patched/
 │   │       └── instance_patched.py
 │   └── slurm/
 │       ├── convert_frdr_to_tls2trees_array.sbatch
+│       ├── convert_for_instance_tls2trees_pilot.sbatch
+│       ├── evaluate_for_instance_tls2trees_pilot.sbatch
+│       ├── inspect_for_instance_inventory.sbatch
 │       ├── inspect_frdr_inventory.sbatch
+│       ├── run_tls2trees_for_instance_pilot.sbatch
 │       ├── run_tls2trees_frdr_array.sbatch
 │       └── summarise_tls2trees_frdr_outputs.sbatch
 ├── src/
@@ -196,6 +212,7 @@ responsibilities separate:
 │       ├── __init__.py
 │       └── ply_io.py
 └── tests/
+    ├── test_for_instance_tls2trees_workflow.py
     └── test_frdr_tls2trees_workflow.py
 ```
 

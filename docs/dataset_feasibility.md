@@ -9,7 +9,7 @@ outside this repository.
 | Dataset | Inspection status | Instance labels | Accuracy status | Recommended role |
 | --- | --- | --- | --- | --- |
 | FRDR treeiso TLS | Downloaded; 16-plot TLS2trees run completed | Not present in the benchmark LAZ inputs | F1/IoU unavailable from `woods` | Completed prediction and operational benchmark |
-| FOR-instance | Downloaded, unpacked and inventoried | `treeID` in annotated LAS files | F1/IoU feasible | Primary next accuracy benchmark |
+| FOR-instance | Downloaded, inventoried; TLS2trees pilot workflow implemented | `treeID` in annotated LAS files | F1/IoU feasible after prediction and matching | Primary next accuracy benchmark |
 | Wytham Woods | Downloaded, unpacked and inventoried | One segmented tree per file | F1/IoU feasible after scene reconstruction | TLS accuracy benchmark candidate |
 
 ## FRDR Treeiso TLS
@@ -41,7 +41,7 @@ outside this repository.
 | Compatible methods | SegmentAnyTree; TreeLearn and other deep learning methods; traditional baselines; TLS2trees compatibility test |
 | Preprocessing | Respect `data_split_metadata.csv`; retain reference IDs separately; build method-specific inputs and prediction adapters |
 | Risks and limitations | Collection and sensor heterogeneity; class imbalance; potential test-set leakage; confirm positive IDs before use |
-| Recommended role | Primary next accuracy benchmark, starting with `CULS/plot_1_annotated.las` |
+| Recommended role | Primary next accuracy benchmark, starting with the implemented TLS2trees leaf-off pilot on `CULS/plot_1_annotated.las` |
 
 The inspected inventory contains 32 LAS files, 151,478,959 points and 1,130
 positive reference tree IDs. Semantic classes are:
@@ -59,6 +59,10 @@ positive reference tree IDs. Semantic classes are:
 `TUWIEN/test.las` is not recommended as the first pilot because a spot check
 found only `treeID = 0.0` in the sampled output. Confirm usable positive IDs
 before including it in an accuracy run.
+
+The first pilot filters references to classes `4` and `6`. Class `5` is excluded
+because the current TLS2trees configuration produces leaf-off predictions.
+See [`for_instance_tls2trees_pilot.md`](for_instance_tls2trees_pilot.md).
 
 ## Wytham Woods
 

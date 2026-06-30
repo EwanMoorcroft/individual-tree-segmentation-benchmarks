@@ -1,7 +1,14 @@
-# Synthetic Output Examples
+# Public-Safe Results And Examples
 
-Every value in this directory is fabricated for schema illustration. These
-files are not derived from FRDR data, TLS2trees predictions or a Barkla run and
+This directory contains one completed public-safe benchmark summary and four
+fabricated schema examples.
+
+`tls2trees_frdr_prediction_summary.csv` contains the completed FRDR/TLS2trees
+per-plot prediction and operational summary. It does not contain coordinates,
+point clouds, logs or accuracy metrics.
+
+Files ending in `_example` contain fabricated values for schema illustration.
+They are not derived from FRDR data, TLS2trees predictions or a Barkla run and
 must not be used as benchmark results.
 
 - `frdr_dataset_inventory_example.csv` shows two inventory rows, including an

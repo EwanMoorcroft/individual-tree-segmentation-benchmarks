@@ -6,9 +6,9 @@ adapter, method runner, scheduler workflow, metadata outputs and focused tests.
 
 ## Current Benchmarks
 
-| Dataset | Method | Status | Configuration | Runbook |
-| --- | --- | --- | --- | --- |
-| FRDR treeiso TLS | TLS2trees | Prediction workflow ready | `configs/frdr_tls2trees_benchmark.yml` | `docs/tls2trees_frdr_benchmark_runbook.md` |
+| Dataset | Method | Status | Configuration | Runbook | Results |
+| --- | --- | --- | --- | --- | --- |
+| FRDR treeiso TLS | TLS2trees | Prediction benchmark completed | `configs/frdr_tls2trees_benchmark.yml` | `docs/tls2trees_frdr_benchmark_runbook.md` | `docs/frdr_tls2trees_results.md` |
 
 The FRDR LAZ files do not contain individual-tree reference instance labels.
 The TLS2trees workflow therefore preserves predictions and operational metadata

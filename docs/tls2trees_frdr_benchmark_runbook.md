@@ -6,6 +6,9 @@ Run the patched TLS2trees instance stage reproducibly across the 16 FRDR plots o
 
 Do not run this full workflow on the local Mac. Do not modify files under `~/data/datasets/frdr_treeiso`.
 
+The completed run and public-safe per-plot summary are documented in
+[`frdr_tls2trees_results.md`](frdr_tls2trees_results.md).
+
 ## Paths And Environment
 
 - Barkla project: `~/scratch/tree-seg-benchmark`
@@ -174,11 +177,17 @@ squeue -u "$USER"
 
 If any array task fails, inspect its Slurm log and per-plot metadata. Do not blindly resubmit against a non-empty output directory.
 
-The instance array defaults to 32 GiB per task. Override it at submission only when the pilot or scheduler evidence supports a change, for example:
+The instance array defaults to 32 GiB per task. During the completed benchmark,
+`Mixed_plot1` (array index 2) was killed for exceeding that allocation. It
+completed when rerun with a 96 GiB allocation and recorded 49.602968 GiB peak
+usage:
 
 ```bash
-sbatch --array=1-15 --mem=48G scripts/slurm/run_tls2trees_frdr_array.sbatch
+sbatch --array=2-2 --mem=96G scripts/slurm/run_tls2trees_frdr_array.sbatch
 ```
+
+Retain the 32 GiB default for other plots unless scheduler evidence supports a
+different allocation.
 
 To summarise successful outputs even when one array task failed:
 

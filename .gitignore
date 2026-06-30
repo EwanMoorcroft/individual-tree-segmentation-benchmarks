@@ -1,8 +1,10 @@
 .DS_Store
 .env
+.conda/
 .pytest_cache/
 .venv/
 __pycache__/
+env/
 pycache/
 venv/
 
@@ -13,6 +15,7 @@ venv/
 /results/
 
 *.err
+*.log
 *.las
 *.laz
 *.npy
@@ -20,3 +23,4 @@ venv/
 *.out
 *.ply
 *.png
+Thumbs.db

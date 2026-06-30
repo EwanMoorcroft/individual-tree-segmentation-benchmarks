@@ -8,10 +8,11 @@ This repository collects reproducible workflows for benchmarking individual
 tree segmentation methods across LiDAR datasets using the University of
 Liverpool Barkla2 HPC system.
 
-The first implemented benchmark uses TLS2trees instance segmentation with the
-FRDR treeiso terrestrial laser scanning dataset. Additional dataset and method
-combinations can be added through new configs, data adapters, method wrappers,
-Slurm jobs and evaluation modules without creating separate repositories.
+The first completed prediction benchmark uses TLS2trees instance segmentation
+with the FRDR treeiso terrestrial laser scanning dataset. Additional dataset
+and method combinations can be added through new configs, data adapters, method
+wrappers, Slurm jobs and evaluation modules without creating separate
+repositories.
 
 No source datasets, converted point clouds, predictions, scheduler logs or
 external method repositories are included.
@@ -52,6 +53,20 @@ exits with a clear error when no reference labels are provided.
 - The configured parameters reproduce a successful feasibility run and require
   visual validation before being treated as final benchmark parameters.
 - Runtime and predicted tree count depend on plot size and point density.
+
+## Completed FRDR/TLS2trees Run
+
+All 16 configured FRDR plots completed on Barkla2. The run processed
+205,602,855 input points and produced 2,036 predicted tree files containing
+27,131,496 points. One `woods = 0.0` point in `NSpruce_plot2` was dropped under
+the configured unknown-value policy.
+
+`Mixed_plot1` was killed for exceeding a 32 GiB Slurm allocation, then completed
+when rerun with 96 GiB; its recorded peak usage was 49.602968 GiB.
+
+- [Completed benchmark results note](docs/frdr_tls2trees_results.md)
+- [Per-plot prediction summary CSV](examples/tls2trees_frdr_prediction_summary.csv)
+- [Evaluation metrics and reference-label requirements](docs/evaluation_metrics.md)
 
 ## FRDR Label Mapping
 
@@ -136,11 +151,14 @@ applies the documented `clstr` compatibility correction for newer pandas
 ├── configs/
 │   └── frdr_tls2trees_benchmark.yml
 ├── docs/
+│   ├── evaluation_metrics.md
+│   ├── frdr_tls2trees_results.md
 │   └── tls2trees_frdr_benchmark_runbook.md
 ├── examples/
 │   ├── README.md
 │   ├── frdr_dataset_inventory_example.csv
 │   ├── tls2trees_conversion_metadata_example.json
+│   ├── tls2trees_frdr_prediction_summary.csv
 │   ├── tls2trees_prediction_summary_example.csv
 │   └── tls2trees_run_metadata_example.json
 ├── scripts/
@@ -167,11 +185,11 @@ applies the documented `clstr` compatibility correction for newer pandas
     └── test_frdr_tls2trees_workflow.py
 ```
 
-## Synthetic Examples
+## Public-Safe Results And Examples
 
-The [`examples/`](examples/) directory contains tiny, explicitly synthetic
-inventory, conversion, run and prediction-summary records. They illustrate the
-generated schemas without publishing FRDR data or Barkla outputs.
+The [`examples/`](examples/) directory contains the completed per-plot summary
+CSV and tiny synthetic examples of inventory, conversion and run records. No
+FRDR coordinates, point clouds, prediction files or logs are included.
 
 ## Recommended Pilot First
 
@@ -242,7 +260,7 @@ The `.gitignore` excludes:
 - scheduler and method logs;
 - result metadata, tables and prediction artefacts;
 - LAS, LAZ, PLY, NumPy and image files;
-- virtual environments and Python/test caches.
+- virtual environments, logs, system files and Python/test caches.
 
 No raw data or predictions are included in this repository.
 

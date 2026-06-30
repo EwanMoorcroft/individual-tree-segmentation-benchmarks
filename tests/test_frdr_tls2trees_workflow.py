@@ -291,3 +291,23 @@ def test_synthetic_examples_are_parseable() -> None:
     assert len(inventory) == 2
     assert inventory[1]["unknown_woods_values"] == '["0.0"]'
     assert predictions[0]["status"] == "complete"
+
+
+def test_completed_frdr_summary_is_consistent() -> None:
+    path = ROOT / "examples/tls2trees_frdr_prediction_summary.csv"
+    with path.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert len(rows) == 16
+    assert all(row["status"] == "complete" for row in rows)
+    assert all(row["return_code"] == "0" for row in rows)
+    assert sum(int(row["input_point_count"]) for row in rows) == 205_602_855
+    assert sum(int(row["retained_point_count"]) for row in rows) == 205_602_854
+    assert sum(int(row["dropped_unknown_count"]) for row in rows) == 1
+    assert sum(int(row["predicted_tree_count"]) for row in rows) == 2_036
+    assert sum(int(row["predicted_tree_points"]) for row in rows) == 27_131_496
+
+    columns = set(rows[0])
+    assert columns.isdisjoint({"f1", "precision", "recall", "iou"})
+    mixed = next(row for row in rows if row["plot_name"] == "Mixed_plot1")
+    assert mixed["peak_memory_gb"] == "49.602968"

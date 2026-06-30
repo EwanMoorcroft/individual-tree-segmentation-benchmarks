@@ -23,4 +23,5 @@ venv/
 *.out
 *.ply
 *.png
+*.zip
 Thumbs.db

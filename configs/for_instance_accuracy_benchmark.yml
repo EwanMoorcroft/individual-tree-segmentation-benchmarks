@@ -1,0 +1,77 @@
+# Planning stub. Review paths, method-specific inputs, and dataset split before use.
+project:
+  name: tree-seg-benchmark
+  mode: labelled_accuracy_candidate
+  barkla_root: "~/scratch/tree-seg-benchmark"
+
+dataset:
+  name: for_instance
+  source_url: "https://doi.org/10.5281/zenodo.8287792"
+  dataset_root: "~/data/datasets/for_instance/FORinstance_dataset"
+  downloaded_and_inspected: true
+  split_metadata: "data_split_metadata.csv"
+  collections:
+    - CULS
+    - NIBIO
+    - RMIT
+    - SCION
+    - TUWIEN
+  inventory:
+    las_file_count: 32
+    total_points: 151478959
+    reference_tree_count: 1130
+
+pilot:
+  collection: CULS
+  relative_path: "CULS/plot_1_annotated.las"
+  point_count: 1816672
+  reference_tree_count: 6
+  reason: "Small inspected plot with positive treeID values and semantic classes."
+
+reference:
+  mode: labelled_point_cloud
+  field: treeID
+  ignored_labels:
+    - 0
+    - -1
+
+semantic:
+  field: classification
+  valid_tree_classes:
+    - 4
+    - 5
+    - 6
+  ignored_classes:
+    - 0
+    - 1
+    - 2
+    - 3
+
+method_candidates:
+  - segment_any_tree
+  - tls2trees_compatibility_test
+  - treelearn_or_other_deep_learning
+  - traditional_baseline
+
+evaluation:
+  enabled: false
+  enable_after_prediction_adapter_validation: true
+  metrics:
+    - precision
+    - recall
+    - f1
+    - mean_matched_iou
+  iou_threshold: 0.5
+  coordinate_tolerance: 0.01
+  require_one_to_one_matching: true
+  require_split_compliance: true
+
+outputs:
+  predictions_root: "data/predictions/<method>/for_instance"
+  metadata_root: "results/metadata/for_instance"
+  tables_root: "results/tables/for_instance"
+
+notes:
+  - "Edit paths and select a method wrapper before execution."
+  - "Do not use evaluation-split plots for training or parameter selection."
+  - "Confirm positive treeID values before including any plot in evaluation."

@@ -4,15 +4,25 @@ This repository is structured to hold multiple individual tree segmentation
 benchmarks. Each benchmark should provide a reproducible configuration, input
 adapter, method runner, scheduler workflow, metadata outputs and focused tests.
 
-## Current Benchmarks
+## Benchmark Registry
 
-| Dataset | Method | Status | Configuration | Runbook | Results |
-| --- | --- | --- | --- | --- | --- |
-| FRDR treeiso TLS | TLS2trees | Prediction benchmark completed | `configs/frdr_tls2trees_benchmark.yml` | `docs/tls2trees_frdr_benchmark_runbook.md` | `docs/frdr_tls2trees_results.md` |
+| Dataset | Method | Status | Configuration or note |
+| --- | --- | --- | --- |
+| FRDR treeiso TLS | TLS2trees | Prediction benchmark completed | [`frdr_tls2trees_benchmark.yml`](configs/frdr_tls2trees_benchmark.yml) |
+| FOR-instance | SegmentAnyTree | Candidate accuracy benchmark | [`for_instance_accuracy_benchmark.yml`](configs/for_instance_accuracy_benchmark.yml) |
+| FOR-instance | TLS2trees | Candidate compatibility test | UAV data require a method compatibility assessment |
+| FOR-instance | TreeLearn or another deep learning method | Candidate accuracy benchmark | Respect the supplied development/test split |
+| Wytham Woods | TLS2trees | Candidate TLS accuracy benchmark | [`wytham_accuracy_benchmark.yml`](configs/wytham_accuracy_benchmark.yml) |
+| Wytham Woods | SegmentAnyTree | Candidate accuracy benchmark | Plot-level input reconstruction required |
+| Wytham Woods | Traditional TLS method | Candidate baseline | Plot-level input reconstruction required |
 
 The FRDR LAZ files do not contain individual-tree reference instance labels.
 The TLS2trees workflow therefore preserves predictions and operational metadata
 but does not report IoU/F1 without an external instance reference.
+
+No candidate accuracy row indicates a completed method run or a reported
+accuracy result. Dataset readiness and remaining preprocessing are documented
+in [`docs/dataset_feasibility.md`](docs/dataset_feasibility.md).
 
 ## Adding A Benchmark
 

@@ -1,11 +1,16 @@
 # Public-Safe Results And Examples
 
-This directory contains one completed public-safe benchmark summary and four
-fabricated schema examples.
+This directory contains public-safe benchmark summaries and fabricated schema
+examples.
 
 `tls2trees_frdr_prediction_summary.csv` contains the completed FRDR/TLS2trees
 per-plot prediction and operational summary. It does not contain coordinates,
 point clouds, logs or accuracy metrics.
+
+`for_instance_inventory_summary.csv` contains ten observed inventory rows from
+the FOR-instance inspection. It includes relative paths and aggregate counts,
+not point coordinates. `has_treeSP` is marked `not_confirmed` because that field
+was not established by the retained inspection summary.
 
 Files ending in `_example` contain fabricated values for schema illustration.
 They are not derived from FRDR data, TLS2trees predictions or a Barkla run and

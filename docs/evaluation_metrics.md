@@ -1,58 +1,73 @@
 # Evaluation Metrics
 
-## Metrics Available For FRDR
+Metrics are grouped by the evidence they require. Operational and semantic
+checks do not substitute for instance accuracy.
 
-The completed FRDR/TLS2trees run supports prediction and operational reporting:
+## Prediction And Operational Metrics
+
+These metrics can be recorded without individual-tree reference labels:
 
 - input, retained and dropped point counts;
-- wood and non-wood point counts used during conversion;
-- predicted tree count;
-- points assigned to predicted trees;
+- predicted tree count and points assigned to predictions;
 - minimum, maximum and mean points per predicted tree;
-- process runtime and peak memory;
-- return code, completion status and output validation.
+- output-file validity and completion status;
+- command, method version and return code;
+- runtime and peak memory.
 
-These measures describe execution and predicted outputs. They are not
-segmentation accuracy measures.
+The completed FRDR/TLS2trees benchmark reports these measures. They describe
+execution and predicted outputs, not segmentation accuracy.
 
-## Why Instance Accuracy Is Not Reported
+## Semantic Consistency Checks
 
-The FRDR `woods` field is a semantic binary label:
+Semantic checks validate dataset preparation and method inputs:
 
-- `woods = 1`: wood;
-- `woods = 2`: non-wood.
+- required field presence and data type;
+- observed values and counts for each semantic class;
+- mapping from source classes to method classes;
+- unknown, ignored and dropped point counts;
+- consistency between positive instance IDs and included tree-material classes;
+- preservation of coordinates and point counts through conversion.
 
-It does not assign a unique tree identifier to each point. A wood point cannot
-therefore be matched to a reference tree instance using `woods` alone. F1,
-precision, recall and intersection over union (IoU) are not computed for this
-benchmark.
+For FRDR, `woods = 1` means wood and `woods = 2` means non-wood. These values
+cannot identify individual trees. FOR-instance uses `classification` values
+`4`, `5` and `6` for stem, live branches and woody branches respectively; the
+initial tree-only evaluation ignores classes `0`, `1`, `2` and `3`.
+
+## Instance Accuracy Readiness
+
+| Dataset | Reference representation | Instance accuracy status |
+| --- | --- | --- |
+| FRDR treeiso TLS | No tree IDs in the benchmark LAZ inputs | F1, precision, recall and IoU unavailable from `woods` |
+| FOR-instance | Positive `treeID` values in annotated LAS files | F1 and matched IoU feasible |
+| Wytham Woods | One segmented reference tree per PLY filename | F1 and matched IoU feasible after scene reconstruction |
 
 The evaluator in
 [`scripts/evaluation/instance_iou_f1.py`](../scripts/evaluation/instance_iou_f1.py)
-returns an error when no reference instance source is supplied:
+intentionally refuses to run without a reference instance source:
 
 ```text
 No reference instance labels supplied; IoU/F1 cannot be computed.
 ```
 
-## Evaluation With Reference Instances
+## One-To-One Instance Evaluation
 
-If suitable reference labels become available, the evaluator accepts either:
+The evaluator accepts:
 
-1. a directory containing one LAS, LAZ or PLY file per reference tree; or
-2. one labelled LAS, LAZ or PLY point cloud containing an individual-tree ID
-   field.
+1. a prediction directory containing one LAS, LAZ or PLY file per predicted
+   tree; and
+2. either a reference directory containing one file per tree or one labelled
+   point cloud containing an individual-tree ID field.
 
 Predicted and reference coordinates are quantised using the configured
-coordinate tolerance. For each predicted-reference pair, point-set IoU is:
+coordinate tolerance. Point-set IoU for each candidate pair is:
 
 ```text
 IoU = intersection point count / union point count
 ```
 
-The evaluator performs one-to-one matching for pairs meeting the configured
-IoU threshold. With `TP` matched predictions, `FP` unmatched predictions and
-`FN` unmatched references:
+Predicted and reference trees are matched one-to-one only when their IoU meets
+the configured threshold. With `TP` matched predictions, `FP` unmatched
+predictions and `FN` unmatched references:
 
 ```text
 precision = TP / (TP + FP)
@@ -60,5 +75,24 @@ recall = TP / (TP + FN)
 F1 = 2 * precision * recall / (precision + recall)
 ```
 
-Reference provenance, instance field, ignored labels, coordinate tolerance and
-IoU threshold must be recorded with any reported accuracy result.
+F1 must be calculated only after this instance matching. Semantic wood/non-wood
+agreement is not an instance F1 score.
+
+## Required Accuracy Result Fields
+
+Every labelled accuracy run must record:
+
+- reference tree count;
+- predicted tree count;
+- true positives, false positives and false negatives;
+- precision, recall and F1;
+- mean matched IoU;
+- IoU threshold and coordinate tolerance;
+- reference instance field or filename rule;
+- ignored semantic classes and instance labels;
+- dataset split and reference provenance;
+- runtime and peak memory;
+- method version, command and parameter configuration.
+
+No FRDR instance accuracy value should be reported unless an external,
+documented individual-tree reference is supplied and evaluated.

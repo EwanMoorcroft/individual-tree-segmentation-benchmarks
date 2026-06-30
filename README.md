@@ -4,34 +4,31 @@
 
 ## Purpose
 
-This repository collects reproducible workflows for benchmarking individual
-tree segmentation methods across LiDAR datasets using the University of
-Liverpool Barkla2 HPC system.
+This repository collects reproducible workflows for benchmarking multiple
+individual tree segmentation methods across multiple LiDAR datasets using the
+University of Liverpool Barkla2 HPC system.
 
 The first completed prediction benchmark uses TLS2trees instance segmentation
-with the FRDR treeiso terrestrial laser scanning dataset. Additional dataset
-and method combinations can be added through new configs, data adapters, method
-wrappers, Slurm jobs and evaluation modules without creating separate
-repositories.
+with the FRDR treeiso terrestrial laser scanning dataset. Future method
+wrappers may cover SegmentAnyTree, TreeLearn and other deep learning methods,
+and traditional segmentation baselines without creating separate repositories.
 
 No source datasets, converted point clouds, predictions, scheduler logs or
 external method repositories are included.
 
-## Scope
+## Current Status
 
-The current FRDR/TLS2trees protocol covers:
+- FRDR/TLS2trees: completed prediction and operational benchmark across 16
+  plots; no reference instance accuracy is reported.
+- FOR-instance: downloaded and inspected; selected as the immediate next
+  accuracy dataset because its annotated point clouds include `treeID`.
+- Wytham Woods: downloaded and inspected; retained as a strong TLS reference
+  dataset after plot-level reference reconstruction from per-tree files.
 
-- FRDR dataset inventory and field inspection;
-- conversion of the FRDR `woods` field to TLS2trees semantic labels;
-- patched TLS2trees instance-stage execution;
-- Slurm array conversion and prediction workflows;
-- preservation of per-tree predictions;
-- runtime, memory and output metadata collection;
-- output validation and per-tree summary tables;
-- a reusable IoU/F1 evaluator for future reference instance labels.
-
-See [`BENCHMARKS.md`](BENCHMARKS.md) for the benchmark registry and extension
-requirements.
+See the [benchmark registry](BENCHMARKS.md),
+[dataset feasibility assessment](docs/dataset_feasibility.md), and
+[labelled accuracy preparation plan](docs/labelled_accuracy_benchmark_plan.md)
+for current and candidate dataset-method combinations.
 
 ## Important Limitation
 
@@ -67,6 +64,7 @@ when rerun with 96 GiB; its recorded peak usage was 49.602968 GiB.
 - [Completed benchmark results note](docs/frdr_tls2trees_results.md)
 - [Per-plot prediction summary CSV](examples/tls2trees_frdr_prediction_summary.csv)
 - [Evaluation metrics and reference-label requirements](docs/evaluation_metrics.md)
+- [FOR-instance inventory example](examples/for_instance_inventory_summary.csv)
 
 ## FRDR Label Mapping
 
@@ -143,19 +141,35 @@ applies the documented `clstr` compatibility correction for newer pandas
 
 ## Repository Layout
 
+The repository uses dataset-method configuration files and keeps reusable
+responsibilities separate:
+
+- `configs/`: dataset-method configurations and public-safe planning stubs;
+- `scripts/data/`: dataset inspection, conversion and preparation utilities;
+- `scripts/methods/`: wrappers around external segmentation methods;
+- `scripts/evaluation/`: reusable metric and evaluator scripts;
+- `scripts/slurm/`: scheduler workflows;
+- `docs/`: benchmark results, feasibility notes, runbooks and metric definitions;
+- `examples/`: small summaries and synthetic metadata only.
+
 ```text
 .
 ├── README.md
 ├── BENCHMARKS.md
 ├── requirements.txt
 ├── configs/
-│   └── frdr_tls2trees_benchmark.yml
+│   ├── for_instance_accuracy_benchmark.yml
+│   ├── frdr_tls2trees_benchmark.yml
+│   └── wytham_accuracy_benchmark.yml
 ├── docs/
+│   ├── dataset_feasibility.md
 │   ├── evaluation_metrics.md
 │   ├── frdr_tls2trees_results.md
+│   ├── labelled_accuracy_benchmark_plan.md
 │   └── tls2trees_frdr_benchmark_runbook.md
 ├── examples/
 │   ├── README.md
+│   ├── for_instance_inventory_summary.csv
 │   ├── frdr_dataset_inventory_example.csv
 │   ├── tls2trees_conversion_metadata_example.json
 │   ├── tls2trees_frdr_prediction_summary.csv
@@ -187,9 +201,9 @@ applies the documented `clstr` compatibility correction for newer pandas
 
 ## Public-Safe Results And Examples
 
-The [`examples/`](examples/) directory contains the completed per-plot summary
-CSV and tiny synthetic examples of inventory, conversion and run records. No
-FRDR coordinates, point clouds, prediction files or logs are included.
+The [`examples/`](examples/) directory contains the completed FRDR per-plot
+summary, a small FOR-instance inventory extract, and synthetic schema examples.
+No coordinates, point clouds, prediction files or logs are included.
 
 ## Recommended Pilot First
 
@@ -266,8 +280,8 @@ No raw data or predictions are included in this repository.
 
 ## Tests
 
-The test suite uses small synthetic point clouds and does not require the FRDR
-dataset or a TLS2trees checkout:
+The test suite uses small synthetic point clouds and does not require any source
+dataset or external method checkout:
 
 ```bash
 python -m pip install pytest

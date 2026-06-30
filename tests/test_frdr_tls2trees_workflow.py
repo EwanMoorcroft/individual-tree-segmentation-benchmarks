@@ -4,6 +4,7 @@ import csv
 import importlib.util
 import json
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -11,6 +12,7 @@ from types import ModuleType
 import laspy
 import numpy as np
 import pytest
+import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -39,6 +41,15 @@ def write_woods_las(path: Path, woods: list[int] | None = None) -> None:
     las.add_extra_dim(laspy.ExtraBytesParams(name="woods", type=np.uint8))
     las["woods"] = np.array(woods or [1, 2, 1], dtype=np.uint8)
     las.write(path)
+
+
+def write_xyz_las(path: Path, coordinates: list[tuple[float, float, float]]) -> None:
+    header = laspy.LasHeader(point_format=3, version="1.2")
+    cloud = laspy.LasData(header)
+    cloud.x = np.array([point[0] for point in coordinates])
+    cloud.y = np.array([point[1] for point in coordinates])
+    cloud.z = np.array([point[2] for point in coordinates])
+    cloud.write(path)
 
 
 def test_frdr_conversion_writes_tls2trees_schema(tmp_path: Path) -> None:
@@ -311,3 +322,109 @@ def test_completed_frdr_summary_is_consistent() -> None:
     assert columns.isdisjoint({"f1", "precision", "recall", "iou"})
     mixed = next(row for row in rows if row["plot_name"] == "Mixed_plot1")
     assert mixed["peak_memory_gb"] == "49.602968"
+
+
+def test_all_benchmark_configs_parse() -> None:
+    config_paths = sorted((ROOT / "configs").glob("*.yml"))
+    assert {path.name for path in config_paths} >= {
+        "for_instance_accuracy_benchmark.yml",
+        "frdr_tls2trees_benchmark.yml",
+        "wytham_accuracy_benchmark.yml",
+    }
+    for path in config_paths:
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+        assert isinstance(payload, dict), path
+        assert isinstance(payload.get("project"), dict), path
+        assert isinstance(payload.get("dataset"), dict), path
+
+
+def test_for_instance_inventory_example_schema() -> None:
+    path = ROOT / "examples/for_instance_inventory_summary.csv"
+    with path.open(encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        rows = list(reader)
+        columns = set(reader.fieldnames or [])
+
+    required = {
+        "relative_path",
+        "collection",
+        "point_count",
+        "reference_tree_count",
+        "classification_values",
+        "has_treeID",
+        "has_treeSP",
+    }
+    assert columns == required
+    assert len(rows) == 10
+    assert rows[0]["relative_path"] == "CULS/plot_1_annotated.las"
+    assert rows[0]["reference_tree_count"] == "6"
+    assert all(row["has_treeID"] == "true" for row in rows)
+
+
+def test_benchmark_registry_tracks_completed_and_candidate_work() -> None:
+    registry = (ROOT / "BENCHMARKS.md").read_text(encoding="utf-8")
+
+    assert "FRDR treeiso TLS" in registry
+    assert "Prediction benchmark completed" in registry
+    assert "FOR-instance" in registry
+    assert "Wytham Woods" in registry
+    assert "Candidate accuracy benchmark" in registry
+
+
+def test_evaluator_calculates_synthetic_instance_metrics(
+    tmp_path: Path, monkeypatch
+) -> None:
+    evaluator = load_script(
+        "scripts/evaluation/instance_iou_f1.py", "instance_iou_f1_synthetic"
+    )
+    predictions = tmp_path / "predictions"
+    references = tmp_path / "references"
+    predictions.mkdir()
+    references.mkdir()
+    matched_points = [(0.0, 0.0, 0.0), (0.0, 0.0, 1.0)]
+    write_xyz_las(predictions / "tree_1.las", matched_points)
+    write_xyz_las(predictions / "tree_2.las", [(10.0, 10.0, 10.0)])
+    write_xyz_las(references / "tree_1.las", matched_points)
+    output_path = tmp_path / "metrics.json"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "instance_iou_f1.py",
+            "--predicted-instance-dir",
+            str(predictions),
+            "--reference-instance-dir",
+            str(references),
+            "--output-json",
+            str(output_path),
+        ],
+    )
+
+    assert evaluator.main() == 0
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["true_positives"] == 1
+    assert payload["false_positives"] == 1
+    assert payload["false_negatives"] == 0
+    assert payload["precision"] == pytest.approx(0.5)
+    assert payload["recall"] == pytest.approx(1.0)
+    assert payload["f1"] == pytest.approx(2 / 3)
+    assert payload["mean_matched_iou"] == pytest.approx(1.0)
+
+
+def test_no_raw_point_cloud_or_archive_files_are_tracked() -> None:
+    completed = subprocess.run(
+        ["git", "ls-files"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    forbidden = {".las", ".laz", ".ply", ".zip", ".npy", ".npz"}
+    tracked_forbidden = [
+        path
+        for path in completed.stdout.splitlines()
+        if Path(path).suffix.lower() in forbidden
+    ]
+
+    assert tracked_forbidden == []

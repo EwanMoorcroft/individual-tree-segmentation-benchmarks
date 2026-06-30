@@ -256,6 +256,9 @@ def main() -> int:
     precision = true_positives / len(predictions) if predictions else 0.0
     recall = true_positives / len(references) if references else 0.0
     f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+    mean_matched_iou = (
+        float(np.mean([match["iou"] for match in matches])) if matches else 0.0
+    )
 
     payload = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -272,6 +275,7 @@ def main() -> int:
         "precision": precision,
         "recall": recall,
         "f1": f1,
+        "mean_matched_iou": mean_matched_iou,
         "matches": matches,
     }
     output_path = resolve_path(args.output_json)
@@ -281,6 +285,7 @@ def main() -> int:
     print(f"Precision: {precision:.6f}")
     print(f"Recall: {recall:.6f}")
     print(f"F1: {f1:.6f}")
+    print(f"Mean matched IoU: {mean_matched_iou:.6f}")
     print(f"Metadata: {output_path}")
     return 0
 

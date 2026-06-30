@@ -1,0 +1,60 @@
+# Planning stub. Plot-level reconstruction and method adapters are not implemented.
+project:
+  name: tree-seg-benchmark
+  mode: labelled_accuracy_candidate
+  barkla_root: "~/scratch/tree-seg-benchmark"
+
+dataset:
+  name: wytham_woods
+  source_url: "https://doi.org/10.5281/zenodo.7307956"
+  dataset_root: "~/data/datasets/wytham_woods/DATA_clouds_ply/DATA_clouds_ply"
+  downloaded_and_inspected: true
+  sensor_type: terrestrial_laser_scanning
+  reference_file_count: 876
+  fields:
+    - x
+    - y
+    - z
+
+reference:
+  mode: one_file_per_tree
+  file_glob: "*.ply"
+  tree_id_source: filename
+
+preprocessing:
+  plot_or_scene_reconstruction_required: true
+  preserve_source_files: true
+  required_steps:
+    - "Define a documented spatial scene or plot boundary."
+    - "Combine selected tree files while retaining filename-derived IDs."
+    - "Construct equivalent method inputs without using reference IDs as features."
+    - "Validate coordinate alignment between predictions and references."
+
+method_candidates:
+  - tls2trees
+  - segment_any_tree
+  - treelearn_or_other_deep_learning
+  - traditional_tls_baseline
+
+evaluation:
+  enabled: false
+  enable_after_reference_reconstruction: true
+  metrics:
+    - precision
+    - recall
+    - f1
+    - mean_matched_iou
+  iou_threshold: 0.5
+  coordinate_tolerance: 0.01
+  require_one_to_one_matching: true
+
+outputs:
+  reconstructed_inputs_root: "data/interim/wytham_woods"
+  predictions_root: "data/predictions/<method>/wytham_woods"
+  metadata_root: "results/metadata/wytham_woods"
+  tables_root: "results/tables/wytham_woods"
+
+notes:
+  - "Edit paths and select a method wrapper before execution."
+  - "No accuracy run is valid until the reconstruction protocol is documented."
+  - "Reference IDs must be used only for evaluation, not as method input features."

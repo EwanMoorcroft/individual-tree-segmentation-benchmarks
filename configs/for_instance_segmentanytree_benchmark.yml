@@ -1,0 +1,137 @@
+project:
+  name: tree-seg-benchmark
+  benchmark_name: for_instance_segmentanytree
+  mode: labelled_accuracy_benchmark_setup
+  barkla_root: "~/scratch/tree-seg-benchmark"
+
+environment:
+  module: "miniforge3/25.3.0-python3.12.10"
+  python_environment: "~/fastscratch/venvs/treebench"
+  activation: "source ~/fastscratch/venvs/treebench/bin/activate"
+  python_version_tested: "3.12.10"
+
+dataset:
+  name: FOR-instance
+  source_url: "https://doi.org/10.5281/zenodo.8287792"
+  root: "~/data/datasets/for_instance/FORinstance_dataset"
+  input_glob: "**/*.las"
+  split_metadata_file: "data_split_metadata.csv"
+  reference_instance_field: treeID
+  semantic_field: classification
+  reference_classes:
+    - 4
+    - 5
+    - 6
+  ignored_classes:
+    - 0
+    - 1
+    - 2
+    - 3
+  ignored_tree_ids:
+    - 0
+  inventory:
+    expected_file_count: 32
+    observed_total_points: 151478959
+    observed_reference_tree_count: 1130
+  pilot:
+    collection: CULS
+    relative_path: "CULS/plot_1_annotated.las"
+    plot_name: plot_1_annotated
+    observed_point_count: 1816672
+    observed_reference_tree_count: 6
+
+benchmark:
+  default_selection: all
+  selected_split: null
+  preserve_split_labels: true
+  prevent_test_split_tuning: true
+  array_size: 32
+
+method:
+  name: SegmentAnyTree
+  repo_url: "https://github.com/SmartForest-no/SegmentAnyTree"
+  repo_path: "external/SegmentAnyTree"
+  command_template: null
+  command_template_note: "Set this to an argument list only after checking the installed checkout."
+  allowed_placeholders:
+    - "{repo_path}"
+    - "{input_path}"
+    - "{input_dir}"
+    - "{staged_input_dir}"
+    - "{output_dir}"
+    - "{collection}"
+    - "{plot_name}"
+    - "{split}"
+  verified_upstream_example:
+    inspected_branch: main
+    inspected_interface: "bash run_inference.sh <input_dir> <output_dir> <clean_output_dir>"
+    example_template:
+      - bash
+      - "{repo_path}/run_inference.sh"
+      - "{staged_input_dir}"
+      - "{output_dir}"
+      - "false"
+    warning: "The upstream script contains installation-specific paths; do not copy this example into command_template until the Barkla checkout is inspected."
+  prediction_output_subpath: final_results
+  output_format: null
+  prediction_instance_field: null
+  gpu_required: null
+
+evaluation:
+  reference_instance_field: treeID
+  reference_semantic_field: classification
+  reference_classes:
+    - 4
+    - 5
+    - 6
+  ignored_classes:
+    - 0
+    - 1
+    - 2
+    - 3
+  ignored_tree_ids:
+    - 0
+  iou_threshold: 0.5
+  coordinate_tolerance: 0.02
+  metrics:
+    - reference_tree_count
+    - predicted_tree_count
+    - true_positives
+    - false_positives
+    - false_negatives
+    - precision
+    - recall
+    - f1
+    - mean_matched_iou
+    - median_matched_iou
+    - runtime_seconds
+    - peak_memory_gb
+  unsupported_metrics:
+    - over_segmentation_count
+    - under_segmentation_count
+  unsupported_metrics_note: "These require an explicit many-to-one and one-to-many definition beyond the current one-to-one evaluator."
+
+paths:
+  staged_inputs_root: "data/interim/segmentanytree/for_instance/staged_inputs"
+  predictions_root: "data/predictions/segmentanytree/for_instance"
+  normalised_predictions_root: "data/interim/segmentanytree/for_instance"
+  metadata_root: "results/metadata/segmentanytree_for_instance"
+  inventory_csv: "results/metadata/segmentanytree_for_instance/inventory.csv"
+  inventory_json: "results/metadata/segmentanytree_for_instance/inventory.json"
+  run_metadata_root: "results/metadata/segmentanytree_for_instance/runs"
+  normalisation_metadata_root: "results/metadata/segmentanytree_for_instance/normalisation"
+  evaluation_metadata_root: "results/metadata/segmentanytree_for_instance/evaluations"
+  per_plot_metrics_root: "results/tables/segmentanytree_for_instance/per_plot"
+  tables_root: "results/tables"
+  logs_root: "logs/segmentanytree_for_instance"
+
+runtime:
+  overwrite: false
+  capture_stdout_stderr: true
+  cpu_dry_run_partition: nodes
+  prediction_time_limit: "02:00:00"
+  prediction_memory: "32G"
+  normalisation_memory: "16G"
+  evaluation_memory: "32G"
+  gpu_partition: null
+  gpu_request: null

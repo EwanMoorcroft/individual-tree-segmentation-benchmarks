@@ -253,6 +253,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--iou-threshold", type=float, default=0.5)
     parser.add_argument("--coordinate-tolerance", type=float, default=0.01)
     parser.add_argument("--plot-name")
+    parser.add_argument("--collection")
+    parser.add_argument("--split")
+    parser.add_argument("--relative-path")
+    parser.add_argument(
+        "--run-metadata-json",
+        help="Optional method-run metadata providing runtime, memory, and status.",
+    )
     parser.add_argument("--output-json", default="results/metadata/instance_iou_f1.json")
     parser.add_argument(
         "--output-metrics-csv",
@@ -345,6 +352,9 @@ def main() -> int:
     mean_matched_iou = (
         float(np.mean([match["iou"] for match in matches])) if matches else 0.0
     )
+    median_matched_iou = (
+        float(np.median([match["iou"] for match in matches])) if matches else 0.0
+    )
     matched_prediction_ids = {match["prediction"] for match in matches}
     matched_reference_ids = {match["reference"] for match in matches}
     unmatched_predictions = [
@@ -359,6 +369,18 @@ def main() -> int:
     ]
     evaluation_runtime_seconds = round(time.perf_counter() - started, 6)
     plot_name = args.plot_name or prediction_dir.name
+    run_metadata: dict[str, Any] = {}
+    run_metadata_path: Path | None = None
+    if args.run_metadata_json:
+        run_metadata_path = resolve_path(args.run_metadata_json)
+        if not run_metadata_path.is_file():
+            raise FileNotFoundError(f"Run metadata does not exist: {run_metadata_path}")
+        run_metadata = json.loads(run_metadata_path.read_text(encoding="utf-8"))
+        if not isinstance(run_metadata, dict):
+            raise ValueError(f"Run metadata must contain a JSON object: {run_metadata_path}")
+    method_runtime_seconds = run_metadata.get("runtime_seconds")
+    peak_memory_gb = run_metadata.get("peak_memory_gb")
+    run_status = run_metadata.get("status", "evaluated")
 
     payload = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -378,6 +400,13 @@ def main() -> int:
         "coordinate_tolerance": args.coordinate_tolerance,
         "iou_threshold": args.iou_threshold,
         "plot_name": plot_name,
+        "collection": args.collection,
+        "split": args.split,
+        "relative_path": args.relative_path,
+        "run_metadata_json": str(run_metadata_path) if run_metadata_path else None,
+        "runtime_seconds": method_runtime_seconds,
+        "peak_memory_gb": peak_memory_gb,
+        "status": run_status,
         "prediction_instance_count": len(predictions),
         "reference_instance_count": len(references),
         "predicted_tree_count": len(predictions),
@@ -389,6 +418,7 @@ def main() -> int:
         "recall": recall,
         "f1": f1,
         "mean_matched_iou": mean_matched_iou,
+        "median_matched_iou": median_matched_iou,
         "evaluation_runtime_seconds": evaluation_runtime_seconds,
         "matches": matches,
         "unmatched_predictions": unmatched_predictions,
@@ -417,6 +447,9 @@ def main() -> int:
     )
     metrics_row = {
         "plot_name": plot_name,
+        "collection": args.collection or "",
+        "split": args.split or "",
+        "relative_path": args.relative_path or "",
         "prediction_directory": str(prediction_dir),
         "reference_source": str(reference_source),
         "evaluation_mode": "leaf_off"
@@ -443,8 +476,12 @@ def main() -> int:
         "recall": recall,
         "f1": f1,
         "mean_matched_iou": mean_matched_iou,
+        "median_matched_iou": median_matched_iou,
         "iou_threshold": args.iou_threshold,
         "coordinate_tolerance": args.coordinate_tolerance,
+        "runtime_seconds": method_runtime_seconds,
+        "peak_memory_gb": peak_memory_gb,
+        "status": run_status,
         "evaluation_runtime_seconds": evaluation_runtime_seconds,
     }
     write_csv(metrics_path, list(metrics_row), [metrics_row])
@@ -473,6 +510,7 @@ def main() -> int:
     print(f"Recall: {recall:.6f}")
     print(f"F1: {f1:.6f}")
     print(f"Mean matched IoU: {mean_matched_iou:.6f}")
+    print(f"Median matched IoU: {median_matched_iou:.6f}")
     print(f"Metadata: {output_path}")
     print(f"Metrics: {metrics_path}")
     print(f"Matches: {matches_path}")

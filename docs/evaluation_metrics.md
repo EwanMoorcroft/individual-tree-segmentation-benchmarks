@@ -38,6 +38,10 @@ classes `4` and `6` only. Class `5` is excluded to avoid penalising leaf-off
 predictions for missing live-branch points. A future leaf-on experiment must be
 configured and reported separately.
 
+The SegmentAnyTree/FOR-instance benchmark uses classes `4`, `5` and `6`. Its
+adapter must first normalise a verified method output to one PLY per predicted
+tree; it does not assume an undocumented SegmentAnyTree instance field.
+
 ## Instance Accuracy Readiness
 
 | Dataset | Reference representation | Instance accuracy status |
@@ -91,7 +95,7 @@ Every labelled accuracy run must record:
 - predicted tree count;
 - true positives, false positives and false negatives;
 - precision, recall and F1;
-- mean matched IoU;
+- mean and median matched IoU;
 - IoU threshold and coordinate tolerance;
 - reference instance field or filename rule;
 - ignored semantic classes and instance labels;
@@ -104,3 +108,5 @@ documented individual-tree reference is supplied and evaluated.
 
 The evaluator also writes matched-pair, unmatched-prediction and
 unmatched-reference tables so TP, FP and FN assignments can be reviewed.
+Over-segmentation and under-segmentation counts are not reported because the
+current evaluator has no fixed many-to-one or one-to-many definition.

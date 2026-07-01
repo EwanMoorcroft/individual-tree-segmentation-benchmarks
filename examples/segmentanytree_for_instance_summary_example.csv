@@ -1,0 +1,2 @@
+synthetic_example,group,plot_count,evaluated_plot_count,total_reference_trees,total_predicted_trees,total_true_positives,total_false_positives,total_false_negatives,micro_precision,micro_recall,micro_f1,mean_plot_f1,mean_matched_iou,total_runtime_seconds,mean_runtime_seconds,peak_memory_max_gb,completed_count,failed_count
+true,SYNTHETIC,1,1,3,4,2,2,1,0.5,0.666667,0.571429,0.571429,0.7,12.5,12.5,1.2,1,0

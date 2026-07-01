@@ -1,0 +1,2 @@
+synthetic_example,collection,plot_name,split,reference_tree_count,predicted_tree_count,true_positives,false_positives,false_negatives,precision,recall,f1,mean_matched_iou,median_matched_iou,iou_threshold,coordinate_tolerance,runtime_seconds,peak_memory_gb,status
+true,SYNTHETIC,synthetic_plot_1,development,3,4,2,2,1,0.5,0.666667,0.571429,0.7,0.7,0.5,0.02,12.5,1.2,completed

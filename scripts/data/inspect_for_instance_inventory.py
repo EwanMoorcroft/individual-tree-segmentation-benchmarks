@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import platform
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,11 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[2]
+DATA_DIR = Path(__file__).resolve().parent
+if str(DATA_DIR) not in sys.path:
+    sys.path.insert(0, str(DATA_DIR))
+
+from select_for_instance_plot import read_split_metadata, split_for_relative_path
 
 
 def resolve_path(path_text: str) -> Path:
@@ -42,6 +48,7 @@ def inspect_las(
     tree_id_field: str = "treeID",
     tree_species_field: str = "treeSP",
     semantic_field: str = "classification",
+    split: str = "unassigned",
 ) -> dict[str, Any]:
     import laspy
 
@@ -50,6 +57,7 @@ def inspect_las(
         "relative_path": relative_path.as_posix(),
         "collection": relative_path.parts[0] if len(relative_path.parts) > 1 else "",
         "filename": path.name,
+        "split": split,
         "file_size_bytes": path.stat().st_size,
         "error": None,
     }
@@ -127,6 +135,7 @@ def write_inventory(records: list[dict[str, Any]], csv_path: Path, json_path: Pa
         "relative_path",
         "collection",
         "filename",
+        "split",
         "file_size_bytes",
         "point_count",
         "dimensions",
@@ -163,12 +172,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset-root", required=True)
     parser.add_argument("--chunk-size", type=int, default=1_000_000)
     parser.add_argument(
+        "--split-metadata",
+        help="Defaults to <dataset-root>/data_split_metadata.csv when present.",
+    )
+    parser.add_argument(
         "--csv-output",
-        default="results/metadata/for_instance_tls2trees/inventory.csv",
+        default="results/metadata/for_instance/inventory.csv",
     )
     parser.add_argument(
         "--json-output",
-        default="results/metadata/for_instance_tls2trees/inventory.json",
+        default="results/metadata/for_instance/inventory.json",
     )
     return parser.parse_args()
 
@@ -184,10 +197,23 @@ def main() -> int:
     if not files:
         raise SystemExit(f"No .las files found under: {dataset_root}")
 
-    records = [
-        inspect_las(path, dataset_root, args.chunk_size)
-        for path in files
-    ]
+    split_metadata = (
+        resolve_path(args.split_metadata)
+        if args.split_metadata
+        else dataset_root / "data_split_metadata.csv"
+    )
+    split_lookup = read_split_metadata(split_metadata)
+    records = []
+    for path in files:
+        relative_path = path.relative_to(dataset_root)
+        records.append(
+            inspect_las(
+                path,
+                dataset_root,
+                args.chunk_size,
+                split=split_for_relative_path(relative_path, split_lookup),
+            )
+        )
     csv_path = resolve_path(args.csv_output)
     json_path = resolve_path(args.json_output)
     write_inventory(records, csv_path, json_path)
@@ -196,6 +222,9 @@ def main() -> int:
     print(f"Inspected {len(records)} LAS files; errors: {errors}")
     print(f"CSV: {csv_path}")
     print(f"JSON: {json_path}")
+    print(
+        f"Split metadata: {split_metadata if split_metadata.is_file() else 'not found'}"
+    )
     return 1 if errors else 0
 
 

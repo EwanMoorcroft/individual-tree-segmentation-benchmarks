@@ -10,7 +10,8 @@ point clouds, logs or accuracy metrics.
 `for_instance_inventory_summary.csv` contains ten observed inventory rows from
 the FOR-instance inspection. It includes relative paths and aggregate counts,
 not point coordinates. `has_treeSP` is marked `not_confirmed` because that field
-was not established by the retained inspection summary.
+was not established by the retained inspection summary. Split values are
+copied from the dataset's `data_split_metadata.csv`.
 
 Files ending in `_example` contain fabricated values for schema illustration.
 They are not derived from FRDR data, TLS2trees predictions or a Barkla run and
@@ -24,6 +25,10 @@ must not be used as benchmark results.
   record.
 - `tls2trees_prediction_summary_example.csv` shows the corresponding combined
   plot summary.
+- `segmentanytree_for_instance_plot_metrics_example.csv` shows one synthetic
+  labelled evaluation row.
+- `segmentanytree_for_instance_summary_example.csv` shows its synthetic
+  aggregate schema.
 
 Paths beginning with `/path/to/` are placeholders. Counts, coordinates,
 versions, timings and memory values are synthetic.

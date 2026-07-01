@@ -9,9 +9,10 @@ individual tree segmentation methods across multiple LiDAR datasets using the
 University of Liverpool Barkla2 HPC system.
 
 The first completed prediction benchmark uses TLS2trees instance segmentation
-with the FRDR treeiso terrestrial laser scanning dataset. Future method
-wrappers may cover SegmentAnyTree, TreeLearn and other deep learning methods,
-and traditional segmentation baselines without creating separate repositories.
+with the FRDR treeiso terrestrial laser scanning dataset. The current priority
+is a full SegmentAnyTree accuracy benchmark on the labelled FOR-instance
+dataset. Future configs can add other methods and datasets without creating
+separate repositories.
 
 No source datasets, converted point clouds, predictions, scheduler logs or
 external method repositories are included.
@@ -20,10 +21,10 @@ external method repositories are included.
 
 - FRDR/TLS2trees: completed prediction and operational benchmark across 16
   plots; no reference instance accuracy is reported.
-- FOR-instance: downloaded and inspected; selected as the immediate next
-  accuracy dataset because its annotated point clouds include `treeID`. The
-  first TLS2trees leaf-off pilot workflow is implemented for
-  `CULS/plot_1_annotated.las` but has not yet produced an accuracy result.
+- FOR-instance/SegmentAnyTree: full 32-plot accuracy workflow prepared,
+  beginning with `CULS/plot_1_annotated.las`; no prediction or accuracy result
+  is reported yet. Split labels from `data_split_metadata.csv` are preserved.
+- FOR-instance/TLS2trees: retained as a candidate compatibility test.
 - Wytham Woods: downloaded and inspected; retained as a strong TLS reference
   dataset after plot-level reference reconstruction from per-tree files.
 
@@ -32,10 +33,11 @@ See the [benchmark registry](BENCHMARKS.md),
 [labelled accuracy preparation plan](docs/labelled_accuracy_benchmark_plan.md)
 for current and candidate dataset-method combinations.
 
-The [FOR-instance TLS2trees pilot runbook](docs/for_instance_tls2trees_pilot.md)
-defines the first labelled run. It evaluates semantic classes `4` and `6`
-against positive `treeID` references. Class `5` is reserved for separately
-labelled future leaf-on work.
+The [SegmentAnyTree/FOR-instance runbook](docs/segmentanytree_for_instance_benchmark.md)
+defines the next labelled benchmark. It evaluates semantic classes `4`, `5`
+and `6` against positive `treeID` references. The earlier
+[FOR-instance TLS2trees pilot](docs/for_instance_tls2trees_pilot.md) remains
+available and uses its separate leaf-off class definition.
 
 ## Important Limitation
 
@@ -116,11 +118,14 @@ python -m pip install -r requirements.txt
 | Purpose | Path |
 | --- | --- |
 | Project root | `~/scratch/tree-seg-benchmark` |
-| Dataset root | `~/data/datasets/frdr_treeiso` |
+| FRDR dataset root | `~/data/datasets/frdr_treeiso` |
+| FOR-instance dataset root | `~/data/datasets/for_instance/FORinstance_dataset` |
 | TLS2trees checkout | `external/TLS2trees` |
+| SegmentAnyTree checkout | `external/SegmentAnyTree` |
 | Converted inputs | `data/interim/tls2trees/frdr_full/<plot_name>/` |
-| Predictions | `data/predictions/tls2trees/frdr_full/<plot_name>/` |
-| Logs | `logs/tls2trees_frdr_full/` |
+| SegmentAnyTree predictions | `data/predictions/segmentanytree/for_instance/<collection>/<plot_name>/` |
+| SegmentAnyTree normalised predictions | `data/interim/segmentanytree/for_instance/<collection>/<plot_name>/normalised_predictions/` |
+| Logs | `logs/<benchmark>/` |
 | Metadata | `results/metadata/` |
 | Tables | `results/tables/` |
 
@@ -166,6 +171,7 @@ responsibilities separate:
 ├── requirements.txt
 ├── configs/
 │   ├── for_instance_accuracy_benchmark.yml
+│   ├── for_instance_segmentanytree_benchmark.yml
 │   ├── for_instance_tls2trees_accuracy.yml
 │   ├── frdr_tls2trees_benchmark.yml
 │   └── wytham_accuracy_benchmark.yml
@@ -175,11 +181,14 @@ responsibilities separate:
 │   ├── for_instance_tls2trees_pilot.md
 │   ├── frdr_tls2trees_results.md
 │   ├── labelled_accuracy_benchmark_plan.md
+│   ├── segmentanytree_for_instance_benchmark.md
 │   └── tls2trees_frdr_benchmark_runbook.md
 ├── examples/
 │   ├── README.md
 │   ├── for_instance_inventory_summary.csv
 │   ├── frdr_dataset_inventory_example.csv
+│   ├── segmentanytree_for_instance_plot_metrics_example.csv
+│   ├── segmentanytree_for_instance_summary_example.csv
 │   ├── tls2trees_conversion_metadata_example.json
 │   ├── tls2trees_frdr_prediction_summary.csv
 │   ├── tls2trees_prediction_summary_example.csv
@@ -189,10 +198,14 @@ responsibilities separate:
 │   │   ├── convert_frdr_woods_to_tls2trees_ply.py
 │   │   ├── convert_for_instance_to_tls2trees_ply.py
 │   │   ├── inspect_for_instance_inventory.py
-│   │   └── inspect_frdr_dataset_inventory.py
+│   │   ├── inspect_frdr_dataset_inventory.py
+│   │   └── select_for_instance_plot.py
 │   ├── evaluation/
-│   │   └── instance_iou_f1.py
+│   │   ├── instance_iou_f1.py
+│   │   └── summarise_for_instance_segmentanytree_benchmark.py
 │   ├── methods/
+│   │   ├── normalise_segmentanytree_predictions.py
+│   │   ├── run_segmentanytree_for_instance.py
 │   │   ├── run_tls2trees_instance_for_plot.py
 │   │   ├── run_tls2trees_for_instance_plot.py
 │   │   ├── summarise_tls2trees_outputs.py
@@ -204,14 +217,20 @@ responsibilities separate:
 │       ├── evaluate_for_instance_tls2trees_pilot.sbatch
 │       ├── inspect_for_instance_inventory.sbatch
 │       ├── inspect_frdr_inventory.sbatch
+│       ├── normalise_segmentanytree_for_instance_array.sbatch
+│       ├── evaluate_segmentanytree_for_instance_array.sbatch
+│       ├── run_segmentanytree_for_instance_array.sbatch
+│       ├── run_segmentanytree_for_instance_pilot.sbatch
 │       ├── run_tls2trees_for_instance_pilot.sbatch
 │       ├── run_tls2trees_frdr_array.sbatch
+│       ├── summarise_segmentanytree_for_instance.sbatch
 │       └── summarise_tls2trees_frdr_outputs.sbatch
 ├── src/
 │   └── benchmark/
 │       ├── __init__.py
 │       └── ply_io.py
 └── tests/
+    ├── test_segmentanytree_for_instance_workflow.py
     ├── test_for_instance_tls2trees_workflow.py
     └── test_frdr_tls2trees_workflow.py
 ```
@@ -222,63 +241,50 @@ The [`examples/`](examples/) directory contains the completed FRDR per-plot
 summary, a small FOR-instance inventory extract, and synthetic schema examples.
 No coordinates, point clouds, prediction files or logs are included.
 
-## Recommended Pilot First
+## Recommended SegmentAnyTree Pilot
 
-Create the log directory and check project storage before submitting jobs.
-Slurm opens its output files before the job script starts:
+Inspect the external SegmentAnyTree checkout and configure its command before
+submitting work. The pilot script performs a dry-run by default:
 
 ```bash
 cd ~/scratch/tree-seg-benchmark
-mkdir -p logs/tls2trees_frdr_full
-
-df -h ~/scratch/tree-seg-benchmark
-du -h --max-depth=2 ~/scratch/tree-seg-benchmark/data 2>/dev/null | sort -h
-
-sbatch --array=0-0 scripts/slurm/convert_frdr_to_tls2trees_array.sbatch
+mkdir -p logs/segmentanytree_for_instance
+git -C external/SegmentAnyTree rev-parse HEAD
+sed -n '1,240p' external/SegmentAnyTree/README.md
+sbatch scripts/slurm/inspect_for_instance_inventory.sbatch
+sbatch scripts/slurm/run_segmentanytree_for_instance_pilot.sbatch
 ```
 
-Wait for conversion task `0` to finish successfully, inspect its metadata, and
-then submit only the matching instance task:
-
-```bash
-sbatch --array=0-0 scripts/slurm/run_tls2trees_frdr_array.sbatch
-```
-
-After the instance task finishes successfully:
-
-```bash
-python scripts/methods/summarise_tls2trees_outputs.py \
-  --plot-name LPine_plot1 \
-  --output-dir data/predictions/tls2trees/frdr_full/LPine_plot1
-```
-
-Do not submit the full arrays as independent jobs. Follow the dependency-chained
-commands in
-[`docs/tls2trees_frdr_benchmark_runbook.md`](docs/tls2trees_frdr_benchmark_runbook.md)
-for the complete preflight, inventory and remaining plots.
+The pilot fails safely while `method.command_template` is unset. After
+inspection, follow the prediction, normalisation, evaluation and
+dependency-chained full-array commands in the
+[SegmentAnyTree/FOR-instance runbook](docs/segmentanytree_for_instance_benchmark.md).
+GPU resources must be added only when the installed method and Barkla
+configuration confirm they are required.
 
 ## Recommended Staged Execution
 
-1. Run and review the dataset inventory.
-2. Run conversion for one small plot selected from the inventory.
-3. Dry-run and execute the instance stage for that plot.
-4. Repeat conversion and execution for one large plot.
-5. Submit the remaining Slurm array tasks only after both pilots succeed.
-6. Summarise all completed predictions.
+1. Inspect the installed SegmentAnyTree version, command, dependencies and
+   output schema.
+2. Run and review the FOR-instance inventory and split assignments.
+3. Dry-run and then execute `CULS/plot_1_annotated.las`.
+4. Normalise and evaluate the pilot, then fix the final evaluation settings.
+5. Submit prediction, normalisation and evaluation arrays with dependencies.
+6. Summarise plot, collection and split accuracy only after all jobs finish.
 
-The conversion and prediction arrays check available project-filesystem space
-before heavy work. Set `TLS2TREES_MIN_FREE_GB` to change the configured reserve.
+Do not train or tune on the test split. External NEWFOR results should be
+compared only when metrics, class filters, IoU thresholds and coordinate
+tolerances are compatible.
 
 ## Outputs
 
-The workflow writes:
+The SegmentAnyTree/FOR-instance workflow writes:
 
-- `*.leafoff.ply` files containing individual predicted trees;
-- per-plot conversion metadata JSON;
+- method-specific predictions outside Git;
+- one normalised XYZ PLY per predicted tree;
 - per-plot run metadata JSON, including runtime and peak memory when available;
-- per-plot output summary JSON;
-- per-tree CSV summaries;
-- `results/tables/tls2trees_frdr_prediction_summary.csv`.
+- per-plot evaluation, matched-pair and unmatched-instance tables;
+- plot, collection and split benchmark summary tables.
 
 These outputs are intentionally excluded from Git.
 

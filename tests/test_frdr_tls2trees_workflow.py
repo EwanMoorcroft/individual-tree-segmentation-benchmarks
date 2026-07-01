@@ -348,6 +348,7 @@ def test_for_instance_inventory_example_schema() -> None:
     required = {
         "relative_path",
         "collection",
+        "split",
         "point_count",
         "reference_tree_count",
         "classification_values",

@@ -9,12 +9,13 @@ adapter, method runner, scheduler workflow, metadata outputs and focused tests.
 | Dataset | Method | Status | Configuration or note |
 | --- | --- | --- | --- |
 | FRDR treeiso TLS | TLS2trees | Prediction benchmark completed | [`frdr_tls2trees_benchmark.yml`](configs/frdr_tls2trees_benchmark.yml) |
-| FOR-instance | SegmentAnyTree | Candidate accuracy benchmark | [`for_instance_accuracy_benchmark.yml`](configs/for_instance_accuracy_benchmark.yml) |
-| FOR-instance | TLS2trees | Leaf-off accuracy pilot workflow implemented; not yet run | [`for_instance_tls2trees_accuracy.yml`](configs/for_instance_tls2trees_accuracy.yml) |
+| FOR-instance | SegmentAnyTree | Accuracy benchmark setup in progress | [`for_instance_segmentanytree_benchmark.yml`](configs/for_instance_segmentanytree_benchmark.yml) |
+| FOR-instance | TLS2trees | Candidate compatibility test | [`for_instance_tls2trees_accuracy.yml`](configs/for_instance_tls2trees_accuracy.yml) |
 | FOR-instance | TreeLearn or another deep learning method | Candidate accuracy benchmark | Respect the supplied development/test split |
 | Wytham Woods | TLS2trees | Candidate TLS accuracy benchmark | [`wytham_accuracy_benchmark.yml`](configs/wytham_accuracy_benchmark.yml) |
 | Wytham Woods | SegmentAnyTree | Candidate accuracy benchmark | Plot-level input reconstruction required |
 | Wytham Woods | Traditional TLS method | Candidate baseline | Plot-level input reconstruction required |
+| NEWFOR | SegmentAnyTree | External comparison dataset; not implemented here | Add only through a separate documented dataset config |
 
 The FRDR LAZ files do not contain individual-tree reference instance labels.
 The TLS2trees workflow therefore preserves predictions and operational metadata
@@ -24,9 +25,11 @@ No candidate accuracy row indicates a completed method run or a reported
 accuracy result. Dataset readiness and remaining preprocessing are documented
 in [`docs/dataset_feasibility.md`](docs/dataset_feasibility.md).
 
-The first labelled workflow uses FOR-instance
-`CULS/plot_1_annotated.las` with TLS2trees. See
-[`docs/for_instance_tls2trees_pilot.md`](docs/for_instance_tls2trees_pilot.md).
+The next full labelled workflow uses SegmentAnyTree on the 32 FOR-instance LAS
+files, beginning with `CULS/plot_1_annotated.las`. See
+[`docs/segmentanytree_for_instance_benchmark.md`](docs/segmentanytree_for_instance_benchmark.md).
+The earlier TLS2trees pilot scaffolding remains available as a compatibility
+test.
 
 ## Adding A Benchmark
 

@@ -29,6 +29,8 @@ _PLY_DTYPES = {
 
 TLS2TREES_COLUMNS = ("x", "y", "z", "n_z", "label")
 TLS2TREES_DTYPE = np.dtype([(name, "<f8") for name in TLS2TREES_COLUMNS])
+XYZ_COLUMNS = ("x", "y", "z")
+XYZ_DTYPE = np.dtype([(name, "<f8") for name in XYZ_COLUMNS])
 
 
 @dataclass(frozen=True)
@@ -207,4 +209,52 @@ def write_tls2trees_ply(
         temporary_path.unlink(missing_ok=True)
         raise
 
+    return path
+
+
+def write_xyz_ply(
+    output_path: str | Path,
+    coordinates: np.ndarray,
+    *,
+    overwrite: bool = False,
+) -> Path:
+    """Write XYZ coordinates as a binary little-endian PLY."""
+
+    path = Path(output_path).expanduser().resolve()
+    if path.exists() and not overwrite:
+        raise FileExistsError(f"Output exists; pass --overwrite to replace it: {path}")
+
+    points = np.asarray(coordinates, dtype=np.float64)
+    if points.ndim != 2 or points.shape[1] != 3:
+        raise ValueError(
+            f"Coordinates must have shape (point_count, 3); received {points.shape}"
+        )
+    if not np.all(np.isfinite(points)):
+        raise ValueError("Coordinates contain non-finite values")
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_name(f".{path.name}.tmp")
+    header = (
+        "ply\n"
+        "format binary_little_endian 1.0\n"
+        "comment source tree-seg-benchmark\n"
+        f"element vertex {len(points)}\n"
+        "property float64 x\n"
+        "property float64 y\n"
+        "property float64 z\n"
+        "end_header\n"
+    ).encode("ascii")
+
+    records = np.empty(len(points), dtype=XYZ_DTYPE)
+    for index, name in enumerate(XYZ_COLUMNS):
+        records[name] = points[:, index]
+
+    try:
+        with temporary_path.open("wb") as handle:
+            handle.write(header)
+            handle.write(records.tobytes())
+        os.replace(temporary_path, path)
+    except Exception:
+        temporary_path.unlink(missing_ok=True)
+        raise
     return path

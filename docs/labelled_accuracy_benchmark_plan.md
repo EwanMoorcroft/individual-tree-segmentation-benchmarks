@@ -12,13 +12,12 @@ Expected fields:
 
 - `treeID`: plot-wise individual-tree reference identifier;
 - `classification`: semantic point class;
-- first leaf-off reference classes: `4` (stem) and `6` (woody branches);
-- ignored classes for the first leaf-off evaluation: `0`, `1`, `2`, `3`, `5`.
+- SegmentAnyTree reference classes: `4` (stem), `5` (live branches) and `6`
+  (woody branches);
+- ignored classes: `0`, `1`, `2` and `3`.
 
-Class `5` contains live branches. It is excluded from the first pilot because
-the configured TLS2trees instance stage produces leaf-off predictions. Future
-leaf-on experiments may include class `5`, but they require a separate
-configuration and result label.
+The retained TLS2trees leaf-off pilot uses classes `4` and `6` only. That
+method-specific filter must not be carried into the SegmentAnyTree benchmark.
 
 ## Split Control
 
@@ -62,8 +61,8 @@ The existing evaluator accepts:
   point cloud with a reference instance field.
 
 Every accuracy result must include reference and prediction counts, TP, FP, FN,
-precision, recall, F1, mean matched IoU, IoU threshold, coordinate tolerance,
-ignored labels/classes, runtime and peak memory.
+precision, recall, F1, mean and median matched IoU, IoU threshold, coordinate
+tolerance, ignored labels/classes, runtime and peak memory.
 
 ## Method Wrapper Requirements
 
@@ -78,10 +77,16 @@ Each method wrapper should:
 - emit predictions in a documented instance representation;
 - record method version, parameters, environment and resource use.
 
-TLS2trees on FOR-instance is a compatibility test because FOR-instance is UAV
-laser scanning data. SegmentAnyTree and TreeLearn or another deep learning
-method are candidate accuracy methods, subject to their input and checkpoint
-requirements.
+SegmentAnyTree is the primary FOR-instance accuracy method. Its 32-plot
+workflow preserves split labels from `data_split_metadata.csv`, normalises
+method outputs and aggregates plot, collection and split metrics. TLS2trees on
+FOR-instance remains a compatibility test because FOR-instance is UAV laser
+scanning data.
+
+Do not train or tune on the test split. Fix the prediction adapter, semantic
+classes, coordinate tolerance, IoU threshold and evaluator before final test
+evaluation. Comparisons with external NEWFOR results are valid only when those
+settings and metrics are compatible.
 
 ## Wytham Follow-On
 
@@ -93,5 +98,7 @@ methods. Reference IDs must not leak into method features.
 No accuracy claim is valid until predictions have been matched against the
 held-out reference instances using the documented evaluator settings.
 
-The implemented first workflow is documented in
+The primary workflow is documented in
+[`segmentanytree_for_instance_benchmark.md`](segmentanytree_for_instance_benchmark.md).
+The earlier TLS2trees compatibility pilot remains documented in
 [`for_instance_tls2trees_pilot.md`](for_instance_tls2trees_pilot.md).

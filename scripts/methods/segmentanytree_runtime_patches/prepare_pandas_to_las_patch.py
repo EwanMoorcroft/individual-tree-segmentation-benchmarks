@@ -13,9 +13,11 @@ CAST_OLD = (
     "las_file[column] = "
     "df[column].astype(standard_columns_with_data_types[column])"
 )
-CAST_NEW = (
-    "values = df[column].round() if column == \"scan_angle\" else df[column]\n"
-    "            las_file[column] = "
+CAST_VALUE_NEW = (
+    'values = df[column].round() if column == "scan_angle" else df[column]'
+)
+CAST_ASSIGN_NEW = (
+    "las_file[column] = "
     "values.astype(standard_columns_with_data_types[column])"
 )
 
@@ -23,12 +25,30 @@ CAST_NEW = (
 def patch_source(source: str) -> str:
     if source.count(SCAN_ANGLE_OLD) != 1:
         raise ValueError("Expected one unsigned scan_angle declaration")
-    if source.count(CAST_OLD) != 1:
+    source_lines = source.splitlines()
+    cast_lines = [
+        index
+        for index, line in enumerate(source_lines)
+        if line.strip() == CAST_OLD
+    ]
+    if len(cast_lines) != 1:
         raise ValueError("Expected one standard LAS column cast")
+
+    cast_index = cast_lines[0]
+    cast_line = source_lines[cast_index]
+    indentation = cast_line[: len(cast_line) - len(cast_line.lstrip())]
+    replacement_lines = [
+        f"{indentation}{CAST_VALUE_NEW}",
+        f"{indentation}{CAST_ASSIGN_NEW}",
+    ]
+    trailing_newline = "\n" if source.endswith("\n") else ""
     patched = source.replace(SCAN_ANGLE_OLD, SCAN_ANGLE_NEW)
-    patched = patched.replace(CAST_OLD, CAST_NEW)
+    patched_lines = patched.splitlines()
+    patched_lines[cast_index : cast_index + 1] = replacement_lines
+    patched = "\n".join(patched_lines) + trailing_newline
     if patched == source:
         raise ValueError("No export compatibility changes were applied")
+    compile(patched, "pandas_to_las.py", "exec")
     return patched
 
 

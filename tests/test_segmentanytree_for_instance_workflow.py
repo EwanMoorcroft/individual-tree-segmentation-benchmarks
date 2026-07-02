@@ -444,6 +444,13 @@ for column in standard_columns_with_data_types:
 
     assert "'scan_angle': 'int16'" in patched
     assert 'df[column].round() if column == "scan_angle"' in patched
+    assert (
+        "\n        values = df[column].round() if column == \"scan_angle\" "
+        "else df[column]\n"
+        "        las_file[column] = values.astype("
+        "standard_columns_with_data_types[column])\n"
+    ) in patched
+    compile(patched, "pandas_to_las.py", "exec")
     with pytest.raises(ValueError, match="unsigned scan_angle"):
         patcher.patch_source(patched)
 

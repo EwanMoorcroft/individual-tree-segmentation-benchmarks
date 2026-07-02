@@ -2,31 +2,14 @@
 
 ## Status
 
-The prediction, normalisation and labelled evaluation pilot completed for
-`CULS/plot_1_annotated.las`, a development-split plot containing 1,816,672
-input points and six positive reference trees. The full 32-file benchmark has
-not been run.
+The full benchmark completed prediction, normalisation and labelled evaluation
+for all 32 FOR-instance LAS files. The result set contains 21 development plots
+and 11 test plots across CULS, NIBIO, RMIT, SCION and TUWIEN. No plot is missing
+from the final summary.
 
-The pilot produced a labelled LAZ file, 21 normalised predicted instances and
-an evaluation against the original `treeID` reference. At an IoU threshold of
-0.5 and coordinate tolerance of 0.02 m, all six reference trees were matched:
-
-| Metric | Pilot value |
-| --- | ---: |
-| Predicted trees | 21 |
-| Reference trees | 6 |
-| True positives | 6 |
-| False positives | 15 |
-| False negatives | 0 |
-| Precision | 0.285714 |
-| Recall | 1.000000 |
-| F1 | 0.444444 |
-| Mean matched IoU | 0.850764 |
-| Median matched IoU | 0.862035 |
-
-These are pilot results, not full benchmark results. The public-safe record is
-in
-[`examples/segmentanytree_for_instance_pilot_metrics.csv`](../examples/segmentanytree_for_instance_pilot_metrics.csv).
+The complete results and their limitations are documented in
+[`segmentanytree_for_instance_results.md`](segmentanytree_for_instance_results.md).
+The public workbook and CSV tables are in [`examples/`](../examples/).
 
 ## Dataset And Evaluation Labels
 
@@ -35,9 +18,9 @@ labels in `classification`. This benchmark includes classes `4` (stem), `5`
 (live branches) and `6` (woody branches). Classes `0`, `1`, `2` and `3`, and
 non-positive tree IDs, are ignored during reference construction.
 
-The pilot is assigned to the `dev` split in `data_split_metadata.csv`. Split
-labels are retained for every array task; evaluation plots must not be used for
-parameter tuning.
+The inventory contains 32 LAS files, 151,478,959 points and 1,130 positive
+reference trees. Split labels are read from `data_split_metadata.csv` and
+retained in every evaluation row.
 
 ## Method And External Dependency
 
@@ -50,16 +33,21 @@ SegmentAnyTree remains an external dependency:
 - container source: `docker://maciekwielgosz/segment-any-tree:latest`;
 - Barkla image: `~/scratch/containers/segment-any-tree_latest.sif`.
 
-The external checkout, approximately 7.4 GB SIF image, model checkpoint and
-predictions are excluded from this repository.
+The external checkout, approximately 7.4 GB SIF image, model checkpoint, raw
+data and prediction outputs are excluded from this repository.
 
-## Barkla Execution Route
+## Working Barkla Setup
 
-The working route uses Barkla2, Rocky Linux 9, the `gpu-l40s` partition and an
-NVIDIA L40S GPU. Repository utilities use
-`miniforge3/25.3.0-python3.12.10` and
-`~/fastscratch/venvs/treebench`; inference uses Apptainer 1.3.6 and Python 3.8
-inside the container.
+The validated execution route uses Barkla2, Rocky Linux 9, Apptainer 1.3.6 and
+NVIDIA L40S GPUs. Repository utilities use
+`miniforge3/25.3.0-python3.12.10` with
+`~/fastscratch/venvs/treebench`. Inference runs under Python 3.8 inside the
+container.
+
+The full prediction array ran on `gpu-l40s-low`. Each task requested one GPU,
+eight CPUs and 48 GiB RAM. The completed tasks used at most 9.608 GiB and the
+longest observed per-plot runtime was comfortably below one hour, so the
+reusable prediction script now requests a one-hour limit.
 
 Podman was tested first, but its rootless runtime directory under `/run/user`
 was unavailable in the Slurm job. Apptainer provided GPU visibility and
@@ -75,47 +63,35 @@ inconsistencies had to be resolved before inference could run on Barkla:
   `~/fastscratch/segmentanytree_pyuser_v1` contains NumPy 1.24.4, pandas
   1.5.3, SciPy 1.10.1 and scikit-learn 1.3.2.
 
-The immutable container also required a writable bind for its processed-data
-cache. During clustering, the upstream single-process
-`multiprocessing.Pool` blocked after CUDA initialisation. The opt-in
-`sitecustomize.py` compatibility layer runs those one-worker maps serially.
-The final LAS export required signed 16-bit, rounded `scan_angle` values. The
-runtime patch preparation script applies that narrow correction to the tested
-external source without modifying or copying the external repository into
-Git.
+The immutable container also required a writable processed-data cache. During
+clustering, the upstream one-worker `multiprocessing.Pool` blocked after CUDA
+initialisation. The opt-in `sitecustomize.py` compatibility layer runs those
+one-worker maps serially. The LAS exporter also required signed 16-bit,
+rounded `scan_angle` values. The runtime patch preparation script applies that
+narrow correction without changing the external checkout.
 
-Further detail is recorded in
+Further deployment detail is in
 [`segmentanytree_barkla_debug_log.md`](segmentanytree_barkla_debug_log.md).
 
-## Pilot Commands
+## Pilot Validation
 
-The successful investigation used
-`run_segmentanytree_for_instance_pilot_apptainer_v3.sbatch`. Inference and
-instance prediction finished in that job, but the upstream final LAS export
-failed. `postprocess_segmentanytree_pilot_v1.sbatch` reran the exporter with the
-signed `scan_angle` correction, and
-`evaluate_segmentanytree_pilot_v2.sbatch` completed the labelled evaluation.
-Those numbered investigation scripts were consolidated rather than retained.
+The canonical pilot file is `CULS/plot_1_annotated.las`. It contains 1,816,672
+input points and six positive reference trees. The corrected pilot chain
+completed with Slurm jobs 9548698, 9548699 and 9548700 for prediction,
+normalisation and evaluation respectively.
 
-The reusable pilot now applies both runtime corrections:
+The canonical rerun produced 20 predicted trees, six true positives, 14 false
+positives and no false negatives. Its precision was 0.300000, recall 1.000000,
+F1 0.461538 and mean matched IoU 0.850730. These values supersede the earlier
+investigation record that required separate postprocessing.
+
+To repeat the pilot:
 
 ```bash
 cd ~/scratch/tree-seg-benchmark
 mkdir -p logs/segmentanytree_for_instance
 
-SAT_CONTAINER=$(sbatch --parsable \
-  scripts/slurm/test_segmentanytree_apptainer.sbatch)
-
-SAT_STACK=$(sbatch --parsable \
-  --dependency=afterok:${SAT_CONTAINER} \
-  scripts/slurm/install_segmentanytree_python_stack.sbatch)
-
-SAT_STACK_TEST=$(sbatch --parsable \
-  --dependency=afterok:${SAT_STACK} \
-  scripts/slurm/test_segmentanytree_python_stack_repair.sbatch)
-
 SAT_PILOT=$(sbatch --parsable \
-  --dependency=afterok:${SAT_STACK_TEST} \
   --export=ALL,SEGMENTANYTREE_EXECUTE=1 \
   scripts/slurm/run_segmentanytree_for_instance_pilot_apptainer.sbatch)
 
@@ -130,62 +106,18 @@ SAT_EVAL=$(sbatch --parsable \
   scripts/slurm/evaluate_segmentanytree_for_instance_array.sbatch)
 ```
 
-The install job is needed only when creating or deliberately rebuilding the
-controlled userbase. The prediction script leaves an existing final LAZ
-unchanged and refuses a non-empty partial output directory. Archive the
-previous ignored pilot output before a clean reproduction.
+Use `install_segmentanytree_python_stack.sbatch` and
+`test_segmentanytree_python_stack_repair.sbatch` only when deliberately
+creating or rebuilding the controlled userbase.
 
-The prediction job invokes the container interface:
+## Full Benchmark Workflow
 
-```text
-bash run_inference.sh /sat_input /sat_output true
-```
-
-The Python wrapper remains useful for selection and dry-run metadata, but it
-does not execute this benchmark natively:
+The completed run used the following reusable dependency chain:
 
 ```bash
-python scripts/methods/run_segmentanytree_for_instance.py \
-  --plot-path CULS/plot_1_annotated.las \
-  --dry-run
-```
+cd ~/scratch/tree-seg-benchmark
+mkdir -p logs/segmentanytree_for_instance
 
-## Pilot Outputs
-
-Full outputs remain ignored by Git:
-
-- labelled prediction:
-  `data/predictions/segmentanytree/for_instance/CULS/plot_1_annotated/final_results/plot_1_annotated_out.laz`;
-- normalised instances:
-  `data/interim/segmentanytree/for_instance/CULS/plot_1_annotated/normalised_predictions/`;
-- run and evaluation metadata:
-  `results/metadata/segmentanytree_for_instance/`;
-- pilot metrics:
-  `results/tables/segmentanytree_for_instance/per_plot/CULS_plot_1_annotated.csv`;
-- matched pairs:
-  `results/tables/segmentanytree_for_instance/per_plot/CULS_plot_1_annotated_matches.csv`;
-- scheduler logs: `logs/segmentanytree_for_instance/`.
-
-The final prediction contains `PredInstance` and `PredSemantic`. It contains
-1,816,728 points, 56 more than the source LAS because the upstream merge uses
-coordinate joins across intermediate outputs. The normaliser separates
-positive `PredInstance` values into one XYZ PLY per predicted tree. Evaluation
-then matches those coordinates to the unchanged source LAS at the configured
-0.02 m tolerance. This point-count difference remains a scaling risk and must
-be checked on every plot.
-
-The recorded pilot runtime was 175 seconds across inference and repaired
-postprocessing, with peak memory of 6.334 GB. The postprocessing repair took 35
-seconds. These measurements are pilot observations and should not be treated
-as full-array resource estimates.
-
-## Full Benchmark
-
-Before submitting all 32 files, confirm the canonical pilot script reproduces
-the final LAZ without a separate repair job and inspect the 15 unmatched pilot
-predictions. Then submit the dependency chain:
-
-```bash
 PRED_JOB=$(sbatch --parsable \
   --export=ALL,SEGMENTANYTREE_EXECUTE=1 \
   scripts/slurm/run_segmentanytree_for_instance_array.sbatch)
@@ -198,10 +130,62 @@ EVAL_JOB=$(sbatch --parsable \
   --dependency=afterok:${NORM_JOB} \
   scripts/slurm/evaluate_segmentanytree_for_instance_array.sbatch)
 
-sbatch --dependency=afterok:${EVAL_JOB} \
-  scripts/slurm/summarise_segmentanytree_for_instance.sbatch
+SUMMARY_JOB=$(sbatch --parsable \
+  --dependency=afterok:${EVAL_JOB} \
+  scripts/slurm/summarise_segmentanytree_for_instance.sbatch)
 ```
 
-For each plot, verify completion status, final point count, positive predicted
-instance count, coordinate matching, runtime and peak memory. Resolve missing
-or failed tasks before reporting collection, split or overall results.
+The completed full-array jobs were 9548701 for prediction, 9548702 for
+normalisation, 9548703 for evaluation and 9548704 for summarisation. All 32
+tasks in each array completed successfully.
+
+The prediction job invokes the container interface:
+
+```text
+bash run_inference.sh /sat_input /sat_output true
+```
+
+The Python wrapper remains useful for plot selection and dry-run metadata, but
+it does not execute this benchmark natively:
+
+```bash
+python scripts/methods/run_segmentanytree_for_instance.py \
+  --plot-path CULS/plot_1_annotated.las \
+  --dry-run
+```
+
+## Working Output Locations
+
+Large outputs remain ignored by Git:
+
+- labelled predictions:
+  `data/predictions/segmentanytree/for_instance/<collection>/<plot>/final_results/`;
+- normalised instances:
+  `data/interim/segmentanytree/for_instance/<collection>/<plot>/normalised_predictions/`;
+- run and evaluation metadata:
+  `results/metadata/segmentanytree_for_instance/`;
+- per-plot metrics and match assignments:
+  `results/tables/segmentanytree_for_instance/per_plot/`;
+- full plot table:
+  `results/tables/segmentanytree_for_instance_plot_metrics.csv`;
+- collection and split summaries:
+  `results/tables/segmentanytree_for_instance_summary_by_collection.csv` and
+  `results/tables/segmentanytree_for_instance_summary_by_split.csv`;
+- scheduler logs: `logs/segmentanytree_for_instance/`.
+
+The final labelled predictions use `PredInstance` and `PredSemantic`. The
+normaliser writes one XYZ PLY per positive `PredInstance`. Evaluation matches
+those coordinates to the unchanged source LAS at a 0.02 m tolerance and uses a
+0.5 IoU threshold.
+
+## Validation After A Rerun
+
+After any rerun:
+
+1. confirm 32 completed rows and no missing relative path;
+2. confirm each final LAZ contains positive `PredInstance` values;
+3. compare output and input point counts;
+4. confirm 32 normalisation and 32 evaluation metadata records;
+5. rebuild the summary and public-safe tables;
+6. inspect the NIBIO collection separately; and
+7. retain the supplied split labels and unchanged evaluation thresholds.

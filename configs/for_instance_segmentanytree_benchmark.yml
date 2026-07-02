@@ -2,6 +2,7 @@ project:
   name: tree-seg-benchmark
   benchmark_name: for_instance_segmentanytree
   mode: labelled_accuracy_benchmark
+  status: completed
   barkla_root: "~/scratch/tree-seg-benchmark"
   barkla_specific: true
 
@@ -50,6 +51,10 @@ benchmark:
   preserve_split_labels: true
   prevent_test_split_tuning: true
   array_size: 32
+  completed_plot_count: 32
+  completed_prediction_count: 32
+  completed_normalisation_count: 32
+  completed_evaluation_count: 32
 
 method:
   name: SegmentAnyTree
@@ -120,15 +125,21 @@ paths:
   evaluation_metadata_root: "results/metadata/segmentanytree_for_instance/evaluations"
   per_plot_metrics_root: "results/tables/segmentanytree_for_instance/per_plot"
   tables_root: "results/tables/segmentanytree_for_instance"
+  plot_metrics_csv: "results/tables/segmentanytree_for_instance_plot_metrics.csv"
+  collection_summary_csv: "results/tables/segmentanytree_for_instance_summary_by_collection.csv"
+  split_summary_csv: "results/tables/segmentanytree_for_instance_summary_by_split.csv"
+  benchmark_summary_json: "results/metadata/segmentanytree_for_instance/benchmark_summary.json"
+  public_results_root: "examples"
+  public_workbook: "examples/segmentanytree_for_instance_full_results.xlsx"
   logs_root: "logs/segmentanytree_for_instance"
 
 runtime:
   overwrite: false
   capture_stdout_stderr: true
-  prediction_time_limit: "04:00:00"
+  prediction_time_limit: "01:00:00"
   prediction_memory: "48G"
   prediction_cpus: 8
   normalisation_memory: "16G"
   evaluation_memory: "32G"
-  gpu_partition: gpu-l40s
+  gpu_partition: gpu-l40s-low
   gpu_request: "gpu:1"

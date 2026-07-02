@@ -51,12 +51,22 @@ per predicted tree.
 | FOR-instance | Positive `treeID` values in annotated LAS files | F1 and matched IoU feasible |
 | Wytham Woods | One segmented reference tree per PLY filename | F1 and matched IoU feasible after scene reconstruction |
 
-The SegmentAnyTree development pilot metrics are stored outside Git under
+The full SegmentAnyTree metrics are stored outside Git under
 `results/tables/segmentanytree_for_instance/per_plot/`, with evaluation
-metadata under `results/metadata/segmentanytree_for_instance/`. A small
-public-safe pilot row is retained in
-[`examples/segmentanytree_for_instance_pilot_metrics.csv`](../examples/segmentanytree_for_instance_pilot_metrics.csv).
-This is a pilot record, not a full benchmark summary.
+metadata under `results/metadata/segmentanytree_for_instance/`. Public-safe
+per-plot, collection, split, matched-pair and inventory tables are retained in
+[`examples/`](../examples/), and the interpretation is documented in
+[`segmentanytree_for_instance_results.md`](segmentanytree_for_instance_results.md).
+
+Summary tables distinguish two IoU aggregations:
+
+- the mean of per-plot matched-IoU means, where plots without accepted matches
+  contribute zero in the recorded plot table; and
+- pooled matched IoU, calculated directly across all accepted matched pairs.
+
+The pooled value describes match quality only. It must be reported with
+precision, recall and F1 because unmatched predictions and references do not
+contribute an IoU value.
 
 The evaluator in
 [`scripts/evaluation/instance_iou_f1.py`](../scripts/evaluation/instance_iou_f1.py)

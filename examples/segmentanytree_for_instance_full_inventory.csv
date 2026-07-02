@@ -1,0 +1,33 @@
+relative_path,collection,plot_name,split,point_count,reference_tree_count,classification_values,has_treeID,has_treeSP,positive_treeID_point_count,zero_treeID_point_count
+CULS/plot_1_annotated.las,CULS,plot_1_annotated,dev,1816672,6,"[2, 3, 4, 5, 6]",True,True,379167,1437505
+CULS/plot_2_annotated.las,CULS,plot_2_annotated,test,3946098,20,"[2, 3, 4, 5, 6]",True,True,1252762,2693336
+CULS/plot_3_annotated.las,CULS,plot_3_annotated,dev,3084916,21,"[2, 3, 4, 5, 6]",True,True,1045496,2039420
+NIBIO/plot_10_annotated.las,NIBIO,plot_10_annotated,dev,4066375,25,"[0, 1, 2, 3, 4, 5, 6]",True,True,1559490,2506885
+NIBIO/plot_11_annotated.las,NIBIO,plot_11_annotated,dev,6374998,29,"[0, 1, 2, 3, 4, 5, 6]",True,True,2968124,3406874
+NIBIO/plot_12_annotated.las,NIBIO,plot_12_annotated,dev,7866181,26,"[0, 1, 2, 3, 4, 5, 6]",True,True,3053159,4813022
+NIBIO/plot_13_annotated.las,NIBIO,plot_13_annotated,dev,6705567,35,"[0, 1, 2, 3, 4, 5, 6]",True,True,2250143,4455424
+NIBIO/plot_16_annotated.las,NIBIO,plot_16_annotated,dev,5460307,38,"[0, 1, 2, 3, 4, 5, 6]",True,True,2131260,3329047
+NIBIO/plot_17_annotated.las,NIBIO,plot_17_annotated,test,6890118,30,"[0, 1, 2, 3, 4, 5, 6]",True,True,2610198,4279920
+NIBIO/plot_18_annotated.las,NIBIO,plot_18_annotated,test,6915118,27,"[1, 2, 3, 4, 5, 6]",True,True,2064772,4850346
+NIBIO/plot_19_annotated.las,NIBIO,plot_19_annotated,dev,7061905,33,"[0, 1, 2, 3, 4, 5, 6]",True,True,2147286,4914619
+NIBIO/plot_1_annotated.las,NIBIO,plot_1_annotated,test,5000698,37,"[1, 2, 3, 4, 5, 6]",True,True,2349911,2650787
+NIBIO/plot_21_annotated.las,NIBIO,plot_21_annotated,dev,5846863,23,"[1, 2, 3, 4, 5, 6]",True,True,2144181,3702682
+NIBIO/plot_22_annotated.las,NIBIO,plot_22_annotated,test,6366607,20,"[0, 1, 2, 3, 4, 5, 6]",True,True,2234385,4132222
+NIBIO/plot_23_annotated.las,NIBIO,plot_23_annotated,test,6163377,28,"[0, 1, 2, 3, 4, 5, 6]",True,True,2264782,3898595
+NIBIO/plot_2_annotated.las,NIBIO,plot_2_annotated,dev,5027570,40,"[1, 2, 3, 4, 5, 6]",True,True,2452830,2574740
+NIBIO/plot_3_annotated.las,NIBIO,plot_3_annotated,dev,5302422,26,"[1, 2, 3, 4, 5, 6]",True,True,2300769,3001653
+NIBIO/plot_4_annotated.las,NIBIO,plot_4_annotated,dev,5762467,25,"[1, 2, 3, 4, 5, 6]",True,True,2170962,3591505
+NIBIO/plot_5_annotated.las,NIBIO,plot_5_annotated,test,5223631,19,"[1, 2, 3, 4, 5, 6]",True,True,1820639,3402992
+NIBIO/plot_6_annotated.las,NIBIO,plot_6_annotated,dev,4551358,44,"[0, 1, 2, 3, 4, 5, 6]",True,True,1616574,2934784
+NIBIO/plot_7_annotated.las,NIBIO,plot_7_annotated,dev,4943818,29,"[0, 1, 2, 3, 4, 5, 6]",True,True,1589212,3354606
+NIBIO/plot_8_annotated.las,NIBIO,plot_8_annotated,dev,5269942,22,"[1, 2, 3, 4, 5, 6]",True,True,2130258,3139684
+NIBIO/plot_9_annotated.las,NIBIO,plot_9_annotated,dev,5195391,19,"[1, 2, 3, 4, 5, 6]",True,True,1765143,3430248
+RMIT/test.las,RMIT,test,test,357435,64,"[1, 2, 3, 4, 5, 6]",True,False,127556,229879
+RMIT/train.las,RMIT,train,dev,1483208,159,"[1, 2, 3, 4, 5, 6]",True,False,652974,830234
+SCION/plot_31_annotated.las,SCION,plot_31_annotated,test,2977537,25,"[1, 2, 3, 4, 5, 6]",True,True,2028347,949190
+SCION/plot_35_annotated.las,SCION,plot_35_annotated,dev,3184258,23,"[1, 2, 3, 4, 5, 6]",True,True,2161499,1022759
+SCION/plot_39_annotated.las,SCION,plot_39_annotated,dev,1884678,48,"[1, 2, 3, 4, 5, 6]",True,True,1318823,565855
+SCION/plot_61_annotated.las,SCION,plot_61_annotated,test,3589254,18,"[1, 2, 3, 4, 5, 6]",True,True,2103561,1485693
+SCION/plot_87_annotated.las,SCION,plot_87_annotated,dev,3311297,21,"[1, 2, 3, 4, 5, 6]",True,True,2211248,1100049
+TUWIEN/test.las,TUWIEN,test,test,2280049,35,"[1, 2, 3, 4, 5, 6]",True,False,981230,1298819
+TUWIEN/train.las,TUWIEN,train,dev,7568844,115,"[1, 2, 3, 4, 5, 6]",True,False,4522964,3045880

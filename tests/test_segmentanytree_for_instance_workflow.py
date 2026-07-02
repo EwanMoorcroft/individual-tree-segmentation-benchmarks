@@ -100,6 +100,7 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     )
 
     assert config["project"]["benchmark_name"] == "for_instance_segmentanytree"
+    assert config["project"]["status"] == "completed"
     assert config["dataset"]["name"] == "FOR-instance"
     assert config["dataset"]["root"] == (
         "~/data/datasets/for_instance/FORinstance_dataset"
@@ -113,6 +114,7 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
         "CULS/plot_1_annotated.las"
     )
     assert config["benchmark"]["array_size"] == 32
+    assert config["benchmark"]["completed_evaluation_count"] == 32
     assert config["method"]["execution_mode"] == "apptainer_slurm"
     assert config["method"]["apptainer_image"] == (
         "~/scratch/containers/segment-any-tree_latest.sif"
@@ -126,6 +128,7 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     assert config["method"]["command_template"] is None
     assert config["evaluation"]["iou_threshold"] == 0.5
     assert config["evaluation"]["coordinate_tolerance"] == 0.02
+    assert config["runtime"]["gpu_partition"] == "gpu-l40s-low"
 
 
 def test_required_for_instance_scripts_are_present_and_tracked() -> None:
@@ -623,6 +626,49 @@ def test_public_segmentanytree_pilot_record_matches_evaluation() -> None:
         0.8507642594155439
     )
     assert row["status"] == "completed_with_postprocess_repair"
+
+
+def test_public_full_segmentanytree_results_are_complete_and_sanitised() -> None:
+    prefix = ROOT / "examples/segmentanytree_for_instance_full"
+    with Path(f"{prefix}_plot_metrics.csv").open(
+        encoding="utf-8", newline=""
+    ) as handle:
+        plots = list(csv.DictReader(handle))
+    with Path(f"{prefix}_summary.csv").open(
+        encoding="utf-8", newline=""
+    ) as handle:
+        overall = next(csv.DictReader(handle))
+    with Path(f"{prefix}_matches.csv").open(
+        encoding="utf-8", newline=""
+    ) as handle:
+        matches = list(csv.DictReader(handle))
+    with Path(f"{prefix}_inventory.csv").open(
+        encoding="utf-8", newline=""
+    ) as handle:
+        inventory = list(csv.DictReader(handle))
+
+    assert len(plots) == 32
+    assert len(inventory) == 32
+    assert len(matches) == 376
+    assert {row["status"] for row in plots} == {"completed"}
+    assert int(overall["total_reference_trees"]) == 1130
+    assert int(overall["total_predicted_trees"]) == 2532
+    assert int(overall["total_true_positives"]) == 376
+    assert int(overall["total_false_positives"]) == 2156
+    assert int(overall["total_false_negatives"]) == 754
+    assert float(overall["micro_f1"]) == pytest.approx(0.20535226652102676)
+    assert float(overall["pooled_mean_matched_iou"]) == pytest.approx(
+        0.7263750375278218
+    )
+
+    published_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in ROOT.glob("examples/segmentanytree_for_instance_full_*.*")
+        if path.suffix in {".csv", ".json"}
+    )
+    assert "/" + "Users/" not in published_text
+    assert "/mnt/" not in published_text
+    assert "sge" + "moorc" not in published_text
 
 
 def test_no_raw_point_cloud_or_archive_is_tracked() -> None:

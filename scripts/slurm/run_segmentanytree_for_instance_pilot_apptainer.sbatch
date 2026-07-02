@@ -1,8 +1,8 @@
 #!/bin/bash -l
 #SBATCH --job-name=for_sat_pilot
-#SBATCH --partition=gpu-l40s
+#SBATCH --partition=gpu-l40s-low
 #SBATCH --gres=gpu:1
-#SBATCH --time=04:00:00
+#SBATCH --time=00:30:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=48G

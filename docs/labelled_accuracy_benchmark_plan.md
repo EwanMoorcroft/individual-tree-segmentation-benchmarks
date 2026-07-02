@@ -1,21 +1,17 @@
 # Labelled Accuracy Benchmark Plan
 
-## Current Priority
+## Completed Primary Benchmark
 
 SegmentAnyTree on FOR-instance is the primary labelled accuracy benchmark.
 FOR-instance supplies `treeID` reference instances and semantic
 `classification` labels, allowing one-to-one precision, recall, F1 and matched
 IoU evaluation.
 
-The development pilot on `CULS/plot_1_annotated.las` has completed inference,
-normalisation and evaluation. It contains 1,816,672 input points and six
-positive reference trees. The workflow includes classes `4`, `5` and `6`,
+The canonical pilot and the full 32-file benchmark have completed inference,
+normalisation and evaluation. The workflow includes classes `4`, `5` and `6`,
 ignores classes `0`, `1`, `2` and `3`, and ignores non-positive tree IDs.
-
-The full 32-file benchmark remains pending. Before submission, the consolidated
-Apptainer pilot must reproduce the repaired output, the 15 unmatched pilot
-predictions should be inspected, and per-plot point-count and coordinate
-matching checks should be retained.
+Results are reported in
+[`segmentanytree_for_instance_results.md`](segmentanytree_for_instance_results.md).
 
 ## Split Control
 
@@ -29,25 +25,32 @@ label in metadata and metric tables.
   before evaluating the full set.
 - Record the model checkpoint, external commit and container route.
 
-## Full-Run Sequence
+## Completed Full-Run Sequence
 
-1. Re-run the canonical Apptainer pilot and confirm it produces the labelled
-   LAZ without a separate postprocessing repair.
-2. Check required dimensions, positive `PredInstance` values, output point
-   count and coordinate alignment.
-3. Normalise the labelled point cloud to one XYZ PLY per positive predicted
+1. The canonical Apptainer pilot produced its labelled LAZ without a separate
+   repair job.
+2. The labelled output was normalised to one XYZ PLY per positive predicted
    instance.
-4. Re-evaluate the pilot against the unchanged source LAS with a 0.02 m
-   coordinate tolerance and 0.5 IoU threshold.
-5. Submit prediction, normalisation and evaluation arrays for all 32 LAS files.
-6. Resolve failed or missing tasks before building collection, split and
-   overall summaries.
-7. Report development and evaluation splits separately and avoid parameter
-   selection on evaluation results.
+3. Prediction, normalisation and evaluation arrays completed for all 32 LAS
+   files.
+4. Collection, split and overall summaries were built after checking for
+   missing or failed tasks.
+5. Development and test split results were reported separately.
 
-Every accuracy row must record reference and prediction counts, TP, FP, FN,
+Every accuracy row records reference and prediction counts, TP, FP, FN,
 precision, recall, F1, mean and median matched IoU, runtime, peak memory,
 thresholds and ignored classes.
+
+## Next Validation Priorities
+
+1. Inspect NIBIO development plots, where 16 of 20 plots have no accepted
+   match under the fixed evaluation protocol.
+2. Quantify output point-count differences and coordinate coverage by
+   collection.
+3. Review unmatched predictions for over-segmentation.
+4. Run a second method against the same references without changing the
+   SegmentAnyTree result protocol.
+5. Keep test plots out of any subsequent parameter adjustment.
 
 ## Other Candidate Work
 

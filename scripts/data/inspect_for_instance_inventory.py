@@ -97,6 +97,10 @@ def inspect_las(
                     "classification_values": sorted(
                         classification_values, key=lambda value: (str(type(value)), value)
                     ),
+                    "treeID_positive_count": positive_tree_id_point_count,
+                    "treeID_zero_count": zero_tree_id_point_count,
+                    # Retain the original names for consumers created before the
+                    # public inventory schema was finalised.
                     "positive_treeID_point_count": positive_tree_id_point_count,
                     "zero_treeID_point_count": zero_tree_id_point_count,
                     "reference_tree_count": len(positive_reference_ids),
@@ -142,6 +146,8 @@ def write_inventory(records: list[dict[str, Any]], csv_path: Path, json_path: Pa
         "has_treeID",
         "has_treeSP",
         "classification_values",
+        "treeID_positive_count",
+        "treeID_zero_count",
         "positive_treeID_point_count",
         "zero_treeID_point_count",
         "reference_tree_count",
@@ -176,11 +182,15 @@ def parse_args() -> argparse.Namespace:
         help="Defaults to <dataset-root>/data_split_metadata.csv when present.",
     )
     parser.add_argument(
+        "--output-csv",
         "--csv-output",
+        dest="output_csv",
         default="results/metadata/for_instance/inventory.csv",
     )
     parser.add_argument(
+        "--output-json",
         "--json-output",
+        dest="output_json",
         default="results/metadata/for_instance/inventory.json",
     )
     return parser.parse_args()
@@ -214,8 +224,8 @@ def main() -> int:
                 split=split_for_relative_path(relative_path, split_lookup),
             )
         )
-    csv_path = resolve_path(args.csv_output)
-    json_path = resolve_path(args.json_output)
+    csv_path = resolve_path(args.output_csv)
+    json_path = resolve_path(args.output_json)
     write_inventory(records, csv_path, json_path)
 
     errors = sum(bool(record.get("error")) for record in records)

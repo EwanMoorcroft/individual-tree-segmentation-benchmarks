@@ -23,7 +23,15 @@ DATA_DIR = ROOT / "scripts/data"
 if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
-from select_for_instance_plot import select_plot
+try:
+    from select_for_instance_plot import select_plot
+except ModuleNotFoundError as exc:
+    if exc.name != "select_for_instance_plot":
+        raise
+    raise ModuleNotFoundError(
+        "Required plot selector is missing: "
+        f"{DATA_DIR / 'select_for_instance_plot.py'}"
+    ) from exc
 
 
 PACKAGE_DISTRIBUTIONS = {

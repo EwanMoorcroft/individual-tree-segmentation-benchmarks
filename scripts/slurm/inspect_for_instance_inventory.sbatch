@@ -20,5 +20,5 @@ mkdir -p results/metadata/segmentanytree_for_instance
 python scripts/data/inspect_for_instance_inventory.py \
   --dataset-root "$HOME/data/datasets/for_instance/FORinstance_dataset" \
   --split-metadata "$HOME/data/datasets/for_instance/FORinstance_dataset/data_split_metadata.csv" \
-  --csv-output results/metadata/segmentanytree_for_instance/inventory.csv \
-  --json-output results/metadata/segmentanytree_for_instance/inventory.json
+  --output-csv results/metadata/segmentanytree_for_instance/inventory.csv \
+  --output-json results/metadata/segmentanytree_for_instance/inventory.json

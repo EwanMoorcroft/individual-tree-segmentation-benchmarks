@@ -118,6 +118,24 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     assert config["evaluation"]["coordinate_tolerance"] == 0.02
 
 
+def test_required_for_instance_scripts_are_present_and_tracked() -> None:
+    relative_paths = [
+        "scripts/data/inspect_for_instance_inventory.py",
+        "scripts/data/convert_for_instance_to_tls2trees_ply.py",
+        "scripts/data/select_for_instance_plot.py",
+    ]
+    assert all((ROOT / relative_path).is_file() for relative_path in relative_paths)
+
+    completed = subprocess.run(
+        ["git", "ls-files", "--", *relative_paths],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert set(completed.stdout.splitlines()) == set(relative_paths)
+
+
 def test_split_aware_plot_selection_is_deterministic(tmp_path: Path) -> None:
     selector = load_script(
         "scripts/data/select_for_instance_plot.py", "segmentanytree_selector"
@@ -166,9 +184,54 @@ def test_inventory_records_split_and_required_fields(tmp_path: Path) -> None:
     assert record["split"] == "development"
     assert record["point_count"] == 5
     assert record["classification_values"] == [2, 4, 5, 6]
+    assert record["treeID_positive_count"] == 4
+    assert record["treeID_zero_count"] == 1
     assert record["positive_treeID_point_count"] == 4
     assert record["zero_treeID_point_count"] == 1
     assert record["reference_tree_count"] == 2
+
+
+def test_inventory_cli_accepts_public_output_argument_names(monkeypatch) -> None:
+    inventory = load_script(
+        "scripts/data/inspect_for_instance_inventory.py",
+        "segmentanytree_inventory_cli",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "inspect_for_instance_inventory.py",
+            "--dataset-root",
+            "dataset",
+            "--output-csv",
+            "inventory.csv",
+            "--output-json",
+            "inventory.json",
+        ],
+    )
+
+    args = inventory.parse_args()
+
+    assert args.output_csv == "inventory.csv"
+    assert args.output_json == "inventory.json"
+
+
+def test_segmentanytree_runner_help_loads_selector() -> None:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/methods/run_segmentanytree_for_instance.py"),
+            "--help",
+        ],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert "--dry-run" in completed.stdout
+    assert "ModuleNotFoundError" not in completed.stderr
 
 
 def test_wrapper_dry_run_does_not_execute_method(

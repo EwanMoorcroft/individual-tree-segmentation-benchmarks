@@ -39,8 +39,9 @@ predictions for missing live-branch points. A future leaf-on experiment must be
 configured and reported separately.
 
 The SegmentAnyTree/FOR-instance benchmark uses classes `4`, `5` and `6`. Its
-adapter must first normalise a verified method output to one PLY per predicted
-tree; it does not assume an undocumented SegmentAnyTree instance field.
+verified output is one labelled LAZ with predicted instance field
+`PredInstance`. The adapter removes non-positive labels and writes one XYZ PLY
+per predicted tree.
 
 ## Instance Accuracy Readiness
 
@@ -49,6 +50,13 @@ tree; it does not assume an undocumented SegmentAnyTree instance field.
 | FRDR treeiso TLS | No tree IDs in the benchmark LAZ inputs | F1, precision, recall and IoU unavailable from `woods` |
 | FOR-instance | Positive `treeID` values in annotated LAS files | F1 and matched IoU feasible |
 | Wytham Woods | One segmented reference tree per PLY filename | F1 and matched IoU feasible after scene reconstruction |
+
+The SegmentAnyTree development pilot metrics are stored outside Git under
+`results/tables/segmentanytree_for_instance/per_plot/`, with evaluation
+metadata under `results/metadata/segmentanytree_for_instance/`. A small
+public-safe pilot row is retained in
+[`examples/segmentanytree_for_instance_pilot_metrics.csv`](../examples/segmentanytree_for_instance_pilot_metrics.csv).
+This is a pilot record, not a full benchmark summary.
 
 The evaluator in
 [`scripts/evaluation/instance_iou_f1.py`](../scripts/evaluation/instance_iou_f1.py)

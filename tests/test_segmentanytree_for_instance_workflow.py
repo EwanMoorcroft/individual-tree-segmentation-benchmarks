@@ -113,6 +113,16 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
         "CULS/plot_1_annotated.las"
     )
     assert config["benchmark"]["array_size"] == 32
+    assert config["method"]["execution_mode"] == "apptainer_slurm"
+    assert config["method"]["apptainer_image"] == (
+        "~/scratch/containers/segment-any-tree_latest.sif"
+    )
+    assert config["method"]["python_userbase"] == (
+        "~/fastscratch/segmentanytree_pyuser_v1"
+    )
+    assert config["method"]["output_format"] == "labelled_point_cloud"
+    assert config["method"]["prediction_instance_field"] == "PredInstance"
+    assert config["method"]["gpu_required"] is True
     assert config["method"]["command_template"] is None
     assert config["evaluation"]["iou_threshold"] == 0.5
     assert config["evaluation"]["coordinate_tolerance"] == 0.02
@@ -279,6 +289,58 @@ def test_wrapper_dry_run_does_not_execute_method(
     assert payload["command"][0] == "python"
 
 
+def test_configured_wrapper_delegates_to_apptainer_slurm(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    runner = load_script(
+        "scripts/methods/run_segmentanytree_for_instance.py",
+        "segmentanytree_runner_slurm",
+    )
+    dataset_root = tmp_path / "dataset"
+    input_path = dataset_root / "CULS/plot_1_annotated.las"
+    input_path.parent.mkdir(parents=True)
+    write_annotated_las(input_path)
+    (dataset_root / "data_split_metadata.csv").write_text(
+        "relative_path,split\nCULS/plot_1_annotated.las,dev\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "external/SegmentAnyTree").mkdir(parents=True)
+    config = minimal_runner_config(tmp_path, dataset_root)
+    config["dataset"]["pilot"] = {
+        "relative_path": "CULS/plot_1_annotated.las"
+    }
+    config["method"]["execution_mode"] = "apptainer_slurm"
+    config["method"]["command_template"] = None
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    monkeypatch.setattr(runner, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_segmentanytree_for_instance.py",
+            "--config",
+            str(config_path),
+            "--plot-path",
+            "CULS/plot_1_annotated.las",
+            "--dry-run",
+        ],
+    )
+
+    assert runner.main() == 0
+    output = capsys.readouterr().out
+    assert "run_segmentanytree_for_instance_pilot_apptainer.sbatch" in output
+    payload = json.loads(
+        (
+            tmp_path
+            / "results/metadata/segmentanytree_for_instance/runs/CULS"
+            / "plot_1_annotated_run.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert payload["execution_mode"] == "apptainer_slurm"
+    assert payload["status"] == "dry_run"
+
+
 def test_wrapper_parses_peak_memory_only_with_units(tmp_path: Path) -> None:
     runner = load_script(
         "scripts/methods/run_segmentanytree_for_instance.py",
@@ -359,6 +421,41 @@ def test_normaliser_splits_tiny_labelled_prediction(tmp_path: Path) -> None:
         "instance_9.ply",
     ]
     assert read_ply_vertices(outputs[0])[0].vertex_count == 2
+
+
+def test_export_patch_is_narrow_and_requires_expected_source() -> None:
+    patcher = load_script(
+        (
+            "scripts/methods/segmentanytree_runtime_patches/"
+            "prepare_pandas_to_las_patch.py"
+        ),
+        "segmentanytree_export_patch",
+    )
+    source = """
+standard_columns_with_data_types = {
+    'scan_angle': 'uint16',
+}
+for column in standard_columns_with_data_types:
+    if column in df.columns:
+        las_file[column] = df[column].astype(standard_columns_with_data_types[column])
+"""
+
+    patched = patcher.patch_source(source)
+
+    assert "'scan_angle': 'int16'" in patched
+    assert 'df[column].round() if column == "scan_angle"' in patched
+    with pytest.raises(ValueError, match="unsigned scan_angle"):
+        patcher.patch_source(patched)
+
+
+def test_serial_pool_preserves_map_order() -> None:
+    serial = load_script(
+        "scripts/methods/segmentanytree_runtime_patches/sitecustomize.py",
+        "segmentanytree_serial_pool",
+    )
+
+    with serial.SerialPool(processes=1) as pool:
+        assert pool.map(abs, [-2, -1, 0]) == [2, 1, 0]
 
 
 def test_evaluator_uses_for_instance_tree_classes(
@@ -500,6 +597,25 @@ def test_public_inventory_example_has_required_columns() -> None:
         "has_treeSP",
     } <= columns
     assert rows
+
+
+def test_public_segmentanytree_pilot_record_matches_evaluation() -> None:
+    with (
+        ROOT / "examples/segmentanytree_for_instance_pilot_metrics.csv"
+    ).open(encoding="utf-8", newline="") as handle:
+        row = next(csv.DictReader(handle))
+
+    assert row["split"] == "dev"
+    assert int(row["predicted_tree_count"]) == 21
+    assert int(row["reference_tree_count"]) == 6
+    assert int(row["true_positives"]) == 6
+    assert int(row["false_positives"]) == 15
+    assert int(row["false_negatives"]) == 0
+    assert float(row["f1"]) == pytest.approx(4 / 9)
+    assert float(row["mean_matched_iou"]) == pytest.approx(
+        0.8507642594155439
+    )
+    assert row["status"] == "completed_with_postprocess_repair"
 
 
 def test_no_raw_point_cloud_or_archive_is_tracked() -> None:

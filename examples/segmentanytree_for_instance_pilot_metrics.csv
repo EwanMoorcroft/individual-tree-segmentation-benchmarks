@@ -1,0 +1,2 @@
+plot_name,collection,split,relative_path,predicted_tree_count,reference_tree_count,true_positives,false_positives,false_negatives,precision,recall,f1,mean_matched_iou,median_matched_iou,iou_threshold,coordinate_tolerance,runtime_seconds,peak_memory_gb,status
+plot_1_annotated,CULS,dev,CULS/plot_1_annotated.las,21,6,6,15,0,0.2857142857142857,1.0,0.4444444444444445,0.8507642594155439,0.8620353530248571,0.5,0.02,175.0,6.334,completed_with_postprocess_repair

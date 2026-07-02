@@ -18,5 +18,5 @@ cd "$HOME/scratch/tree-seg-benchmark"
 mkdir -p logs/segmentanytree_for_instance
 
 python scripts/evaluation/summarise_for_instance_segmentanytree_benchmark.py \
-  --metrics-root results/metadata/segmentanytree_for_instance/evaluations \
+  --metrics-root results/tables/segmentanytree_for_instance/per_plot \
   --inventory-csv results/metadata/segmentanytree_for_instance/inventory.csv

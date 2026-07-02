@@ -42,9 +42,12 @@ PACKAGE_DISTRIBUTIONS = {
     "torch_points3d": "torch-points3d",
 }
 COMMAND_REQUIRED_MESSAGE = (
-    "SegmentAnyTree command is unresolved. Inspect the installed "
-    "external/SegmentAnyTree README and scripts, then set "
-    "method.command_template in configs/for_instance_segmentanytree_benchmark.yml."
+    "Native SegmentAnyTree execution is unresolved. Use the configured "
+    "Apptainer Slurm workflow or provide an explicit method.command_template."
+)
+SLURM_EXECUTION_MESSAGE = (
+    "This benchmark is configured for Apptainer under Slurm. Submit the "
+    "displayed sbatch command instead of running the Python wrapper directly."
 )
 
 
@@ -139,6 +142,28 @@ def build_command(
     if any(not item for item in command):
         raise ValueError("method.command_template produced an empty argument")
     return command
+
+
+def build_slurm_command(
+    selection: dict[str, Any],
+    pilot_relative_path: str | None,
+) -> list[str]:
+    if selection["relative_path"] == pilot_relative_path:
+        script = (
+            "scripts/slurm/"
+            "run_segmentanytree_for_instance_pilot_apptainer.sbatch"
+        )
+        return [
+            "sbatch",
+            "--export=ALL,SEGMENTANYTREE_EXECUTE=1",
+            script,
+        ]
+    return [
+        "sbatch",
+        f"--array={selection['array_index']}",
+        "--export=ALL,SEGMENTANYTREE_EXECUTE=1",
+        "scripts/slurm/run_segmentanytree_for_instance_array.sbatch",
+    ]
 
 
 def prepare_empty_directory(
@@ -244,31 +269,40 @@ def main() -> int:
         overwrite = args.overwrite or bool(
             config.get("runtime", {}).get("overwrite", False)
         )
+        execution_mode = config["method"].get("execution_mode", "native")
 
-        if output_dir.is_symlink():
-            raise ValueError(
-                f"Refusing symlinked prediction output directory: {output_dir}"
+        if execution_mode == "apptainer_slurm":
+            command = build_slurm_command(
+                selection,
+                config["dataset"].get("pilot", {}).get("relative_path"),
             )
-        if output_dir.exists() and not output_dir.is_dir():
-            raise FileExistsError(
-                f"Prediction output path is not a directory: {output_dir}"
+        else:
+            if output_dir.is_symlink():
+                raise ValueError(
+                    f"Refusing symlinked prediction output directory: {output_dir}"
+                )
+            if output_dir.exists() and not output_dir.is_dir():
+                raise FileExistsError(
+                    f"Prediction output path is not a directory: {output_dir}"
+                )
+            if output_dir.exists() and any(output_dir.iterdir()) and not overwrite:
+                raise FileExistsError(
+                    "Prediction directory is not empty; pass --overwrite to "
+                    f"replace it: {output_dir}"
+                )
+            values = {
+                "repo_path": str(repo_path),
+                "input_path": str(input_path),
+                "input_dir": str(input_path.parent),
+                "staged_input_dir": str(staged_input_dir),
+                "output_dir": str(output_dir),
+                "collection": collection,
+                "plot_name": plot_name,
+                "split": selection["split"],
+            }
+            command = build_command(
+                config["method"].get("command_template"), values
             )
-        if output_dir.exists() and any(output_dir.iterdir()) and not overwrite:
-            raise FileExistsError(
-                "Prediction directory is not empty; pass --overwrite to replace it: "
-                f"{output_dir}"
-            )
-        values = {
-            "repo_path": str(repo_path),
-            "input_path": str(input_path),
-            "input_dir": str(input_path.parent),
-            "staged_input_dir": str(staged_input_dir),
-            "output_dir": str(output_dir),
-            "collection": collection,
-            "plot_name": plot_name,
-            "split": selection["split"],
-        }
-        command = build_command(config["method"].get("command_template"), values)
         external_commit = git_commit(repo_path)
         payload.update(
             {
@@ -287,6 +321,7 @@ def main() -> int:
                 "stdout_log": str(stdout_path),
                 "stderr_log": str(stderr_path),
                 "command": command,
+                "execution_mode": execution_mode,
                 "overwrite_enabled": overwrite,
             }
         )
@@ -299,6 +334,8 @@ def main() -> int:
             print(f"Output: {output_dir}")
             return_code = 0
         else:
+            if execution_mode == "apptainer_slurm":
+                raise RuntimeError(SLURM_EXECUTION_MESSAGE)
             prepare_empty_directory(staged_input_dir, staged_root, overwrite)
             prepare_empty_directory(output_dir, predictions_root, overwrite)
             (staged_input_dir / input_path.name).symlink_to(input_path)

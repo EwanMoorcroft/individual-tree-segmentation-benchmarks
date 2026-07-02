@@ -1,104 +1,64 @@
 # Labelled Accuracy Benchmark Plan
 
-## Immediate Pilot
+## Current Priority
 
-The recommended next pilot is
-`FORinstance_dataset/CULS/plot_1_annotated.las`. The inspected file contains
-1,816,672 points and six positive reference trees, making it suitable for
-testing the preparation, prediction and evaluation interfaces before larger
-plots.
+SegmentAnyTree on FOR-instance is the primary labelled accuracy benchmark.
+FOR-instance supplies `treeID` reference instances and semantic
+`classification` labels, allowing one-to-one precision, recall, F1 and matched
+IoU evaluation.
 
-Expected fields:
+The development pilot on `CULS/plot_1_annotated.las` has completed inference,
+normalisation and evaluation. It contains 1,816,672 input points and six
+positive reference trees. The workflow includes classes `4`, `5` and `6`,
+ignores classes `0`, `1`, `2` and `3`, and ignores non-positive tree IDs.
 
-- `treeID`: plot-wise individual-tree reference identifier;
-- `classification`: semantic point class;
-- SegmentAnyTree reference classes: `4` (stem), `5` (live branches) and `6`
-  (woody branches);
-- ignored classes: `0`, `1`, `2` and `3`.
-
-The retained TLS2trees leaf-off pilot uses classes `4` and `6` only. That
-method-specific filter must not be carried into the SegmentAnyTree benchmark.
+The full 32-file benchmark remains pending. Before submission, the consolidated
+Apptainer pilot must reproduce the repaired output, the 15 unmatched pilot
+predictions should be inspected, and per-plot point-count and coordinate
+matching checks should be retained.
 
 ## Split Control
 
-Read `data_split_metadata.csv` before selecting any plot. Record each plot's
-development or evaluation role in run metadata.
+Read `data_split_metadata.csv` before selecting any plot and preserve its split
+label in metadata and metric tables.
 
-- Use development plots for adapter development, parameter selection and error
+- Use development plots for adapter checks, parameter selection and error
   analysis.
 - Keep evaluation plots isolated from training and parameter selection.
-- Do not select a pilot solely because its evaluation result is favourable.
-- Record model checkpoints, training data, parameter provenance and split
-  membership for every method.
+- Fix semantic filters, normalisation, coordinate tolerance and IoU threshold
+  before evaluating the full set.
+- Record the model checkpoint, external commit and container route.
 
-These controls are required to avoid test-set leakage.
+## Full-Run Sequence
 
-## Preparation Sequence
+1. Re-run the canonical Apptainer pilot and confirm it produces the labelled
+   LAZ without a separate postprocessing repair.
+2. Check required dimensions, positive `PredInstance` values, output point
+   count and coordinate alignment.
+3. Normalise the labelled point cloud to one XYZ PLY per positive predicted
+   instance.
+4. Re-evaluate the pilot against the unchanged source LAS with a 0.02 m
+   coordinate tolerance and 0.5 IoU threshold.
+5. Submit prediction, normalisation and evaluation arrays for all 32 LAS files.
+6. Resolve failed or missing tasks before building collection, split and
+   overall summaries.
+7. Report development and evaluation splits separately and avoid parameter
+   selection on evaluation results.
 
-1. Inspect the selected LAS header, dimensions, class counts and positive
-   `treeID` counts without modifying the source file.
-2. Confirm the plot's split assignment and intended use.
-3. Create a derived method input under `data/interim/`; preserve coordinates
-   and keep `treeID` unavailable to the segmentation method.
-4. Retain a separate evaluation reference containing coordinates and `treeID`.
-5. Apply any semantic filtering consistently and record included and ignored
-   classes.
-6. Run one method through a wrapper that captures its exact version, command,
-   runtime, peak memory, return code and output paths.
-7. Convert predictions to one point-cloud file per predicted tree or another
-   evaluator-supported instance representation.
-8. Validate coordinate alignment, then perform one-to-one instance matching at
-   documented coordinate and IoU tolerances.
+Every accuracy row must record reference and prediction counts, TP, FP, FN,
+precision, recall, F1, mean and median matched IoU, runtime, peak memory,
+thresholds and ignored classes.
 
-Source files must remain unchanged.
+## Other Candidate Work
 
-## Evaluator Inputs And Outputs
+TLS2trees on FOR-instance remains a compatibility experiment rather than the
+current priority because the dataset is UAV laser scanning. Its leaf-off pilot
+uses classes `4` and `6`, which must not replace the SegmentAnyTree class
+definition.
 
-The existing evaluator accepts:
+Wytham Woods remains a future TLS accuracy candidate. Its 876 per-tree PLY files
+must first be reconstructed into a documented plot scene with preserved
+reference IDs and common method inputs. No Wytham benchmark has been run.
 
-- a prediction directory with one LAS, LAZ or PLY file per predicted tree; and
-- either a reference directory with one file per tree or one labelled
-  point cloud with a reference instance field.
-
-Every accuracy result must include reference and prediction counts, TP, FP, FN,
-precision, recall, F1, mean and median matched IoU, IoU threshold, coordinate
-tolerance, ignored labels/classes, runtime and peak memory.
-
-## Method Wrapper Requirements
-
-Each method wrapper should:
-
-- call a pinned external method rather than reimplementing it;
-- construct commands as argument lists without shell interpolation;
-- keep upstream repositories outside version control;
-- separate method inputs, predictions, logs and metadata;
-- refuse ambiguous inputs and non-empty output directories by default;
-- support a dry-run where the upstream interface permits it;
-- emit predictions in a documented instance representation;
-- record method version, parameters, environment and resource use.
-
-SegmentAnyTree is the primary FOR-instance accuracy method. Its 32-plot
-workflow preserves split labels from `data_split_metadata.csv`, normalises
-method outputs and aggregates plot, collection and split metrics. TLS2trees on
-FOR-instance remains a compatibility test because FOR-instance is UAV laser
-scanning data.
-
-Do not train or tune on the test split. Fix the prediction adapter, semantic
-classes, coordinate tolerance, IoU threshold and evaluator before final test
-evaluation. Comparisons with external NEWFOR results are valid only when those
-settings and metrics are compatible.
-
-## Wytham Follow-On
-
-Wytham Woods provides one PLY per reference tree rather than a ready plot-level
-scene. Before evaluation, define a reproducible scene reconstruction that
-preserves filename-derived tree IDs and produces the same method input for all
-methods. Reference IDs must not leak into method features.
-
-No accuracy claim is valid until predictions have been matched against the
-held-out reference instances using the documented evaluator settings.
-
-The primary workflow is documented in
+The detailed runbook is
 [`segmentanytree_for_instance_benchmark.md`](segmentanytree_for_instance_benchmark.md).
-The earlier TLS2trees compatibility pilot remains documented in
-[`for_instance_tls2trees_pilot.md`](for_instance_tls2trees_pilot.md).

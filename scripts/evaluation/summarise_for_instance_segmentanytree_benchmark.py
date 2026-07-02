@@ -12,7 +12,12 @@ from typing import Any, Iterable
 
 
 ROOT = Path(__file__).resolve().parents[2]
-COMPLETED_STATUSES = {"completed", "evaluated", "complete"}
+COMPLETED_STATUSES = {
+    "completed",
+    "completed_with_postprocess_repair",
+    "evaluated",
+    "complete",
+}
 
 
 def resolve_path(path_text: str) -> Path:
@@ -32,9 +37,15 @@ def read_csv_rows(path: Path) -> list[dict[str, str]]:
 def read_plot_metrics(metrics_root: Path) -> list[dict[str, str]]:
     if not metrics_root.is_dir():
         raise FileNotFoundError(f"Metrics directory does not exist: {metrics_root}")
-    metric_files = sorted(metrics_root.rglob("*_metrics.csv"))
+    metric_files = sorted(
+        path
+        for path in metrics_root.rglob("*.csv")
+        if not path.name.endswith(
+            ("_matches.csv", "_unmatched_predictions.csv", "_unmatched_references.csv")
+        )
+    )
     if not metric_files:
-        raise ValueError(f"No per-plot *_metrics.csv files found in: {metrics_root}")
+        raise ValueError(f"No per-plot metric CSV files found in: {metrics_root}")
 
     rows: list[dict[str, str]] = []
     for metric_file in metric_files:
@@ -233,7 +244,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--metrics-root",
-        default="results/metadata/segmentanytree_for_instance/evaluations",
+        default="results/tables/segmentanytree_for_instance/per_plot",
     )
     parser.add_argument(
         "--inventory-csv",

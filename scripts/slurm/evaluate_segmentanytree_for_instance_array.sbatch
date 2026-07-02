@@ -4,7 +4,7 @@
 #SBATCH --time=02:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
-#SBATCH --mem=24G
+#SBATCH --mem=32G
 #SBATCH --array=0-31%2
 #SBATCH --output=logs/segmentanytree_for_instance/%x_%A_%a.out
 #SBATCH --error=logs/segmentanytree_for_instance/%x_%A_%a.err
@@ -31,9 +31,10 @@ PLOT_NAME="${PLOT_INFO[3]}"
 SPLIT="${PLOT_INFO[4]}"
 PREDICTION_DIR="data/interim/segmentanytree/for_instance/${COLLECTION}/${PLOT_NAME}/normalised_predictions"
 EVALUATION_DIR="results/metadata/segmentanytree_for_instance/evaluations/${COLLECTION}"
+TABLE_DIR="results/tables/segmentanytree_for_instance/per_plot"
 RUN_METADATA="results/metadata/segmentanytree_for_instance/runs/${COLLECTION}/${PLOT_NAME}_run.json"
 
-mkdir -p "$EVALUATION_DIR"
+mkdir -p "$EVALUATION_DIR" "$TABLE_DIR"
 python scripts/evaluation/instance_iou_f1.py \
   --plot-name "$PLOT_NAME" \
   --collection "$COLLECTION" \
@@ -45,12 +46,12 @@ python scripts/evaluation/instance_iou_f1.py \
   --reference-semantic-field classification \
   --reference-classes 4 5 6 \
   --ignored-reference-classes 0 1 2 3 \
-  --ignore-reference-labels 0 \
+  --ignore-reference-labels 0,-1 \
   --iou-threshold 0.5 \
   --coordinate-tolerance 0.02 \
   --run-metadata-json "$RUN_METADATA" \
   --output-json "${EVALUATION_DIR}/${PLOT_NAME}.json" \
-  --output-metrics-csv "${EVALUATION_DIR}/${PLOT_NAME}_metrics.csv" \
-  --output-matches-csv "${EVALUATION_DIR}/${PLOT_NAME}_matches.csv" \
-  --output-unmatched-predictions-csv "${EVALUATION_DIR}/${PLOT_NAME}_unmatched_predictions.csv" \
-  --output-unmatched-references-csv "${EVALUATION_DIR}/${PLOT_NAME}_unmatched_references.csv"
+  --output-metrics-csv "${TABLE_DIR}/${COLLECTION}_${PLOT_NAME}.csv" \
+  --output-matches-csv "${TABLE_DIR}/${COLLECTION}_${PLOT_NAME}_matches.csv" \
+  --output-unmatched-predictions-csv "${TABLE_DIR}/${COLLECTION}_${PLOT_NAME}_unmatched_predictions.csv" \
+  --output-unmatched-references-csv "${TABLE_DIR}/${COLLECTION}_${PLOT_NAME}_unmatched_references.csv"

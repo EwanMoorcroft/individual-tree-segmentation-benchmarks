@@ -9,6 +9,7 @@ pycache/
 venv/
 
 /Datasets/
+/containers/
 /data/
 /external/
 /logs/
@@ -22,6 +23,10 @@ venv/
 *.npz
 *.out
 *.ply
+*.pt
+*.pth
+*.ckpt
+*.sif
 *.png
 *.zip
 Thumbs.db

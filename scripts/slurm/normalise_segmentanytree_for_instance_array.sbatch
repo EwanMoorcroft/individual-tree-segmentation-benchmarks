@@ -11,11 +11,6 @@
 
 set -euo pipefail
 
-if [[ -z "${SEGMENTANYTREE_OUTPUT_FORMAT:-}" ]]; then
-  echo "Set SEGMENTANYTREE_OUTPUT_FORMAT after inspecting the pilot output." >&2
-  exit 2
-fi
-
 module purge
 module load miniforge3/25.3.0-python3.12.10
 source "$HOME/fastscratch/venvs/treebench/bin/activate"
@@ -31,18 +26,20 @@ mapfile -t PLOT_INFO < <(
 )
 COLLECTION="${PLOT_INFO[2]}"
 PLOT_NAME="${PLOT_INFO[3]}"
-PREDICTION_INPUT="data/predictions/segmentanytree/for_instance/${COLLECTION}/${PLOT_NAME}/final_results"
+PREDICTION_INPUT="data/predictions/segmentanytree/for_instance/${COLLECTION}/${PLOT_NAME}/final_results/${PLOT_NAME}_out.laz"
 NORMALISED_OUTPUT="data/interim/segmentanytree/for_instance/${COLLECTION}/${PLOT_NAME}/normalised_predictions"
 METADATA_OUTPUT="results/metadata/segmentanytree_for_instance/normalisation/${COLLECTION}/${PLOT_NAME}.json"
 
 NORMALISE_ARGS=(
   --input "$PREDICTION_INPUT"
   --output-dir "$NORMALISED_OUTPUT"
-  --format "$SEGMENTANYTREE_OUTPUT_FORMAT"
+  --format labelled_point_cloud
+  --instance-field PredInstance
+  --ignore-labels 0,-1
   --metadata-output "$METADATA_OUTPUT"
 )
-if [[ -n "${SEGMENTANYTREE_INSTANCE_FIELD:-}" ]]; then
-  NORMALISE_ARGS+=(--instance-field "$SEGMENTANYTREE_INSTANCE_FIELD")
+if [[ "${SEGMENTANYTREE_OVERWRITE:-0}" == "1" ]]; then
+  NORMALISE_ARGS+=(--overwrite)
 fi
 
 python scripts/methods/normalise_segmentanytree_predictions.py "${NORMALISE_ARGS[@]}"

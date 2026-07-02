@@ -1,0 +1,32 @@
+{
+  "collection": "CULS",
+  "coordinate_tolerance": 0.02,
+  "dataset": "FOR-instance",
+  "evaluation_completed": true,
+  "final_prediction_format": "labelled LAZ",
+  "ignored_reference_classes": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "ignored_reference_tree_ids": [
+    0
+  ],
+  "instance_field": "PredInstance",
+  "iou_threshold": 0.5,
+  "method": "SegmentAnyTree",
+  "normalisation_completed": true,
+  "pilot_input_points": 1816672,
+  "pilot_output_points": 1816728,
+  "prediction_completed": true,
+  "reference_classes": [
+    4,
+    5,
+    6
+  ],
+  "reference_field": "treeID",
+  "relative_path": "CULS/plot_1_annotated.las",
+  "split": "dev",
+  "status": "completed_with_postprocess_repair"
+}

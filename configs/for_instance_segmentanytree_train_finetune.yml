@@ -1,0 +1,112 @@
+project:
+  name: tree-seg-benchmark
+  experiment: for_instance_segmentanytree_retrained_from_dev
+  status: training_preflight_ready
+  protocol_id: for_instance_pointwise_v1
+  barkla_specific: true
+
+dataset:
+  name: FOR-instance
+  root: "~/data/datasets/for_instance/FORinstance_dataset"
+  split_metadata_file: "data_split_metadata.csv"
+  development_split_aliases:
+    - dev
+    - development
+    - train
+  held_out_split: test
+  reference_instance_field: treeID
+  semantic_field: classification
+  positive_classes:
+    - 4
+    - 5
+    - 6
+  ignored_classes:
+    - 0
+    - 1
+    - 2
+    - 3
+  ignored_tree_ids:
+    - 0
+  internal_validation:
+    strategy: fixed_random_plot_split
+    seed: 42
+    fraction: 0.25
+    expected_development_plots: 21
+    expected_training_plots: 16
+    expected_validation_plots: 5
+  expected_test_plots: 11
+
+method:
+  name: SegmentAnyTree
+  repo_url: "https://github.com/SmartForest-no/SegmentAnyTree"
+  repo_path: "external/SegmentAnyTree"
+  external_commit: "a3561ed8447bbb7938f059ba65a3e9c97d6e2ee9"
+  training_entrypoint: train.py
+  task_config: panoptic
+  data_config: panoptic/treeins_rad8
+  model_config: panoptic/area4_ablation_3heads_5
+  model_name: PointGroup-PAPER
+  upstream_training_config: treeins
+  primary_training_mode: retrained_from_dev
+  paper_scenario: "scenario_1_uls_only"
+  optional_follow_up_mode: fine_tuned_on_dev
+  optional_follow_up_status: pending_primary_reproduction
+  apptainer_image: "~/scratch/containers/segment-any-tree_latest.sif"
+  apptainer_module: "apptainer/1.3.6"
+  python_userbase: "~/fastscratch/segmentanytree_pyuser_v1"
+  gpu_partition: gpu-l40s-low
+
+preparation:
+  output_root_template: "~/fastscratch/segmentanytree_for_instance_training/{profile}"
+  treeins_dataset_subpath: treeinsfused
+  semantic_mapping:
+    0: 0
+    1: 1
+    2: 1
+    3: 0
+    4: 2
+    5: 2
+    6: 2
+  coordinate_conversion: "raw LAS integer coordinates multiplied by scale, with LAS offsets omitted"
+  remove_ground: false
+  remove_low_vegetation: false
+  remove_outpoints: false
+  convert_test_for_training: false
+  pilot:
+    training_plots: 2
+    validation_plots: 1
+
+training:
+  random_seed_used_by_upstream_trainer: 2022
+  batch_size:
+    pilot: 2
+    full: 4
+  epochs:
+    pilot: 2
+    full: 150
+  hydra_epoch_stop_is_exclusive: true
+  validation_frequency_epochs: 1
+  wandb_enabled: false
+  tensorboard_enabled: false
+  checkpoint_filename: PointGroup-PAPER.pt
+  checkpoint_input: null
+  checkpoint_output_root: "~/fastscratch/segmentanytree_for_instance_checkpoints"
+  test_evaluation_during_training: false
+
+paths:
+  split_manifest_root: "results/metadata/segmentanytree_for_instance/training_splits"
+  training_run_metadata_root: "results/metadata/segmentanytree_for_instance/training_runs"
+  validation_predictions_root: "data/predictions/segmentanytree/for_instance_trained_validation"
+  validation_metrics_root: "results/metadata/segmentanytree_for_instance/trained_validation"
+  final_test_predictions_root: "data/predictions/segmentanytree/for_instance_trained_test"
+  final_test_metrics_root: "results/metadata/segmentanytree_for_instance/trained_test"
+  final_test_tables_root: "results/tables/segmentanytree_for_instance/trained_test"
+  logs_root: "logs/segmentanytree_for_instance"
+
+evaluation:
+  final_reporting_split: test
+  use_test_for_model_selection: false
+  require_aligned_pointwise_outputs: true
+  iou_threshold: 0.5
+  paper_matching_policy: paper_per_prediction_best_iou
+  harmonised_matching_policy: one_to_one

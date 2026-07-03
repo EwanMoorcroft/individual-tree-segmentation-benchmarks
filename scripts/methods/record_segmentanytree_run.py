@@ -70,6 +70,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--time-log")
     parser.add_argument("--package-versions-json")
     parser.add_argument("--checkpoint")
+    parser.add_argument("--aligned-instance-evaluation")
+    parser.add_argument("--aligned-semantic-evaluation")
+    parser.add_argument("--run-type", default="published_pretrained_inference")
+    parser.add_argument("--training-run-id")
     return parser.parse_args()
 
 
@@ -88,6 +92,16 @@ def main() -> int:
         if args.checkpoint
         else None
     )
+    aligned_instance_evaluation = (
+        Path(args.aligned_instance_evaluation).expanduser().resolve()
+        if args.aligned_instance_evaluation
+        else None
+    )
+    aligned_semantic_evaluation = (
+        Path(args.aligned_semantic_evaluation).expanduser().resolve()
+        if args.aligned_semantic_evaluation
+        else None
+    )
     output_file_count = (
         sum(path.is_file() for path in prediction_directory.rglob("*"))
         if prediction_directory.is_dir()
@@ -98,6 +112,8 @@ def main() -> int:
         "benchmark": "for_instance_segmentanytree",
         "dataset": "FOR-instance",
         "method": "SegmentAnyTree",
+        "run_type": args.run_type,
+        "training_run_id": args.training_run_id,
         "execution_mode": "apptainer_slurm",
         "input_file": str(Path(args.input_file).expanduser().resolve()),
         "relative_path": args.relative_path,
@@ -115,6 +131,24 @@ def main() -> int:
         "external_commit": git_commit(repo_path),
         "checkpoint": str(checkpoint) if checkpoint else None,
         "checkpoint_sha256": sha256(checkpoint),
+        "aligned_instance_evaluation": (
+            str(aligned_instance_evaluation)
+            if aligned_instance_evaluation
+            else None
+        ),
+        "aligned_instance_evaluation_exists": bool(
+            aligned_instance_evaluation
+            and aligned_instance_evaluation.is_file()
+        ),
+        "aligned_semantic_evaluation": (
+            str(aligned_semantic_evaluation)
+            if aligned_semantic_evaluation
+            else None
+        ),
+        "aligned_semantic_evaluation_exists": bool(
+            aligned_semantic_evaluation
+            and aligned_semantic_evaluation.is_file()
+        ),
         "python_userbase": str(Path(args.python_userbase).expanduser().resolve()),
         "package_versions": read_json(
             Path(args.package_versions_json).expanduser().resolve()

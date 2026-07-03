@@ -81,17 +81,52 @@ reference trees, 1,591 predicted instances and only 12 accepted matches, with
 published NIBIO result and is too large a discrepancy to treat as ordinary
 forest-domain variation without first excluding export and evaluation errors.
 
+The first test-split audit snapshot contained nine completed audits; all nine
+failed, while two NIBIO tasks were still running. Row inflation among the
+completed audits ranged from two rows for RMIT to 2,056,634 rows for TUWIEN.
+Three inspected NIBIO examples gained 104,470, 164,290 and 164,168 rows. These
+failures confirm that the final-LAZ route is not a valid benchmark-wide
+point-wise evaluation input.
+
+The pinned upstream tracker already computes a full-resolution instance array
+aligned with `test_area_i.instance_labels`, but its instance `to_eval_ply`
+block is commented out. The corrected rerun enables one narrow output call at
+runtime, retains the existing semantic evaluation PLY and stops before the
+coordinate-based final merge. No model weights or inference parameters are
+changed.
+
 ## Remaining Risks And Required Checks
 
 - The repaired Python stack must remain ahead of the container site-packages
   on `PYTHONPATH`.
 - `torch-points-kernels` declares an older NumPy constraint even though the
   tested imports and pilot completed with NumPy 1.24.4.
-- The SHA-256 and training provenance of the checkpoint copied as
-  `PointGroup-PAPER.pt` still require verification.
-- Final exports require point-count and coordinate-multiplicity audits.
-- Internal semantic and instance evaluation PLY files must be inventoried and
-  evaluated without coordinate rematching.
+- The checkpoint SHA-256 is
+  `0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a`;
+  its precise upstream training scenario still requires confirmation.
+- Final exports failed point-count and coordinate-multiplicity audits and must
+  not be used for accuracy.
+- The new aligned instance output requires a two-plot validation before the
+  remaining test plots are submitted.
 - Only the supplied FOR-instance test split may be compared with the paper.
 - The paper-compatible matching policy and strict one-to-one policy must remain
   separate in summaries.
+
+## Methodological Correction
+
+The completed 32-plot array demonstrated that the container and inference path
+worked, but it used the released checkpoint and did not update model weights
+with FOR-instance development data. It is retained as a diagnostic
+inference-only run.
+
+The corrected workflow now mirrors the pinned upstream training preparation:
+seed 42, a 25% internal validation sample from development plots, binary
+tree/non-tree labels and no test files in the training data root. A small
+training preflight must succeed before the 16-plot training and 5-plot
+validation profile is submitted.
+
+The released checkpoint is not used to initialise the primary corrected run.
+Its resume path restores the saved training configuration and optimizer state,
+which would define a separate fine-tuning experiment and requires its own
+compatibility validation. Final test inference remains guarded until the full
+development-trained checkpoint is selected and frozen.

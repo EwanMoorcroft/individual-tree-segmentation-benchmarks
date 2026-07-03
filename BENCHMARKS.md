@@ -9,7 +9,8 @@ adapter, method runner, scheduler workflow, metadata outputs and focused tests.
 | Dataset | Method | Status | Configuration or note |
 | --- | --- | --- | --- |
 | FRDR treeiso TLS | TLS2trees | Prediction benchmark completed | [`frdr_tls2trees_benchmark.yml`](configs/frdr_tls2trees_benchmark.yml) |
-| FOR-instance | SegmentAnyTree | Inference completed; point-wise evaluation revalidation required | [`for_instance_segmentanytree_benchmark.yml`](configs/for_instance_segmentanytree_benchmark.yml) |
+| FOR-instance | SegmentAnyTree released checkpoint | Provisional inference-only run completed; export audit failed | [`for_instance_segmentanytree_benchmark.yml`](configs/for_instance_segmentanytree_benchmark.yml) |
+| FOR-instance | SegmentAnyTree retrained from development split | Training preflight ready; full training and held-out test evaluation pending | [`for_instance_segmentanytree_train_finetune.yml`](configs/for_instance_segmentanytree_train_finetune.yml) |
 | FOR-instance | TLS2trees | Candidate compatibility test | [`for_instance_tls2trees_accuracy.yml`](configs/for_instance_tls2trees_accuracy.yml) |
 | FOR-instance | TreeLearn or another deep learning method | Candidate accuracy benchmark | Respect the supplied development/test split |
 | Wytham Woods | TLS2trees | Candidate TLS accuracy benchmark | [`wytham_accuracy_benchmark.yml`](configs/wytham_accuracy_benchmark.yml) |
@@ -25,13 +26,16 @@ No candidate accuracy row indicates a completed method run or a reported
 accuracy result. Dataset readiness and remaining preprocessing are documented
 in [`docs/dataset_feasibility.md`](docs/dataset_feasibility.md).
 
-The primary labelled workflow completed SegmentAnyTree inference for all 32
-FOR-instance LAS files. The coordinate-rematched metrics are provisional
-because they do not reproduce the method's published point-aligned evaluation.
-See the [`shared protocol`](docs/for_instance_cross_method_protocol.md),
+The first SegmentAnyTree workflow completed inference for all 32 FOR-instance
+LAS files with the released checkpoint. Its coordinate-rematched metrics are
+provisional because they neither preserve point alignment nor represent a
+model trained under the local development/test protocol. The corrected primary
+experiment trains from scratch on FOR-instance development data, selects the
+configuration on an internal development validation split and evaluates the
+held-out test split once. See the
+[`shared protocol`](docs/for_instance_cross_method_protocol.md),
 [`runbook`](docs/segmentanytree_for_instance_benchmark.md) and
-[`results note`](docs/segmentanytree_for_instance_results.md). The earlier
-TLS2trees pilot scaffolding remains available as a compatibility test.
+[`results note`](docs/segmentanytree_for_instance_results.md).
 
 ## Adding A Benchmark
 

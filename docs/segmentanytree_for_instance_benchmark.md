@@ -4,15 +4,17 @@
 
 SegmentAnyTree inference completed for all 32 FOR-instance LAS files: 21
 development plots and 11 test plots across CULS, NIBIO, RMIT, SCION and
-TUWIEN. The first evaluation also completed computationally, but it recovered
-point correspondence from exported coordinates. Those accuracy values are
-provisional because the export is not yet confirmed to preserve one row per
-source point.
+TUWIEN. That run used the released checkpoint and its final exports failed
+point-correspondence checks. Its accuracy values are provisional diagnostic
+outputs, not final dissertation results.
 
 The provisional results and their limitations are documented in
 [`segmentanytree_for_instance_results.md`](segmentanytree_for_instance_results.md).
-They must not be used as final benchmark results until the point-aligned
-evaluation described below has completed.
+They must not be used as final benchmark results. The corrected primary
+experiment will train a new SegmentAnyTree model from FOR-instance development
+data, select it with a fixed internal development validation split and then
+evaluate the frozen checkpoint on the held-out test split using aligned
+point-wise outputs.
 
 ## Dataset And Evaluation Labels
 
@@ -42,8 +44,113 @@ data and prediction outputs are excluded from this repository.
 The completed jobs ran `eval.py` with the supplied `PointGroup-PAPER.pt`
 checkpoint. They did not run `train.py`, did not update model weights and did
 not train SegmentAnyTree on the local copy of FOR-instance. The checkpoint
-SHA-256 and its precise upstream training provenance must be recorded before
-claiming a paper reproduction.
+copied by the container has SHA-256
+`0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a`.
+That hash was consistent across the inspected outputs. The checkpoint's
+committed Hydra overrides identify `treeins_rad8`,
+`area4_ablation_3heads_5`, contain an `epochs=100` override and label the job
+as a mixed training run rather than a local ULS-only retraining. Its exact
+augmentation membership is not fully established from the committed metadata,
+so the inference result is not presented as an exact scenario reproduction.
+
+## Corrected Training Protocol
+
+The pinned upstream training route is `train.py` with the panoptic
+`treeins_rad8` dataset and `area4_ablation_3heads_5` model configuration. The
+upstream conversion script provides the following reproducible preparation:
+
+- read the supplied development/test metadata;
+- choose 25% of development plots for validation with random seed 42;
+- write `x`, `y`, `z`, `intensity`, `semantic_seg` and `treeID` fields;
+- map classes 4, 5 and 6 to binary tree class 2;
+- map classes 1 and 2 to non-tree class 1;
+- map classes 0 and 3 to ignored class 0; and
+- retain all points rather than removing ground, low vegetation or out-points.
+
+For the current 21 development plots, this produces 16 training plots and 5
+validation plots. The 11 test records are retained in the ignored manifest but
+are never converted into the training data root.
+
+The primary corrected run is `retrained_from_dev`, corresponding to the
+paper's ULS-only scenario. Fine-tuning the released mixed-domain checkpoint is
+a different experiment and will only be considered after the from-scratch
+reproduction. The pinned checkpoint resume implementation restores its saved
+run configuration and optimizer state, so it is not treated as a generic
+fine-tuning interface without an explicit, tested compatibility change.
+
+The relevant public configuration is
+[`for_instance_segmentanytree_train_finetune.yml`](../configs/for_instance_segmentanytree_train_finetune.yml).
+Converted PLY files, split manifests containing machine paths, checkpoints and
+training logs remain outside Git.
+
+### Next Barkla Checkpoint
+
+The next run is deliberately small: two development training plots, one
+development validation plot and two executed training epochs. It validates
+data conversion, dataset loading, gradient updates, checkpoint writing,
+checkpoint-based inference and aligned development evaluation. It is not an
+accuracy result.
+
+After pulling the repository on Barkla, submit the complete preflight chain:
+
+```bash
+cd ~/scratch/tree-seg-benchmark
+git pull --ff-only origin main
+
+module purge
+module load miniforge3/25.3.0-python3.12.10
+source ~/fastscratch/venvs/treebench/bin/activate
+python -m pytest
+
+RUN_ID="sat_for_train_pilot_$(date +%Y%m%d_%H%M%S)"
+
+PREP_JOB=$(sbatch --parsable \
+  --export=ALL,SEGMENTANYTREE_TRAIN_PROFILE=pilot \
+  scripts/slurm/prepare_for_instance_segmentanytree_splits.sbatch)
+
+TRAIN_JOB=$(sbatch --parsable \
+  --dependency=afterok:${PREP_JOB} \
+  --export=ALL,SEGMENTANYTREE_EXECUTE=1,SEGMENTANYTREE_TRAIN_PROFILE=pilot,SEGMENTANYTREE_TRAINING_RUN_ID=${RUN_ID} \
+  scripts/slurm/train_segmentanytree_for_instance_pilot.sbatch)
+
+VALIDATE_JOB=$(sbatch --parsable \
+  --dependency=afterok:${TRAIN_JOB} \
+  --array=0-0 \
+  --export=ALL,SEGMENTANYTREE_EXECUTE=1,SEGMENTANYTREE_TRAIN_PROFILE=pilot,SEGMENTANYTREE_TRAINING_RUN_ID=${RUN_ID} \
+  scripts/slurm/run_segmentanytree_for_instance_trained_validation.sbatch)
+
+EVALUATE_JOB=$(sbatch --parsable \
+  --dependency=afterok:${VALIDATE_JOB} \
+  --array=0-0 \
+  --export=ALL,SEGMENTANYTREE_TRAIN_PROFILE=pilot,SEGMENTANYTREE_TRAINING_RUN_ID=${RUN_ID} \
+  scripts/slurm/evaluate_segmentanytree_for_instance_trained_validation.sbatch)
+
+printf 'RUN_ID=%s\nPREP_JOB=%s\nTRAIN_JOB=%s\nVALIDATE_JOB=%s\nEVALUATE_JOB=%s\n' \
+  "$RUN_ID" "$PREP_JOB" "$TRAIN_JOB" "$VALIDATE_JOB" "$EVALUATE_JOB"
+```
+
+The pinned trainer loops to, but not including, `training.epochs`. The wrapper
+therefore passes a stop value one greater than the requested epoch count and
+records both values in run metadata.
+
+Check the chain with:
+
+```bash
+squeue -j "$PREP_JOB,$TRAIN_JOB,$VALIDATE_JOB,$EVALUATE_JOB"
+
+sacct -j "$PREP_JOB,$TRAIN_JOB,$VALIDATE_JOB,$EVALUATE_JOB" \
+  --format=JobID,JobName%26,State,ExitCode,Elapsed,MaxRSS,NodeList
+
+cat "results/metadata/segmentanytree_for_instance/training_runs/${RUN_ID}.json"
+
+find "results/metadata/segmentanytree_for_instance/trained_validation/${RUN_ID}" \
+  -type f -name '*.json' -maxdepth 3 -print
+```
+
+Proceed to the full preparation and training profile only after this chain
+completes and the development output is point aligned. The full profile uses
+all 16 training and 5 validation plots. The guarded test scripts must not be
+submitted until the full checkpoint and evaluation settings are frozen.
 
 ## Working Barkla Setup
 
@@ -239,33 +346,54 @@ This writes
 prints the export status and internal candidate counts for each inspected
 plot.
 
-If an export passes, the final-LAZ diagnostic evaluator can be submitted for
-the test split:
+The first test-split audit snapshot contained nine completed audits and all
+nine failed; the other two tasks were still running when the snapshot was
+recorded. Examples of output row inflation were 66 rows for CULS
+`plot_2_annotated`, 104,470 rows for NIBIO `plot_1_annotated`, 164,290 rows
+for NIBIO `plot_22_annotated`, and 2,056,634 rows for TUWIEN `test`. These
+failures are sufficient to reject the final-LAZ route for the accepted
+benchmark.
+
+The released tracker computes aligned full-resolution instance predictions and
+retains the matching ground-truth array in memory, but the corresponding
+`to_eval_ply` call is commented out in the pinned upstream source. The rerun
+uses a narrow runtime patch to write
+`Instance_results_forEval_0.ply` before the faulty export merge. The upstream
+semantic evaluation PLY is retained unchanged. The dedicated evaluation route
+stops before final LAZ merging.
+
+Validate this route on the first CULS and NIBIO test plots before submitting
+all 11 test plots:
 
 ```bash
-POINTWISE_JOB=$(sbatch --parsable \
-  --array=0-10 \
-  --export=ALL,FOR_INSTANCE_SPLIT=test \
-  scripts/slurm/evaluate_segmentanytree_pointwise_array.sbatch)
+PAPER_PILOT=$(sbatch --parsable \
+  --array=0-1%1 \
+  --export=ALL,SEGMENTANYTREE_EXECUTE=1 \
+  scripts/slurm/run_segmentanytree_for_instance_paper_test_array.sbatch)
+
+PAPER_EVAL=$(sbatch --parsable \
+  --array=0-1%1 \
+  --dependency=afterok:${PAPER_PILOT} \
+  scripts/slurm/evaluate_segmentanytree_paper_test_array.sbatch)
 ```
 
-Do not submit this evaluator as a dependency on `afterok` for the audit array:
-an unsafe export is an expected diagnostic outcome. If internal aligned files
-are present, use those files as the primary evaluation input after their names
-and fields have been confirmed from the inventory JSON.
+Only expand this to array indices `0-10` after both pilot evaluations contain
+the expected aligned point counts, checkpoint hash and plausible metrics.
 
 ## Acceptance Checks
 
 Accept a rerun only when:
 
-1. the checkpoint SHA-256, external commit, container route and package
+1. the new checkpoint SHA-256, external commit, container route and package
    versions are recorded;
-2. all 11 test plots are present and no development plot is included in the
-   primary published-comparison table;
-3. prediction and reference labels have stable row-level correspondence;
-4. the released paper-compatible policy and the harmonized one-to-one policy
-   are reported separately;
-5. the IoU threshold and semantic masks are fixed before reading test scores;
-6. NIBIO is inspected separately because the provisional result differed
-   sharply from the published reference value; and
-7. the public workbook is rebuilt only from the validated point-wise results.
+2. the split manifest contains 16 training, 5 validation and 11 held-out test
+   records, with no converted test PLY in the training root;
+3. model selection uses development validation results only;
+4. all 11 test plots are present and no development plot is included in the
+   final headline table;
+5. prediction and reference labels have stable row-level correspondence;
+6. the released paper-compatible policy and harmonised one-to-one policy are
+   reported separately;
+7. the IoU threshold and semantic masks are fixed before the final test job;
+8. NIBIO is inspected separately without tuning against its test scores; and
+9. the public workbook is rebuilt only from validated trained-model results.

@@ -74,6 +74,21 @@ threshold selection, visual parameter adjustment or repeated debugging.
 Development results may be reported for diagnostics, but the primary
 comparable accuracy result is calculated on the supplied test split.
 
+The discarded SegmentAnyTree coordinate-rematching run included test outputs
+before this protocol was frozen. Those values must not guide the corrected
+training configuration. From this point, training failures and model selection
+are handled only with development training and validation data. The held-out
+test job is submitted only after the checkpoint and evaluation settings have
+been frozen.
+
+Where a method needs validation data, create it from the supplied development
+split and record the selection algorithm and seed. SegmentAnyTree follows its
+upstream conversion script: seed 42 and a fixed random 25% of development
+plots for validation. The same FOR-instance development/test boundary and
+harmonised evaluator apply to every later method. Method-specific
+augmentations, architectures and optimisation schedules remain part of each
+method's documented reproduction rather than being forced to be identical.
+
 ## Reference Definition
 
 The reference instance field is `treeID`.
@@ -195,6 +210,13 @@ For paper-aligned evaluation:
 
 The earlier coordinate-rematched result set is retained only as a provisional
 workflow diagnostic. It is not the accepted SegmentAnyTree reproduction.
+
+The corrected primary SegmentAnyTree experiment is a separate
+`retrained_from_dev` run. It follows the paper's ULS-only training scenario:
+FOR-instance development plots supply training and internal validation data,
+and the supplied test split remains absent from the training data root.
+Starting from the released mixed-domain checkpoint would instead be recorded
+as `fine_tuned_on_dev` and reported as a separate experiment.
 
 ## Required Public Documentation
 

@@ -42,7 +42,9 @@ The SegmentAnyTree/FOR-instance workflow uses classes `4`, `5` and `6`.
 Inference produces internal aligned prediction arrays and a final labelled LAZ
 with `PredInstance`. The final export must pass row-preservation checks before
 it can be used for point-wise accuracy. The internal aligned arrays are the
-preferred reproduction source.
+preferred reproduction source. Every completed audit in the first test-split
+snapshot failed row-preservation checks, so the accepted evaluation must use
+aligned arrays written before final export merging.
 
 ## Instance Accuracy Readiness
 
@@ -59,7 +61,10 @@ per-plot, collection, split, matched-pair and inventory tables are retained in
 [`examples/`](../examples/), and the interpretation is documented in
 [`segmentanytree_for_instance_results.md`](segmentanytree_for_instance_results.md).
 These coordinate-rematched values are provisional and are not the accepted
-paper reproduction.
+paper reproduction or trained-model result. The corrected
+`retrained_from_dev` experiment writes separate training metadata,
+development-validation metrics and held-out test metrics so results from the
+released checkpoint cannot be mixed with results from the new checkpoint.
 
 Summary tables distinguish two IoU aggregations:
 
@@ -150,7 +155,7 @@ Every labelled accuracy run must record:
 - ignored semantic classes and instance labels;
 - dataset split and reference provenance;
 - runtime and peak memory;
-- method version, command and parameter configuration.
+- method version, command and parameter configuration;
 - checkpoint checksum, training mode and training-data declaration.
 
 No FRDR instance accuracy value should be reported unless an external,

@@ -130,7 +130,9 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     assert config["method"]["output_format"] == "labelled_point_cloud"
     assert config["method"]["prediction_instance_field"] == "PredInstance"
     assert config["method"]["checkpoint"]["filename"] == "PointGroup-PAPER.pt"
-    assert config["method"]["checkpoint"]["sha256"] is None
+    assert config["method"]["checkpoint"]["sha256"] == (
+        "0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a"
+    )
     assert config["training"]["current_mode"] == "published_pretrained"
     assert config["training"]["local_weight_updates_performed"] is False
     assert config["training"]["forbidden_training_split"] == ["test"]
@@ -698,6 +700,207 @@ def test_run_metadata_hashes_checkpoint(tmp_path: Path) -> None:
         "cae5c917d62fb2c0f9f2a62ffce50fdab7f8fdd54f1aaff4da5353dde7fade14"
     )
     assert recorder.sha256(tmp_path / "missing.pt") is None
+
+
+def test_tracker_patch_enables_aligned_instance_output() -> None:
+    patcher = load_script(
+        (
+            "scripts/methods/segmentanytree_runtime_patches/"
+            "prepare_pointgroup_tracker_patch.py"
+        ),
+        "segmentanytree_tracker_patcher",
+    )
+    source = (
+        "class Tracker:\n"
+        "    def finalise(self):\n"
+        "        if True:\n"
+        "            if True:\n"
+        "                if True:\n"
+        '                    print("writing evaluation txt")\n'
+    )
+
+    patched = patcher.patch_source(source)
+
+    assert patched.count("Instance_results_forEval_{}.ply") == 1
+    assert "full_ins_pred.numpy()" in patched
+    assert "test_area_i.instance_labels" in patched
+
+
+def test_training_split_is_seeded_and_excludes_test_data(tmp_path: Path) -> None:
+    preparer = load_script(
+        "scripts/data/prepare_segmentanytree_for_instance_training.py",
+        "segmentanytree_training_preparer_split",
+    )
+    dataset_root = tmp_path / "FORinstance_dataset"
+    rows = []
+    for index in range(8):
+        path = dataset_root / "NIBIO" / f"plot_{index}_annotated.las"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_annotated_las(path)
+        rows.append(f"NIBIO/{path.name},NIBIO,dev")
+    for index in range(2):
+        path = dataset_root / "CULS" / f"test_{index}.las"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_annotated_las(path)
+        rows.append(f"CULS/{path.name},CULS,test")
+    metadata = dataset_root / "data_split_metadata.csv"
+    metadata.write_text(
+        "relative_path,collection,split\n" + "\n".join(rows) + "\n",
+        encoding="utf-8",
+    )
+
+    records = preparer.read_split_rows(dataset_root, metadata)
+    first = preparer.assign_training_roles(records, seed=42, validation_fraction=0.25)
+    second = preparer.assign_training_roles(records, seed=42, validation_fraction=0.25)
+
+    assert [row["training_role"] for row in first] == [
+        row["training_role"] for row in second
+    ]
+    assert sum(row["training_role"] == "train" for row in first) == 6
+    assert sum(row["training_role"] == "val" for row in first) == 2
+    assert sum(row["training_role"] == "held_out_test" for row in first) == 2
+
+
+def test_training_preparation_writes_expected_ply_without_test(
+    tmp_path: Path,
+) -> None:
+    preparer = load_script(
+        "scripts/data/prepare_segmentanytree_for_instance_training.py",
+        "segmentanytree_training_preparer_convert",
+    )
+    dataset_root = tmp_path / "FORinstance_dataset"
+    metadata_rows = []
+    for collection, name, split in (
+        ("CULS", "plot_1.las", "dev"),
+        ("CULS", "plot_2.las", "dev"),
+        ("NIBIO", "plot_3.las", "dev"),
+        ("NIBIO", "plot_4.las", "dev"),
+        ("SCION", "plot_5.las", "test"),
+    ):
+        path = dataset_root / collection / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_annotated_las(path)
+        metadata_rows.append(f"{collection}/{name},{collection},{split}")
+    metadata = dataset_root / "data_split_metadata.csv"
+    metadata.write_text(
+        "relative_path,collection,split\n"
+        + "\n".join(metadata_rows)
+        + "\n",
+        encoding="utf-8",
+    )
+    output_root = tmp_path / "prepared"
+    manifest_path = tmp_path / "manifest.json"
+
+    manifest = preparer.prepare(
+        dataset_root=dataset_root,
+        metadata_path=metadata,
+        output_root=output_root,
+        manifest_path=manifest_path,
+        profile="pilot",
+        seed=42,
+        validation_fraction=0.25,
+        pilot_train_count=2,
+        pilot_val_count=1,
+        overwrite=False,
+    )
+
+    assert manifest["selected_role_counts"] == {
+        "train": 2,
+        "val": 1,
+        "held_out_test": 0,
+    }
+    assert manifest["dataset_role_counts"] == {
+        "train": 3,
+        "val": 1,
+        "held_out_test": 1,
+    }
+    assert manifest["test_data_converted"] is False
+    converted = list((output_root / "treeinsfused/raw").rglob("*.ply"))
+    assert len(converted) == 3
+    assert not [path for path in converted if "_test" in path.name]
+    header, vertices = read_ply_vertices(converted[0])
+    assert set(header.columns) == {
+        "x",
+        "y",
+        "z",
+        "intensity",
+        "semantic_seg",
+        "treeID",
+    }
+    assert vertices["semantic_seg"].tolist() == [
+        1.0,
+        2.0,
+        2.0,
+        2.0,
+        2.0,
+    ]
+    assert vertices["treeID"].tolist() == [0.0, 1.0, 1.0, 2.0, 2.0]
+
+
+def test_training_config_and_slurm_gates_are_explicit() -> None:
+    config = yaml.safe_load(
+        (
+            ROOT / "configs/for_instance_segmentanytree_train_finetune.yml"
+        ).read_text(encoding="utf-8")
+    )
+    assert config["method"]["primary_training_mode"] == "retrained_from_dev"
+    assert config["method"]["paper_scenario"] == "scenario_1_uls_only"
+    assert config["dataset"]["internal_validation"]["seed"] == 42
+    assert config["dataset"]["internal_validation"]["expected_training_plots"] == 16
+    assert config["dataset"]["internal_validation"]["expected_validation_plots"] == 5
+    assert config["preparation"]["convert_test_for_training"] is False
+    assert config["evaluation"]["use_test_for_model_selection"] is False
+
+    training_task = (
+        ROOT / "scripts/slurm/train_segmentanytree_for_instance_task.sh"
+    ).read_text(encoding="utf-8")
+    final_test = (
+        ROOT
+        / "scripts/slurm/run_segmentanytree_for_instance_test_from_checkpoint.sbatch"
+    ).read_text(encoding="utf-8")
+    assert "SEGMENTANYTREE_EXECUTE" in training_task
+    assert "training.wandb.log=false" in training_task
+    assert "training.tensorboard.log=false" in training_task
+    assert "data.dataroot=/sat_data" in training_task
+    assert "SEGMENTANYTREE_FINAL_TEST_CONFIRMED" in final_test
+
+
+def test_segmentanytree_training_shell_scripts_parse() -> None:
+    scripts = [
+        "scripts/slurm/prepare_for_instance_segmentanytree_splits.sbatch",
+        "scripts/slurm/train_segmentanytree_for_instance_task.sh",
+        "scripts/slurm/train_segmentanytree_for_instance_pilot.sbatch",
+        "scripts/slurm/train_segmentanytree_for_instance_full.sbatch",
+        "scripts/slurm/evaluate_segmentanytree_pointwise_task.sh",
+        "scripts/slurm/run_segmentanytree_for_instance_trained_validation.sbatch",
+        "scripts/slurm/evaluate_segmentanytree_for_instance_trained_validation.sbatch",
+        "scripts/slurm/run_segmentanytree_for_instance_test_from_checkpoint.sbatch",
+        "scripts/slurm/evaluate_segmentanytree_for_instance_test_from_checkpoint.sbatch",
+    ]
+    for relative_path in scripts:
+        completed = subprocess.run(
+            ["bash", "-n", str(ROOT / relative_path)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert completed.returncode == 0, (
+            relative_path,
+            completed.stderr,
+        )
+
+
+def test_paper_aligned_inference_stops_before_export_merge() -> None:
+    script = (
+        ROOT
+        / "scripts/methods/segmentanytree_runtime_patches/"
+        "run_inference_for_pointwise_evaluation.sh"
+    ).read_text(encoding="utf-8")
+
+    assert "python3 eval.py" in script
+    assert "rename_result_files_instance.py" in script
+    assert "Instance_results_forEval_" in script
+    assert "merge_pt_ss_is" not in script
 
 
 def test_revalidation_slurm_scripts_support_test_only_selection() -> None:

@@ -84,8 +84,8 @@ method:
   gpu_required: true
   checkpoint:
     filename: PointGroup-PAPER.pt
-    sha256: null
-    provenance_status: pending_checksum_verification
+    sha256: "0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a"
+    provenance_status: "container_checkpoint_hash_verified_repository_overrides_record_mixed_training_but_exact_scenario_unconfirmed"
     training_performed_in_this_repository: false
     execution_entrypoint: eval.py
 
@@ -97,6 +97,11 @@ training:
   forbidden_training_split:
     - test
   note: "The completed jobs ran inference with a supplied checkpoint; they did not train SegmentAnyTree."
+  corrected_experiment:
+    config: "configs/for_instance_segmentanytree_train_finetune.yml"
+    primary_mode: retrained_from_dev
+    status: training_preflight_ready
+    final_test_status: not_started
 
 evaluation:
   protocol_id: for_instance_pointwise_v1
@@ -173,6 +178,10 @@ paths:
   export_validation_root: "results/metadata/segmentanytree_for_instance/export_validation"
   internal_output_inventory_root: "results/metadata/segmentanytree_for_instance/internal_output_inventory"
   pointwise_evaluation_root: "results/metadata/segmentanytree_for_instance/pointwise"
+  paper_aligned_predictions_root: "data/predictions/segmentanytree/for_instance_pointwise"
+  paper_aligned_run_metadata_root: "results/metadata/segmentanytree_for_instance/pointwise_runs"
+  paper_aligned_evaluation_root: "results/metadata/segmentanytree_for_instance/pointwise_paper"
+  paper_aligned_tables_root: "results/tables/segmentanytree_for_instance/pointwise_paper"
   per_plot_metrics_root: "results/tables/segmentanytree_for_instance/per_plot"
   pointwise_tables_root: "results/tables/segmentanytree_for_instance/pointwise"
   tables_root: "results/tables/segmentanytree_for_instance"

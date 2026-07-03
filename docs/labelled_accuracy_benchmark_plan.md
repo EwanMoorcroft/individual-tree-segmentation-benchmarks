@@ -7,10 +7,11 @@ FOR-instance supplies `treeID` reference instances and semantic
 `classification` labels, allowing point-wise instance IoU, precision, recall,
 F1 and coverage evaluation.
 
-The canonical pilot and all 32 files completed inference. The earlier
-coordinate-rematched evaluation is provisional because the final export has
-not been shown to preserve one output row per source point. Its diagnostic
-values are documented in
+The canonical pilot and all 32 files completed inference with the released
+checkpoint. The earlier coordinate-rematched evaluation is provisional
+because the final export does not preserve one output row per source point and
+the model was not trained under the local FOR-instance protocol. Its
+diagnostic values are documented in
 [`segmentanytree_for_instance_results.md`](segmentanytree_for_instance_results.md).
 The accepted accuracy evaluation remains pending.
 
@@ -26,20 +27,23 @@ label in metadata and metric tables.
   before evaluating the test set.
 - Record the model checkpoint, external commit and container route.
 
-## Revalidation Sequence
+## Corrected SegmentAnyTree Sequence
 
-1. Record the supplied checkpoint SHA-256 and confirm its upstream provenance.
-2. Inventory the internal semantic and instance evaluation PLY files retained
-   by the inference workflow.
-3. Audit final LAZ point counts and coordinate multiplicity against every
-   source plot.
-4. Evaluate point-aligned labels using the released SegmentAnyTree matching
-   policy.
-5. Evaluate the same labels with a strict one-to-one policy for cross-method
-   comparison.
-6. Use development plots only for diagnostics and report the supplied test
-   split as the primary paper comparison.
-7. Rebuild the workbook and public-safe tables after all validation gates pass.
+1. Reproduce the upstream seed-42 split of development plots into 16 training
+   and 5 validation plots.
+2. Convert development LAS files to the upstream Treeins PLY schema and verify
+   that no test file enters the training root.
+3. Run the two-epoch, three-plot training preflight.
+4. Load its checkpoint for inference on the selected development validation
+   plot and evaluate aligned point-wise labels.
+5. If the complete preflight succeeds, prepare all development plots and train
+   the ULS-only model from scratch.
+6. Select and freeze the checkpoint using only the five development validation
+   plots.
+7. Run inference once on all 11 held-out test plots.
+8. Report the released matching policy and a strict one-to-one policy
+   separately.
+9. Rebuild the workbook and public-safe tables only after all gates pass.
 
 Every accepted accuracy row records reference and prediction counts, TP, FP,
 FN, precision, recall, F1, coverage, matched IoU, matching policy, runtime,
@@ -47,15 +51,13 @@ peak memory, checkpoint identity, thresholds and semantic masks.
 
 ## Next Validation Priorities
 
-1. Inspect one CULS and one NIBIO output to identify the exact internal aligned
-   files before submitting a full CPU evaluation.
-2. Quantify output point-count differences and duplicate-coordinate conflicts
-   by collection.
-3. Determine whether the NIBIO collapse originates in the final export,
-   semantic mapping, checkpoint/configuration or the model prediction.
-4. Freeze the evaluation configuration before reading new test results.
-5. Run a second method against the same harmonized references without
-   replacing its method-specific reproduction metrics.
+1. Submit the development-only preparation and training preflight.
+2. Confirm a non-empty `PointGroup-PAPER.pt` checkpoint and recorded checksum.
+3. Confirm equal lengths for semantic prediction, semantic reference, instance
+   prediction and instance reference arrays on development validation data.
+4. Submit full development training only after those checks pass.
+5. Add the next method against the same fixed development/test boundary and
+   harmonised evaluator.
 
 ## Other Candidate Work
 

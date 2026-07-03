@@ -9,7 +9,7 @@ outside this repository.
 | Dataset | Inspection status | Instance labels | Accuracy status | Recommended role |
 | --- | --- | --- | --- | --- |
 | FRDR treeiso TLS | Downloaded; 16-plot TLS2trees run completed | Not present in the benchmark LAZ inputs | F1/IoU unavailable from `woods` | Completed prediction and operational benchmark |
-| FOR-instance | Downloaded and inventoried; 32-plot SegmentAnyTree inference completed | `treeID` in annotated LAS files | Coordinate-rematched metrics provisional; point-wise revalidation required | Primary cross-method accuracy benchmark |
+| FOR-instance | Downloaded and inventoried; diagnostic 32-plot SegmentAnyTree inference completed | `treeID` in annotated LAS files | Released-checkpoint metrics provisional; development-split training pending | Primary cross-method accuracy benchmark |
 | Wytham Woods | Downloaded, unpacked and inventoried | One segmented tree per file | F1/IoU feasible after scene reconstruction | TLS accuracy benchmark candidate |
 
 ## FRDR Treeiso TLS
@@ -57,9 +57,12 @@ positive reference tree IDs. Semantic classes are:
 | 6 | Woody branches |
 
 The SegmentAnyTree workflow uses tree-material classes `4`, `5` and `6`, with
-classes `0`, `1`, `2` and `3` ignored. Inference completed for all 32 plots,
-but the first accuracy evaluation used coordinate rematching after export and
-is being replaced by aligned point-wise evaluation. The protocol is in
+classes `0`, `1`, `2` and `3` ignored. Released-checkpoint inference completed
+for all 32 plots, but all 11 test exports failed point-correspondence checks.
+That run also did not train a model under the local development/test protocol.
+The corrected experiment uses 16 development plots for training, 5 for
+internal validation and the 11 supplied test plots only after the checkpoint
+is frozen. The protocol is in
 [`for_instance_cross_method_protocol.md`](for_instance_cross_method_protocol.md)
 and the provisional values are documented in
 [`segmentanytree_for_instance_results.md`](segmentanytree_for_instance_results.md).

@@ -9,11 +9,13 @@ individual tree segmentation methods across multiple LiDAR datasets using the
 University of Liverpool Barkla2 HPC system.
 
 The completed workflows cover a TLS2trees prediction benchmark on the FRDR
-treeiso terrestrial laser scanning dataset and SegmentAnyTree inference on all
-32 FOR-instance files. The SegmentAnyTree accuracy evaluation is being
-revalidated against the point-aligned protocol used by the published method.
-Future configs can add other methods and datasets without creating separate
-repositories.
+treeiso terrestrial laser scanning dataset and a diagnostic SegmentAnyTree
+inference run on all 32 FOR-instance files. The SegmentAnyTree run used the
+released checkpoint rather than a model trained under the local FOR-instance
+protocol, and its final exports failed point-correspondence checks. It is
+therefore retained as engineering evidence rather than dissertation accuracy.
+A corrected development-split training workflow is ready for its Barkla
+preflight.
 
 No source datasets, converted point clouds, predictions, scheduler logs or
 external method repositories are included.
@@ -22,10 +24,11 @@ external method repositories are included.
 
 - FRDR/TLS2trees: completed prediction and operational benchmark across 16
   plots; no reference instance accuracy is reported.
-- FOR-instance/SegmentAnyTree: inference completed for all 32 annotated LAS
-  files. The earlier coordinate-rematched evaluation is provisional; aligned
-  point-wise evaluation and export-integrity checks are required before final
-  accuracy is reported.
+- FOR-instance/SegmentAnyTree: a released-checkpoint inference run completed
+  for all 32 annotated LAS files. Its coordinate-rematched evaluation is
+  rejected as final evidence. The corrected workflow now prepares a fixed
+  development-only train/validation split, trains a new model and validates
+  aligned outputs before any held-out test run.
 - FOR-instance/TLS2trees: retained as a candidate compatibility test.
 - Wytham Woods: downloaded and inspected; retained as a strong TLS reference
   dataset after plot-level reference reconstruction from per-tree files.
@@ -42,13 +45,15 @@ and candidate dataset-method combinations.
 The first SegmentAnyTree evaluation used semantic classes `4`, `5` and `6`
 against positive `treeID` references, but recovered point correspondence by
 matching exported coordinates. Its NIBIO F1 differed from the published
-SegmentAnyTree result by far more than the reproduction tolerance. Those
-metrics are retained as diagnostic evidence and must not be described as the
-final method accuracy. The revised evaluator uses aligned prediction and
-reference arrays and reports both the published matching policy and a
-harmonised one-to-one result. The earlier
-[FOR-instance TLS2trees pilot](docs/for_instance_tls2trees_pilot.md) remains
-available and uses its separate leaf-off class definition.
+SegmentAnyTree result by far more than the reproduction tolerance. The
+completed audits subsequently confirmed row inflation, including more than two
+million additional rows for TUWIEN. The revised inference route writes aligned
+prediction and reference arrays before that merge. The corrected training
+route separately follows the upstream FOR-instance preparation: the supplied
+development split is divided reproducibly into training and validation plots
+with seed 42, while test plots are excluded from the training data root. The
+earlier [FOR-instance TLS2trees pilot](docs/for_instance_tls2trees_pilot.md)
+remains available and uses its separate leaf-off class definition.
 
 ## Important Limitation
 
@@ -86,7 +91,7 @@ when rerun with 96 GiB; its recorded peak usage was 49.602968 GiB.
 - [Evaluation metrics and reference-label requirements](docs/evaluation_metrics.md)
 - [FOR-instance inventory example](examples/for_instance_inventory_summary.csv)
 
-## FOR-instance/SegmentAnyTree Inference And Revalidation
+## FOR-instance/SegmentAnyTree Diagnostic Run And Corrected Training
 
 All 32 annotated LAS files completed inference and normalisation. The run
 processed the supplied 21 development and 11 test plots. Cumulative per-plot
@@ -98,9 +103,15 @@ Runtime is cumulative across array tasks rather than elapsed wall time.
 - [Provisional coordinate-rematched results](docs/segmentanytree_for_instance_results.md)
 
 The published workbook and CSV files are provisional and retained to document
-the failed evaluation route. They will be replaced after the point-aligned
-test-split evaluation passes the reproduction gates. Raw point clouds,
-predictions, full metadata and scheduler logs remain ignored.
+the failed evaluation route. They must not be presented as final trained-model
+accuracy. The corrected experiment is defined in
+[`configs/for_instance_segmentanytree_train_finetune.yml`](configs/for_instance_segmentanytree_train_finetune.yml).
+Its first checkpoint is a two-epoch training preflight using two development
+training plots and one development validation plot. Full development-split
+training and held-out test evaluation remain pending.
+
+Raw point clouds, converted training PLY files, checkpoints, predictions, full
+metadata and scheduler logs remain ignored.
 
 ## FRDR Label Mapping
 
@@ -151,6 +162,8 @@ python -m pip install -r requirements.txt
 | SegmentAnyTree checkout | `external/SegmentAnyTree` |
 | SegmentAnyTree SIF | `~/scratch/containers/segment-any-tree_latest.sif` |
 | SegmentAnyTree repaired userbase | `~/fastscratch/segmentanytree_pyuser_v1` |
+| SegmentAnyTree prepared training data | `~/fastscratch/segmentanytree_for_instance_training/<profile>/` |
+| SegmentAnyTree local checkpoints | `~/fastscratch/segmentanytree_for_instance_checkpoints/<run_id>/` |
 | Converted inputs | `data/interim/tls2trees/frdr_full/<plot_name>/` |
 | SegmentAnyTree predictions | `data/predictions/segmentanytree/for_instance/<collection>/<plot_name>/` |
 | SegmentAnyTree normalised predictions | `data/interim/segmentanytree/for_instance/<collection>/<plot_name>/normalised_predictions/` |
@@ -202,6 +215,7 @@ responsibilities separate:
 ├── configs/
 │   ├── for_instance_accuracy_benchmark.yml
 │   ├── for_instance_segmentanytree_benchmark.yml
+│   ├── for_instance_segmentanytree_train_finetune.yml
 │   ├── for_instance_tls2trees_accuracy.yml
 │   ├── frdr_tls2trees_benchmark.yml
 │   └── wytham_accuracy_benchmark.yml
@@ -244,10 +258,12 @@ responsibilities separate:
 │   │   └── select_for_instance_plot.py
 │   ├── evaluation/
 │   │   ├── instance_iou_f1.py
+│   │   ├── inspect_segmentanytree_outputs.py
 │   │   ├── pointwise_instance_metrics.py
+│   │   ├── summarise_for_instance_segmentanytree_benchmark.py
+│   │   ├── summarise_segmentanytree_revalidation.py
 │   │   ├── validate_segmentanytree_export.py
-│   │   └── inspect_segmentanytree_outputs.py
-│   │   └── summarise_for_instance_segmentanytree_benchmark.py
+│   │   └── ...
 │   ├── methods/
 │   │   ├── normalise_segmentanytree_predictions.py
 │   │   ├── record_segmentanytree_run.py
@@ -262,11 +278,15 @@ responsibilities separate:
 │       ├── convert_frdr_to_tls2trees_array.sbatch
 │       ├── convert_for_instance_tls2trees_pilot.sbatch
 │       ├── evaluate_for_instance_tls2trees_pilot.sbatch
+│       ├── evaluate_segmentanytree_paper_test_array.sbatch
 │       ├── inspect_for_instance_inventory.sbatch
 │       ├── inspect_frdr_inventory.sbatch
+│       ├── inspect_segmentanytree_internal_outputs.sbatch
 │       ├── normalise_segmentanytree_for_instance_array.sbatch
 │       ├── evaluate_segmentanytree_for_instance_array.sbatch
+│       ├── audit_segmentanytree_for_instance_export_array.sbatch
 │       ├── run_segmentanytree_for_instance_array.sbatch
+│       ├── run_segmentanytree_for_instance_paper_test_array.sbatch
 │       ├── install_segmentanytree_python_stack.sbatch
 │       ├── run_segmentanytree_for_instance_pilot_apptainer.sbatch
 │       ├── test_segmentanytree_apptainer.sbatch

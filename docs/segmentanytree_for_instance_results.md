@@ -4,14 +4,29 @@
 
 Inference completed for all 32 files, but the accuracy values below are
 **provisional and must not be cited as the final SegmentAnyTree benchmark**.
-They were calculated by splitting the final exported LAZ into predicted trees
-and matching rounded coordinates back to the source LAS.
+The run used the released `PointGroup-PAPER.pt` checkpoint and did not train or
+fine-tune SegmentAnyTree on the local FOR-instance development split. The
+values were also calculated by splitting the final exported LAZ into predicted
+trees and matching rounded coordinates back to the source LAS.
 
 This route does not reproduce the published aligned point-wise evaluation.
 The NIBIO F1 differs from the published result by approximately 0.87, and the
 initial CULS export contained more rows than its source file. The accuracy
 evaluation is therefore being repeated using
 [`for_instance_pointwise_v1`](for_instance_cross_method_protocol.md).
+
+All 11 subsequent test-plot audits failed point-count or
+coordinate-multiplicity checks. The observed failures reject the final LAZ as
+the benchmark-wide accuracy input. A runtime patch now exposes the
+full-resolution aligned instance prediction and ground-truth arrays before the
+upstream coordinate merge. That patch is retained for both the released-model
+reproduction and the corrected trained-model experiment.
+
+There are therefore two independent reasons these results are not final:
+
+1. the coordinate-rematched evaluation input is not point preserving; and
+2. the checkpoint was not trained under the dissertation's fixed
+   FOR-instance development/test protocol.
 
 ## Completed Workflow Scope
 
@@ -72,7 +87,9 @@ reference trees but only 12 accepted matches; 16 of its 20 plots have no
 accepted match. The SegmentAnyTree paper reports NIBIO F1 near 0.88 under its
 aligned evaluation, compared with 0.011 here. The discrepancy is treated as an
 evaluation failure until the internal prediction arrays and final export have
-been audited.
+been audited. The export audit has now confirmed row corruption, so the
+coordinate-rematched NIBIO result is rejected rather than interpreted as model
+performance.
 
 ## Provisional Results By Supplied Split
 
@@ -116,15 +133,17 @@ using a transferred copy of the ignored full result tables as its input.
 
 ## Interpretation And Remaining Validation
 
-The run establishes that full inference is operational. Accuracy acceptance
-requires:
+The run establishes that full inference is operational and identifies the
+failure in the final export. It does not establish trained-model accuracy.
+Acceptance of the corrected experiment requires:
 
-1. inventorying the internal aligned semantic and instance PLY files;
-2. auditing source and final-export point counts and coordinate multiplicity;
-3. evaluating aligned point labels with the released matching policy;
-4. reporting a separate harmonised one-to-one test-split result;
-5. recording the checkpoint checksum and training-data provenance; and
-6. replacing these provisional tables only after the reproduction gates pass.
+1. preparing the fixed seed-42 train/validation split from development plots;
+2. completing the short training and development-validation preflight;
+3. training the selected configuration on development data only;
+4. recording the new checkpoint checksum and complete training provenance;
+5. running the frozen checkpoint once on the 11 held-out test plots;
+6. evaluating aligned point labels with both matching policies; and
+7. replacing these provisional tables only after all reproduction gates pass.
 
 No FRDR accuracy values are combined with these results because the FRDR inputs
 do not contain individual-tree reference IDs.

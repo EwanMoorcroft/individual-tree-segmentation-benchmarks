@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 from datetime import datetime, timezone
@@ -40,6 +41,16 @@ def read_json(path: Path | None) -> dict[str, Any] | None:
     return value
 
 
+def sha256(path: Path | None) -> str | None:
+    if path is None or not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Record one SegmentAnyTree run.")
     parser.add_argument("--output", required=True)
@@ -58,6 +69,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--runtime-seconds", required=True, type=float)
     parser.add_argument("--time-log")
     parser.add_argument("--package-versions-json")
+    parser.add_argument("--checkpoint")
     return parser.parse_args()
 
 
@@ -69,6 +81,11 @@ def main() -> int:
     final_prediction = (
         Path(args.final_prediction).expanduser().resolve()
         if args.final_prediction
+        else None
+    )
+    checkpoint = (
+        Path(args.checkpoint).expanduser().resolve()
+        if args.checkpoint
         else None
     )
     output_file_count = (
@@ -96,6 +113,8 @@ def main() -> int:
         "container_image": str(Path(args.image).expanduser().resolve()),
         "external_repo_path": str(repo_path),
         "external_commit": git_commit(repo_path),
+        "checkpoint": str(checkpoint) if checkpoint else None,
+        "checkpoint_sha256": sha256(checkpoint),
         "python_userbase": str(Path(args.python_userbase).expanduser().resolve()),
         "package_versions": read_json(
             Path(args.package_versions_json).expanduser().resolve()

@@ -48,6 +48,7 @@ SPLIT="${PLOT_INFO[4]}"
 STAGED_INPUT_DIR="$PROJECT_ROOT/data/interim/segmentanytree/for_instance/staged_inputs/${COLLECTION}/${PLOT_NAME}"
 OUTPUT_DIR="$PROJECT_ROOT/data/predictions/segmentanytree/for_instance/${COLLECTION}/${PLOT_NAME}"
 FINAL_PREDICTION="$OUTPUT_DIR/final_results/${PLOT_NAME}_out.laz"
+CHECKPOINT_COPY="$OUTPUT_DIR/PointGroup-PAPER.pt"
 RUN_METADATA="$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/runs/${COLLECTION}/${PLOT_NAME}_run.json"
 TASK_ID="${SLURM_ARRAY_TASK_ID:-pilot}"
 RUNTIME_DIR="$RUNTIME_ROOT/${SLURM_JOB_ID:-manual}_${TASK_ID}_${COLLECTION}_${PLOT_NAME}"
@@ -144,6 +145,7 @@ python scripts/methods/record_segmentanytree_run.py \
   --final-prediction "$FINAL_PREDICTION" \
   --image "$IMAGE" \
   --external-repo "$EXTERNAL_REPO" \
+  --checkpoint "$CHECKPOINT_COPY" \
   --python-userbase "$USERBASE" \
   --status "$STATUS" \
   --return-code "$RETURN_CODE" \

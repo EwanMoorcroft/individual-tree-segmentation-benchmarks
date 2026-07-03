@@ -2,14 +2,17 @@
 
 ## Status
 
-The full benchmark completed prediction, normalisation and labelled evaluation
-for all 32 FOR-instance LAS files. The result set contains 21 development plots
-and 11 test plots across CULS, NIBIO, RMIT, SCION and TUWIEN. No plot is missing
-from the final summary.
+SegmentAnyTree inference completed for all 32 FOR-instance LAS files: 21
+development plots and 11 test plots across CULS, NIBIO, RMIT, SCION and
+TUWIEN. The first evaluation also completed computationally, but it recovered
+point correspondence from exported coordinates. Those accuracy values are
+provisional because the export is not yet confirmed to preserve one row per
+source point.
 
-The complete results and their limitations are documented in
+The provisional results and their limitations are documented in
 [`segmentanytree_for_instance_results.md`](segmentanytree_for_instance_results.md).
-The public workbook and CSV tables are in [`examples/`](../examples/).
+They must not be used as final benchmark results until the point-aligned
+evaluation described below has completed.
 
 ## Dataset And Evaluation Labels
 
@@ -35,6 +38,12 @@ SegmentAnyTree remains an external dependency:
 
 The external checkout, approximately 7.4 GB SIF image, model checkpoint, raw
 data and prediction outputs are excluded from this repository.
+
+The completed jobs ran `eval.py` with the supplied `PointGroup-PAPER.pt`
+checkpoint. They did not run `train.py`, did not update model weights and did
+not train SegmentAnyTree on the local copy of FOR-instance. The checkpoint
+SHA-256 and its precise upstream training provenance must be recorded before
+claiming a paper reproduction.
 
 ## Working Barkla Setup
 
@@ -73,17 +82,14 @@ narrow correction without changing the external checkout.
 Further deployment detail is in
 [`segmentanytree_barkla_debug_log.md`](segmentanytree_barkla_debug_log.md).
 
-## Pilot Validation
+## Pilot Execution
 
 The canonical pilot file is `CULS/plot_1_annotated.las`. It contains 1,816,672
 input points and six positive reference trees. The corrected pilot chain
 completed with Slurm jobs 9548698, 9548699 and 9548700 for prediction,
-normalisation and evaluation respectively.
-
-The canonical rerun produced 20 predicted trees, six true positives, 14 false
-positives and no false negatives. Its precision was 0.300000, recall 1.000000,
-F1 0.461538 and mean matched IoU 0.850730. These values supersede the earlier
-investigation record that required separate postprocessing.
+normalisation and the original coordinate-rematched evaluation respectively.
+The prediction is valid execution evidence. Its earlier accuracy values remain
+provisional until point correspondence is revalidated.
 
 To repeat the pilot:
 
@@ -110,9 +116,9 @@ Use `install_segmentanytree_python_stack.sbatch` and
 `test_segmentanytree_python_stack_repair.sbatch` only when deliberately
 creating or rebuilding the controlled userbase.
 
-## Full Benchmark Workflow
+## Completed Inference Workflow
 
-The completed run used the following reusable dependency chain:
+The earlier full run used the following dependency chain:
 
 ```bash
 cd ~/scratch/tree-seg-benchmark
@@ -135,9 +141,10 @@ SUMMARY_JOB=$(sbatch --parsable \
   scripts/slurm/summarise_segmentanytree_for_instance.sbatch)
 ```
 
-The completed full-array jobs were 9548701 for prediction, 9548702 for
-normalisation, 9548703 for evaluation and 9548704 for summarisation. All 32
-tasks in each array completed successfully.
+The full-array jobs were 9548701 for prediction, 9548702 for normalisation,
+9548703 for the coordinate-rematched evaluation and 9548704 for
+summarisation. All tasks completed, but successful process exits do not make
+the resulting accuracy values paper-comparable.
 
 The prediction job invokes the container interface:
 
@@ -154,17 +161,17 @@ python scripts/methods/run_segmentanytree_for_instance.py \
   --dry-run
 ```
 
-## Working Output Locations
+## Output Locations
 
 Large outputs remain ignored by Git:
 
 - labelled predictions:
   `data/predictions/segmentanytree/for_instance/<collection>/<plot>/final_results/`;
-- normalised instances:
+- coordinate-normalised instances from the provisional evaluator:
   `data/interim/segmentanytree/for_instance/<collection>/<plot>/normalised_predictions/`;
-- run and evaluation metadata:
+- run, audit and evaluation metadata:
   `results/metadata/segmentanytree_for_instance/`;
-- per-plot metrics and match assignments:
+- provisional per-plot metrics and match assignments:
   `results/tables/segmentanytree_for_instance/per_plot/`;
 - full plot table:
   `results/tables/segmentanytree_for_instance_plot_metrics.csv`;
@@ -174,18 +181,91 @@ Large outputs remain ignored by Git:
 - scheduler logs: `logs/segmentanytree_for_instance/`.
 
 The final labelled predictions use `PredInstance` and `PredSemantic`. The
-normaliser writes one XYZ PLY per positive `PredInstance`. Evaluation matches
-those coordinates to the unchanged source LAS at a 0.02 m tolerance and uses a
-0.5 IoU threshold.
+earlier normaliser wrote one XYZ PLY per positive `PredInstance` and matched
+those coordinates back to the source LAS at a 0.02 m tolerance. This is not
+the paper-aligned evaluation route.
 
-## Validation After A Rerun
+## Paper-Aligned Evaluation
 
-After any rerun:
+The SegmentAnyTree paper evaluates FOR-instance using the supplied test split.
+Predicted and reference instance IDs are compared point by point and a
+prediction is accepted at an IoU threshold of 0.5. The released implementation
+uses aligned `preds` and `gt` arrays from semantic and instance evaluation PLY
+files. It does not reconstruct correspondence from rounded XYZ coordinates.
 
-1. confirm 32 completed rows and no missing relative path;
-2. confirm each final LAZ contains positive `PredInstance` values;
-3. compare output and input point counts;
-4. confirm 32 normalisation and 32 evaluation metadata records;
-5. rebuild the summary and public-safe tables;
-6. inspect the NIBIO collection separately; and
-7. retain the supplied split labels and unchanged evaluation thresholds.
+The repository reports two policies from the same point-wise IoU matrix:
+
+- `paper_compatible`: each prediction is compared with its best reference,
+  matching the released SegmentAnyTree evaluator;
+- `harmonized`: a strict one-to-one assignment for comparisons across methods.
+
+The primary published-comparison table must contain only the 11 test plots.
+Development plots may be used for diagnostics, but not to select settings after
+test results have been inspected.
+
+Before submitting more GPU inference, inspect the existing outputs and audit
+the final exports:
+
+```bash
+cd ~/scratch/tree-seg-benchmark
+
+INSPECT_JOB=$(sbatch --parsable \
+  --array=0-10 \
+  --export=ALL,FOR_INSTANCE_SPLIT=test \
+  scripts/slurm/inspect_segmentanytree_internal_outputs.sbatch)
+
+AUDIT_JOB=$(sbatch --parsable \
+  --array=0-10 \
+  --export=ALL,FOR_INSTANCE_SPLIT=test \
+  scripts/slurm/audit_segmentanytree_for_instance_export_array.sbatch)
+
+echo "INSPECT_JOB=$INSPECT_JOB"
+echo "AUDIT_JOB=$AUDIT_JOB"
+```
+
+The audit intentionally fails a task when the final LAZ changes point count or
+coordinate multiplicity. A failed audit does not invalidate the model
+prediction; it means accuracy must be calculated from the aligned internal
+evaluation files instead.
+
+After both jobs leave the queue:
+
+```bash
+python scripts/evaluation/summarise_segmentanytree_revalidation.py
+```
+
+This writes
+`results/tables/segmentanytree_for_instance/revalidation_diagnostics.csv` and
+prints the export status and internal candidate counts for each inspected
+plot.
+
+If an export passes, the final-LAZ diagnostic evaluator can be submitted for
+the test split:
+
+```bash
+POINTWISE_JOB=$(sbatch --parsable \
+  --array=0-10 \
+  --export=ALL,FOR_INSTANCE_SPLIT=test \
+  scripts/slurm/evaluate_segmentanytree_pointwise_array.sbatch)
+```
+
+Do not submit this evaluator as a dependency on `afterok` for the audit array:
+an unsafe export is an expected diagnostic outcome. If internal aligned files
+are present, use those files as the primary evaluation input after their names
+and fields have been confirmed from the inventory JSON.
+
+## Acceptance Checks
+
+Accept a rerun only when:
+
+1. the checkpoint SHA-256, external commit, container route and package
+   versions are recorded;
+2. all 11 test plots are present and no development plot is included in the
+   primary published-comparison table;
+3. prediction and reference labels have stable row-level correspondence;
+4. the released paper-compatible policy and the harmonized one-to-one policy
+   are reported separately;
+5. the IoU threshold and semantic masks are fixed before reading test scores;
+6. NIBIO is inspected separately because the provisional result differed
+   sharply from the published reference value; and
+7. the public workbook is rebuilt only from the validated point-wise results.

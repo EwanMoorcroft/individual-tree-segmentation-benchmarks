@@ -100,7 +100,10 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     )
 
     assert config["project"]["benchmark_name"] == "for_instance_segmentanytree"
-    assert config["project"]["status"] == "completed"
+    assert config["project"]["status"] == (
+        "inference_complete_evaluation_revalidation_required"
+    )
+    assert config["project"]["protocol_id"] == "for_instance_pointwise_v1"
     assert config["dataset"]["name"] == "FOR-instance"
     assert config["dataset"]["root"] == (
         "~/data/datasets/for_instance/FORinstance_dataset"
@@ -114,7 +117,9 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
         "CULS/plot_1_annotated.las"
     )
     assert config["benchmark"]["array_size"] == 32
-    assert config["benchmark"]["completed_evaluation_count"] == 32
+    assert config["benchmark"]["provisional_coordinate_evaluation_count"] == 32
+    assert config["benchmark"]["validated_pointwise_evaluation_count"] == 0
+    assert config["benchmark"]["primary_reporting_split"] == "test"
     assert config["method"]["execution_mode"] == "apptainer_slurm"
     assert config["method"]["apptainer_image"] == (
         "~/scratch/containers/segment-any-tree_latest.sif"
@@ -124,10 +129,22 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     )
     assert config["method"]["output_format"] == "labelled_point_cloud"
     assert config["method"]["prediction_instance_field"] == "PredInstance"
+    assert config["method"]["checkpoint"]["filename"] == "PointGroup-PAPER.pt"
+    assert config["method"]["checkpoint"]["sha256"] is None
+    assert config["training"]["current_mode"] == "published_pretrained"
+    assert config["training"]["local_weight_updates_performed"] is False
+    assert config["training"]["forbidden_training_split"] == ["test"]
     assert config["method"]["gpu_required"] is True
     assert config["method"]["command_template"] is None
     assert config["evaluation"]["iou_threshold"] == 0.5
-    assert config["evaluation"]["coordinate_tolerance"] == 0.02
+    assert config["evaluation"]["threshold_operator"] == "greater_than_or_equal"
+    assert config["evaluation"]["primary_input"] == (
+        "aligned_internal_prediction_arrays"
+    )
+    assert config["evaluation"]["coordinate_rematching"]["status"] == (
+        "provisional_only"
+    )
+    assert config["evaluation"]["coordinate_rematching"]["tolerance"] == 0.02
     assert config["runtime"]["gpu_partition"] == "gpu-l40s-low"
 
 
@@ -588,6 +605,258 @@ def test_summariser_computes_micro_metrics() -> None:
     assert summary["failed_count"] == 1
 
 
+def test_pointwise_evaluator_reports_paper_and_harmonized_metrics() -> None:
+    evaluator = load_script(
+        "scripts/evaluation/pointwise_instance_metrics.py",
+        "segmentanytree_pointwise_evaluator",
+    )
+    labels = evaluator.PointLabels(
+        predicted_instance=np.array([10, 10, 20, 20, 30, 30]),
+        reference_instance=np.array([1, 1, 2, 2, 0, 0]),
+        predicted_semantic=np.array([2, 2, 2, 2, 2, 2]),
+        reference_semantic=np.array([2, 2, 2, 2, 1, 1]),
+    )
+
+    result = evaluator.evaluate_pointwise(
+        labels,
+        reference_tree_classes={2},
+        prediction_tree_classes={2},
+        ignored_reference_labels={0, -1},
+        ignored_prediction_labels={0, -1},
+        iou_threshold=0.5,
+    )
+
+    assert result["reference_instance_count"] == 2
+    assert result["prediction_instance_count"] == 3
+    assert result["paper_compatible"]["true_positives"] == 2
+    assert result["paper_compatible"]["f1"] == pytest.approx(0.8)
+    assert result["harmonized"]["true_positives"] == 2
+    assert result["harmonized"]["f1"] == pytest.approx(0.8)
+    assert result["mean_unweighted_coverage"] == pytest.approx(1.0)
+    assert result["mean_weighted_coverage"] == pytest.approx(1.0)
+
+
+def test_pointwise_evaluator_exposes_matching_policy_difference() -> None:
+    evaluator = load_script(
+        "scripts/evaluation/pointwise_instance_metrics.py",
+        "segmentanytree_pointwise_matching",
+    )
+    labels = evaluator.PointLabels(
+        predicted_instance=np.array([10, 10, 20, 20]),
+        reference_instance=np.array([1, 1, 1, 1]),
+        predicted_semantic=np.array([2, 2, 2, 2]),
+        reference_semantic=np.array([2, 2, 2, 2]),
+    )
+
+    result = evaluator.evaluate_pointwise(
+        labels,
+        reference_tree_classes={2},
+        prediction_tree_classes={2},
+        ignored_reference_labels={0, -1},
+        ignored_prediction_labels={0, -1},
+        iou_threshold=0.5,
+    )
+
+    assert result["paper_compatible"]["true_positives"] == 2
+    assert result["harmonized"]["true_positives"] == 1
+    assert result["harmonized"]["false_positives"] == 1
+    assert result["harmonized"]["false_negatives"] == 0
+
+
+def test_pointwise_evaluator_rejects_unaligned_arrays() -> None:
+    evaluator = load_script(
+        "scripts/evaluation/pointwise_instance_metrics.py",
+        "segmentanytree_pointwise_alignment",
+    )
+    labels = evaluator.PointLabels(
+        predicted_instance=np.array([1, 1]),
+        reference_instance=np.array([1]),
+        predicted_semantic=np.array([2, 2]),
+        reference_semantic=np.array([2, 2]),
+    )
+
+    with pytest.raises(ValueError, match="not aligned"):
+        evaluator.evaluate_pointwise(
+            labels,
+            reference_tree_classes={2},
+            prediction_tree_classes={2},
+            ignored_reference_labels={0, -1},
+            ignored_prediction_labels={0, -1},
+            iou_threshold=0.5,
+        )
+
+
+def test_run_metadata_hashes_checkpoint(tmp_path: Path) -> None:
+    recorder = load_script(
+        "scripts/methods/record_segmentanytree_run.py",
+        "segmentanytree_run_recorder",
+    )
+    checkpoint = tmp_path / "PointGroup-PAPER.pt"
+    checkpoint.write_bytes(b"fixed checkpoint fixture")
+
+    assert recorder.sha256(checkpoint) == (
+        "cae5c917d62fb2c0f9f2a62ffce50fdab7f8fdd54f1aaff4da5353dde7fade14"
+    )
+    assert recorder.sha256(tmp_path / "missing.pt") is None
+
+
+def test_revalidation_slurm_scripts_support_test_only_selection() -> None:
+    scripts = [
+        "scripts/slurm/run_segmentanytree_for_instance_array.sbatch",
+        "scripts/slurm/inspect_segmentanytree_internal_outputs.sbatch",
+        "scripts/slurm/audit_segmentanytree_for_instance_export_array.sbatch",
+        "scripts/slurm/evaluate_segmentanytree_pointwise_array.sbatch",
+    ]
+
+    for relative_path in scripts:
+        text = (ROOT / relative_path).read_text(encoding="utf-8")
+        assert "FOR_INSTANCE_SPLIT" in text
+        assert "--split" in text
+
+
+def test_export_validator_detects_coordinate_and_label_conflicts() -> None:
+    validator = load_script(
+        "scripts/evaluation/validate_segmentanytree_export.py",
+        "segmentanytree_export_validator",
+    )
+    source = np.array([[0, 0, 0], [0, 0, 0], [1, 1, 1]], dtype=np.int64)
+    reordered = np.array([[1, 1, 1], [0, 0, 0], [0, 0, 0]], dtype=np.int64)
+    expanded = np.array(
+        [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 1, 1]],
+        dtype=np.int64,
+    )
+
+    assert validator.coordinate_multisets_equal(source, reordered)
+    assert not validator.coordinate_multisets_equal(source, expanded)
+    assert (
+        validator.coordinate_label_conflicts(
+            source,
+            np.array([1, 2, 3]),
+        )
+        == 1
+    )
+
+
+def test_export_validator_accepts_row_preserving_labelled_las(
+    tmp_path: Path,
+) -> None:
+    validator = load_script(
+        "scripts/evaluation/validate_segmentanytree_export.py",
+        "segmentanytree_export_validator_las",
+    )
+    source_path = tmp_path / "source.las"
+    output_path = tmp_path / "output.las"
+    write_annotated_las(source_path)
+    output = laspy.read(source_path)
+    output.add_extra_dim(
+        laspy.ExtraBytesParams(name="PredInstance", type=np.int32)
+    )
+    output["PredInstance"] = np.array([0, 1, 1, 2, 2], dtype=np.int32)
+    output.write(output_path)
+
+    result = validator.validate_export(
+        source_path,
+        output_path,
+        coordinate_tolerance=0.001,
+        reference_instance_field="treeID",
+        prediction_instance_field="PredInstance",
+    )
+
+    assert result["status"] == "passed"
+    assert result["point_count_delta"] == 0
+    assert result["coordinate_multiset_equal"] is True
+
+
+def test_internal_output_inspector_identifies_evaluation_candidates(
+    tmp_path: Path,
+) -> None:
+    inspector = load_script(
+        "scripts/evaluation/inspect_segmentanytree_outputs.py",
+        "segmentanytree_output_inspector",
+    )
+    (tmp_path / "semantic.ply").write_text(
+        "ply\n"
+        "format ascii 1.0\n"
+        "element vertex 3\n"
+        "property int preds\n"
+        "property int gt\n"
+        "end_header\n"
+        "0 0\n"
+        "1 1\n"
+        "1 1\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "instance.ply").write_text(
+        "ply\n"
+        "format ascii 1.0\n"
+        "element vertex 12\n"
+        "property int preds\n"
+        "property int gt\n"
+        "end_header\n"
+        + "\n".join(f"{index} {index}" for index in range(12))
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PointGroup-PAPER.pt").write_bytes(b"checkpoint")
+
+    payload = inspector.inspect_outputs(tmp_path)
+
+    assert payload["semantic_candidates"] == ["semantic.ply"]
+    assert payload["instance_candidates"] == ["instance.ply"]
+    assert len(payload["checkpoint_files"]) == 1
+    assert len(payload["checkpoint_files"][0]["sha256"]) == 64
+
+
+def test_revalidation_summary_combines_audit_and_inventory(
+    tmp_path: Path,
+) -> None:
+    summariser = load_script(
+        "scripts/evaluation/summarise_segmentanytree_revalidation.py",
+        "segmentanytree_revalidation_summary",
+    )
+    metadata = tmp_path / "metadata"
+    audit = metadata / "export_validation/NIBIO/plot_1.json"
+    inventory = metadata / "internal_output_inventory/NIBIO/plot_1.json"
+    audit.parent.mkdir(parents=True)
+    inventory.parent.mkdir(parents=True)
+    audit.write_text(
+        json.dumps(
+            {
+                "status": "failed",
+                "safe_for_final_accuracy_evaluation": False,
+                "point_count_delta": 56,
+                "coordinate_multiset_equal": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    inventory.write_text(
+        json.dumps(
+            {
+                "instance_candidates": ["Instance_results_forEval0.ply"],
+                "semantic_candidates": ["Semantic_results_forEval0.ply"],
+                "checkpoint_files": [
+                    {
+                        "relative_path": "PointGroup-PAPER.pt",
+                        "sha256": "a" * 64,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = summariser.collect(metadata)
+
+    assert len(rows) == 1
+    assert rows[0]["collection"] == "NIBIO"
+    assert rows[0]["plot_name"] == "plot_1"
+    assert rows[0]["point_count_delta"] == 56
+    assert rows[0]["instance_candidate_count"] == 1
+    assert rows[0]["semantic_candidate_count"] == 1
+    assert rows[0]["checkpoint_sha256"] == "a" * 64
+
+
 def test_public_inventory_example_has_required_columns() -> None:
     with (ROOT / "examples/for_instance_inventory_summary.csv").open(
         encoding="utf-8", newline=""
@@ -626,6 +895,15 @@ def test_public_segmentanytree_pilot_record_matches_evaluation() -> None:
         0.8507642594155439
     )
     assert row["status"] == "completed_with_postprocess_repair"
+    status = json.loads(
+        (
+            ROOT / "examples/segmentanytree_for_instance_pilot_status.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert status["status"] == "provisional_coordinate_evaluation"
+    assert status["accepted_accuracy_status"] == (
+        "pending_pointwise_revalidation"
+    )
 
 
 def test_public_full_segmentanytree_results_are_complete_and_sanitised() -> None:
@@ -646,6 +924,7 @@ def test_public_full_segmentanytree_results_are_complete_and_sanitised() -> None
         encoding="utf-8", newline=""
     ) as handle:
         inventory = list(csv.DictReader(handle))
+    manifest = json.loads(Path(f"{prefix}_manifest.json").read_text())
 
     assert len(plots) == 32
     assert len(inventory) == 32
@@ -659,6 +938,12 @@ def test_public_full_segmentanytree_results_are_complete_and_sanitised() -> None
     assert float(overall["micro_f1"]) == pytest.approx(0.20535226652102676)
     assert float(overall["pooled_mean_matched_iou"]) == pytest.approx(
         0.7263750375278218
+    )
+    assert manifest["status"] == (
+        "provisional_coordinate_evaluation_revalidation_required"
+    )
+    assert manifest["accepted_accuracy_status"] == (
+        "pending_pointwise_revalidation"
     )
 
     published_text = "\n".join(

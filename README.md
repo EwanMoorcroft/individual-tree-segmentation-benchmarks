@@ -9,9 +9,11 @@ individual tree segmentation methods across multiple LiDAR datasets using the
 University of Liverpool Barkla2 HPC system.
 
 The completed workflows cover a TLS2trees prediction benchmark on the FRDR
-treeiso terrestrial laser scanning dataset and a labelled SegmentAnyTree
-accuracy benchmark on FOR-instance. Future configs can add other methods and
-datasets without creating separate repositories.
+treeiso terrestrial laser scanning dataset and SegmentAnyTree inference on all
+32 FOR-instance files. The SegmentAnyTree accuracy evaluation is being
+revalidated against the point-aligned protocol used by the published method.
+Future configs can add other methods and datasets without creating separate
+repositories.
 
 No source datasets, converted point clouds, predictions, scheduler logs or
 external method repositories are included.
@@ -20,29 +22,31 @@ external method repositories are included.
 
 - FRDR/TLS2trees: completed prediction and operational benchmark across 16
   plots; no reference instance accuracy is reported.
-- FOR-instance/SegmentAnyTree: prediction, normalisation and labelled
-  evaluation completed for all 32 annotated LAS files. The results cover all
-  five collections and preserve the supplied development/test split labels.
+- FOR-instance/SegmentAnyTree: inference completed for all 32 annotated LAS
+  files. The earlier coordinate-rematched evaluation is provisional; aligned
+  point-wise evaluation and export-integrity checks are required before final
+  accuracy is reported.
 - FOR-instance/TLS2trees: retained as a candidate compatibility test.
 - Wytham Woods: downloaded and inspected; retained as a strong TLS reference
   dataset after plot-level reference reconstruction from per-tree files.
 
 See the [benchmark registry](BENCHMARKS.md),
 [SegmentAnyTree/FOR-instance runbook](docs/segmentanytree_for_instance_benchmark.md),
-[full SegmentAnyTree results](docs/segmentanytree_for_instance_results.md),
+[cross-method FOR-instance protocol](docs/for_instance_cross_method_protocol.md),
+[provisional SegmentAnyTree results](docs/segmentanytree_for_instance_results.md),
 [evaluation definitions](docs/evaluation_metrics.md),
 [dataset feasibility assessment](docs/dataset_feasibility.md), and
 [labelled accuracy plan](docs/labelled_accuracy_benchmark_plan.md) for current
 and candidate dataset-method combinations.
 
-The full SegmentAnyTree benchmark evaluates semantic classes `4`, `5` and `6`
-against positive `treeID` references. Across 32 plots it evaluated 1,130
-reference trees and 2,532 predictions, with 376 true positives, 2,156 false
-positives and 754 false negatives. Micro precision was 0.148499, micro recall
-0.332743 and micro F1 0.205352 at a 0.5 IoU threshold. The mean IoU across the
-376 matched pairs was 0.726375. Collection-level performance varied strongly;
-the NIBIO results require further investigation before drawing method-level
-conclusions. The earlier
+The first SegmentAnyTree evaluation used semantic classes `4`, `5` and `6`
+against positive `treeID` references, but recovered point correspondence by
+matching exported coordinates. Its NIBIO F1 differed from the published
+SegmentAnyTree result by far more than the reproduction tolerance. Those
+metrics are retained as diagnostic evidence and must not be described as the
+final method accuracy. The revised evaluator uses aligned prediction and
+reference arrays and reports both the published matching policy and a
+harmonised one-to-one result. The earlier
 [FOR-instance TLS2trees pilot](docs/for_instance_tls2trees_pilot.md) remains
 available and uses its separate leaf-off class definition.
 
@@ -82,25 +86,21 @@ when rerun with 96 GiB; its recorded peak usage was 49.602968 GiB.
 - [Evaluation metrics and reference-label requirements](docs/evaluation_metrics.md)
 - [FOR-instance inventory example](examples/for_instance_inventory_summary.csv)
 
-## Completed FOR-instance/SegmentAnyTree Run
+## FOR-instance/SegmentAnyTree Inference And Revalidation
 
-All 32 annotated LAS files completed prediction, normalisation and one-to-one
-instance evaluation. The benchmark processed the supplied 21 development and
-11 test plots without using the test split for parameter selection. Cumulative
-per-plot runtime was 13,430 seconds and the maximum recorded task memory was
-9.608 GiB. Runtime is cumulative across array tasks rather than elapsed wall
-time.
+All 32 annotated LAS files completed inference and normalisation. The run
+processed the supplied 21 development and 11 test plots. Cumulative per-plot
+runtime was 13,430 seconds and the maximum recorded task memory was 9.608 GiB.
+Runtime is cumulative across array tasks rather than elapsed wall time.
 
-- [Results and interpretation](docs/segmentanytree_for_instance_results.md)
-- [Supervisor workbook](examples/segmentanytree_for_instance_full_results.xlsx)
-- [Per-plot metrics](examples/segmentanytree_for_instance_full_plot_metrics.csv)
-- [Overall summary](examples/segmentanytree_for_instance_full_summary.csv)
-- [Collection summaries](examples/segmentanytree_for_instance_full_summary_by_collection.csv)
-- [Split summaries](examples/segmentanytree_for_instance_full_summary_by_split.csv)
-- [Matched instance pairs](examples/segmentanytree_for_instance_full_matches.csv)
+- [Reproducible cross-method protocol](docs/for_instance_cross_method_protocol.md)
+- [Runbook and current revalidation status](docs/segmentanytree_for_instance_benchmark.md)
+- [Provisional coordinate-rematched results](docs/segmentanytree_for_instance_results.md)
 
-These public-safe files contain aggregate measurements and identifiers only.
-Raw point clouds, predictions, full metadata and scheduler logs remain ignored.
+The published workbook and CSV files are provisional and retained to document
+the failed evaluation route. They will be replaced after the point-aligned
+test-split evaluation passes the reproduction gates. Raw point clouds,
+predictions, full metadata and scheduler logs remain ignored.
 
 ## FRDR Label Mapping
 
@@ -208,6 +208,7 @@ responsibilities separate:
 ├── docs/
 │   ├── dataset_feasibility.md
 │   ├── evaluation_metrics.md
+│   ├── for_instance_cross_method_protocol.md
 │   ├── for_instance_tls2trees_pilot.md
 │   ├── frdr_tls2trees_results.md
 │   ├── labelled_accuracy_benchmark_plan.md
@@ -243,6 +244,9 @@ responsibilities separate:
 │   │   └── select_for_instance_plot.py
 │   ├── evaluation/
 │   │   ├── instance_iou_f1.py
+│   │   ├── pointwise_instance_metrics.py
+│   │   ├── validate_segmentanytree_export.py
+│   │   └── inspect_segmentanytree_outputs.py
 │   │   └── summarise_for_instance_segmentanytree_benchmark.py
 │   ├── methods/
 │   │   ├── normalise_segmentanytree_predictions.py
@@ -284,7 +288,7 @@ responsibilities separate:
 ## Public-Safe Results And Examples
 
 The [`examples/`](examples/) directory contains the completed FRDR per-plot
-summary, the public-safe full SegmentAnyTree result tables and workbook, the
+summary, provisional SegmentAnyTree diagnostic tables and workbook, the
 historical pilot record, and synthetic schema examples. No coordinates, point
 clouds, prediction files or logs are included.
 
@@ -316,16 +320,14 @@ SAT_PILOT=$(sbatch --parsable \
   scripts/slurm/run_segmentanytree_for_instance_pilot_apptainer.sbatch)
 ```
 
-The original successful investigation completed inference and instance
-prediction, then needed a 35-second repaired final-export job. The consolidated
-script applies that export correction during inference but still needs a clean
-reproduction on Barkla before the full array is submitted.
+The completed full array produced predictions for all 32 files. The final
+export is now audited separately because the upstream XYZ join is not
+guaranteed to preserve one row per source point.
 
-For the full benchmark, use the dependency-chained prediction, normalisation,
-evaluation and summary commands in the
+Use the paper-aligned audit and evaluation commands in the
 [runbook](docs/segmentanytree_for_instance_benchmark.md). Do not train or tune
-on the evaluation split. Do not report an overall FOR-instance result until all
-32 tasks and their summaries have been checked.
+on the test split. Do not report an overall FOR-instance accuracy result until
+the aligned test-split evaluation passes the reproduction gates.
 
 External NEWFOR results should be compared only when metrics, class filters,
 IoU thresholds and coordinate tolerances are compatible.

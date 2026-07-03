@@ -16,7 +16,7 @@ directory:
 Failed to obtain podman configuration: lstat /run/user/<uid>: no such file or directory
 ```
 
-Apptainer was used for the successful pilot and full benchmark.
+Apptainer was used for the successful pilot and full inference array.
 
 ## Issues Resolved
 
@@ -45,29 +45,53 @@ Apptainer was used for the successful pilot and full benchmark.
 
 The first export repair exposed an indentation error in the prepared Python
 source. The patch generator was corrected and compile-checked before
-submission. The canonical pilot then completed prediction, normalisation and
-evaluation without a separate postprocessing job. The same route completed all
-32 full-array tasks and the final summary.
+submission. The canonical pilot then completed inference and export without a
+separate postprocessing job. The same route produced predictions for all 32
+plots.
 
-## Full-Run Outcome
+## Recorded Execution Outcome
 
-- canonical pilot jobs 9548698, 9548699 and 9548700 completed;
+- canonical pilot jobs 9548698, 9548699 and 9548700 completed inference,
+  coordinate normalisation and the original evaluation;
 - full prediction array 9548701 completed 32 of 32 tasks;
 - full normalisation array 9548702 completed 32 of 32 tasks;
-- full evaluation array 9548703 completed 32 of 32 tasks;
+- full coordinate-rematched evaluation array 9548703 completed 32 of 32 tasks;
 - summary job 9548704 completed;
 - maximum recorded prediction memory was 9.608 GiB;
 - cumulative per-plot prediction runtime was 13,430 seconds.
 
-## Remaining Risks
+The process completion records establish operational success. They do not
+validate the provisional accuracy values.
+
+## Evaluation Failure Investigation
+
+The first evaluator split each final LAZ by `PredInstance` and matched exported
+XYZ coordinates back to the source LAS using a 0.02 m tolerance. That route
+does not reproduce the SegmentAnyTree paper, which evaluates point-aligned
+semantic and instance arrays directly.
+
+The upstream final merge indexes intermediate tables by stringified XYZ
+coordinates. Duplicate coordinates can therefore create ambiguous joins or
+additional rows. This matters particularly for dense point clouds. The initial
+CULS pilot export already contained 56 more rows than its source.
+
+The strongest warning was NIBIO: the provisional result contained 575
+reference trees, 1,591 predicted instances and only 12 accepted matches, with
+16 of 20 plots producing no accepted match. This is inconsistent with the
+published NIBIO result and is too large a discrepancy to treat as ordinary
+forest-domain variation without first excluding export and evaluation errors.
+
+## Remaining Risks And Required Checks
 
 - The repaired Python stack must remain ahead of the container site-packages
   on `PYTHONPATH`.
 - `torch-points-kernels` declares an older NumPy constraint even though the
   tested imports and pilot completed with NumPy 1.24.4.
-- The upstream merge added coordinate rows on the initial pilot. Output point
-  count and coordinate coverage still require collection-level review.
-- NIBIO produced only 12 accepted matches from 575 reference trees. Prediction
-  overlays and reference compatibility require targeted validation.
-- A rerun should be accepted only when the final LAZ exists and subsequent
-  normalisation and evaluation both complete.
+- The SHA-256 and training provenance of the checkpoint copied as
+  `PointGroup-PAPER.pt` still require verification.
+- Final exports require point-count and coordinate-multiplicity audits.
+- Internal semantic and instance evaluation PLY files must be inventoried and
+  evaluated without coordinate rematching.
+- Only the supplied FOR-instance test split may be compared with the paper.
+- The paper-compatible matching policy and strict one-to-one policy must remain
+  separate in summaries.

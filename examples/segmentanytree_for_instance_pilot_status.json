@@ -3,6 +3,8 @@
   "coordinate_tolerance": 0.02,
   "dataset": "FOR-instance",
   "evaluation_completed": true,
+  "evaluation_input": "coordinate_rematched_final_export",
+  "accepted_accuracy_status": "pending_pointwise_revalidation",
   "final_prediction_format": "labelled LAZ",
   "ignored_reference_classes": [
     0,
@@ -28,5 +30,5 @@
   "reference_field": "treeID",
   "relative_path": "CULS/plot_1_annotated.las",
   "split": "dev",
-  "status": "completed_with_postprocess_repair"
+  "status": "provisional_coordinate_evaluation"
 }

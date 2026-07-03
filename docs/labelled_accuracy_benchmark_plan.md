@@ -1,17 +1,18 @@
 # Labelled Accuracy Benchmark Plan
 
-## Completed Primary Benchmark
+## Primary Benchmark
 
 SegmentAnyTree on FOR-instance is the primary labelled accuracy benchmark.
 FOR-instance supplies `treeID` reference instances and semantic
-`classification` labels, allowing one-to-one precision, recall, F1 and matched
-IoU evaluation.
+`classification` labels, allowing point-wise instance IoU, precision, recall,
+F1 and coverage evaluation.
 
-The canonical pilot and the full 32-file benchmark have completed inference,
-normalisation and evaluation. The workflow includes classes `4`, `5` and `6`,
-ignores classes `0`, `1`, `2` and `3`, and ignores non-positive tree IDs.
-Results are reported in
+The canonical pilot and all 32 files completed inference. The earlier
+coordinate-rematched evaluation is provisional because the final export has
+not been shown to preserve one output row per source point. Its diagnostic
+values are documented in
 [`segmentanytree_for_instance_results.md`](segmentanytree_for_instance_results.md).
+The accepted accuracy evaluation remains pending.
 
 ## Split Control
 
@@ -21,36 +22,40 @@ label in metadata and metric tables.
 - Use development plots for adapter checks, parameter selection and error
   analysis.
 - Keep evaluation plots isolated from training and parameter selection.
-- Fix semantic filters, normalisation, coordinate tolerance and IoU threshold
-  before evaluating the full set.
+- Fix semantic filters, point correspondence, matching policy and IoU threshold
+  before evaluating the test set.
 - Record the model checkpoint, external commit and container route.
 
-## Completed Full-Run Sequence
+## Revalidation Sequence
 
-1. The canonical Apptainer pilot produced its labelled LAZ without a separate
-   repair job.
-2. The labelled output was normalised to one XYZ PLY per positive predicted
-   instance.
-3. Prediction, normalisation and evaluation arrays completed for all 32 LAS
-   files.
-4. Collection, split and overall summaries were built after checking for
-   missing or failed tasks.
-5. Development and test split results were reported separately.
+1. Record the supplied checkpoint SHA-256 and confirm its upstream provenance.
+2. Inventory the internal semantic and instance evaluation PLY files retained
+   by the inference workflow.
+3. Audit final LAZ point counts and coordinate multiplicity against every
+   source plot.
+4. Evaluate point-aligned labels using the released SegmentAnyTree matching
+   policy.
+5. Evaluate the same labels with a strict one-to-one policy for cross-method
+   comparison.
+6. Use development plots only for diagnostics and report the supplied test
+   split as the primary paper comparison.
+7. Rebuild the workbook and public-safe tables after all validation gates pass.
 
-Every accuracy row records reference and prediction counts, TP, FP, FN,
-precision, recall, F1, mean and median matched IoU, runtime, peak memory,
-thresholds and ignored classes.
+Every accepted accuracy row records reference and prediction counts, TP, FP,
+FN, precision, recall, F1, coverage, matched IoU, matching policy, runtime,
+peak memory, checkpoint identity, thresholds and semantic masks.
 
 ## Next Validation Priorities
 
-1. Inspect NIBIO development plots, where 16 of 20 plots have no accepted
-   match under the fixed evaluation protocol.
-2. Quantify output point-count differences and coordinate coverage by
-   collection.
-3. Review unmatched predictions for over-segmentation.
-4. Run a second method against the same references without changing the
-   SegmentAnyTree result protocol.
-5. Keep test plots out of any subsequent parameter adjustment.
+1. Inspect one CULS and one NIBIO output to identify the exact internal aligned
+   files before submitting a full CPU evaluation.
+2. Quantify output point-count differences and duplicate-coordinate conflicts
+   by collection.
+3. Determine whether the NIBIO collapse originates in the final export,
+   semantic mapping, checkpoint/configuration or the model prediction.
+4. Freeze the evaluation configuration before reading new test results.
+5. Run a second method against the same harmonized references without
+   replacing its method-specific reproduction metrics.
 
 ## Other Candidate Work
 

@@ -193,6 +193,14 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("examples"),
     )
+    parser.add_argument(
+        "--publication-status",
+        default="provisional_coordinate_evaluation_revalidation_required",
+        help=(
+            "Status written to the public manifest. Use a final status only "
+            "after the point-aligned evaluation gates pass."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -326,7 +334,9 @@ def main() -> int:
 
     manifest = {
         "benchmark": "for_instance_segmentanytree",
-        "status": "completed",
+        "status": args.publication_status,
+        "evaluation_input": "coordinate_rematched_final_export",
+        "accepted_accuracy_status": "pending_pointwise_revalidation",
         "plot_count": len(public_plots),
         "match_count": len(public_matches),
         "source_file_count": len(source_inventory),

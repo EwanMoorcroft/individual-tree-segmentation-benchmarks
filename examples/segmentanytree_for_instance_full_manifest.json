@@ -1,6 +1,8 @@
 {
   "benchmark": "for_instance_segmentanytree",
-  "status": "completed",
+  "status": "provisional_coordinate_evaluation_revalidation_required",
+  "evaluation_input": "coordinate_rematched_final_export",
+  "accepted_accuracy_status": "pending_pointwise_revalidation",
   "plot_count": 32,
   "match_count": 376,
   "source_file_count": 32,

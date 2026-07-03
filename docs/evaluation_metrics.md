@@ -38,10 +38,11 @@ classes `4` and `6` only. Class `5` is excluded to avoid penalising leaf-off
 predictions for missing live-branch points. A future leaf-on experiment must be
 configured and reported separately.
 
-The SegmentAnyTree/FOR-instance benchmark uses classes `4`, `5` and `6`. Its
-verified output is one labelled LAZ with predicted instance field
-`PredInstance`. The adapter removes non-positive labels and writes one XYZ PLY
-per predicted tree.
+The SegmentAnyTree/FOR-instance workflow uses classes `4`, `5` and `6`.
+Inference produces internal aligned prediction arrays and a final labelled LAZ
+with `PredInstance`. The final export must pass row-preservation checks before
+it can be used for point-wise accuracy. The internal aligned arrays are the
+preferred reproduction source.
 
 ## Instance Accuracy Readiness
 
@@ -51,12 +52,14 @@ per predicted tree.
 | FOR-instance | Positive `treeID` values in annotated LAS files | F1 and matched IoU feasible |
 | Wytham Woods | One segmented reference tree per PLY filename | F1 and matched IoU feasible after scene reconstruction |
 
-The full SegmentAnyTree metrics are stored outside Git under
+The first SegmentAnyTree metrics are stored outside Git under
 `results/tables/segmentanytree_for_instance/per_plot/`, with evaluation
 metadata under `results/metadata/segmentanytree_for_instance/`. Public-safe
 per-plot, collection, split, matched-pair and inventory tables are retained in
 [`examples/`](../examples/), and the interpretation is documented in
 [`segmentanytree_for_instance_results.md`](segmentanytree_for_instance_results.md).
+These coordinate-rematched values are provisional and are not the accepted
+paper reproduction.
 
 Summary tables distinguish two IoU aggregations:
 
@@ -68,7 +71,7 @@ The pooled value describes match quality only. It must be reported with
 precision, recall and F1 because unmatched predictions and references do not
 contribute an IoU value.
 
-The evaluator in
+The coordinate evaluator in
 [`scripts/evaluation/instance_iou_f1.py`](../scripts/evaluation/instance_iou_f1.py)
 intentionally refuses to run without a reference instance source:
 
@@ -76,7 +79,31 @@ intentionally refuses to run without a reference instance source:
 No reference instance labels supplied; IoU/F1 cannot be computed.
 ```
 
-## One-To-One Instance Evaluation
+## Aligned Point-Wise Evaluation
+
+The FOR-instance primary protocol requires one predicted instance label and
+one reference `treeID` for each evaluated point. Point correspondence must
+come from source row order or a stable point identifier, not rounded
+coordinates.
+
+[`pointwise_instance_metrics.py`](../scripts/evaluation/pointwise_instance_metrics.py)
+reports:
+
+- the released SegmentAnyTree per-prediction-best-IoU policy for paper
+  reproduction;
+- a strict one-to-one assignment for cross-method comparison;
+- mean unweighted and point-weighted coverage; and
+- accepted match identifiers and IoUs.
+
+The evaluation mask is the union of predicted-tree and reference-tree points.
+The accepted threshold is IoU greater than or equal to 0.5, matching the
+released SegmentAnyTree evaluator. Primary comparable results use only the
+supplied test split. Development plots are retained for diagnostics.
+
+The full protocol is
+[`for_instance_cross_method_protocol.md`](for_instance_cross_method_protocol.md).
+
+## Coordinate-Based One-To-One Evaluation
 
 The evaluator accepts:
 
@@ -85,8 +112,10 @@ The evaluator accepts:
 2. either a reference directory containing one file per tree or one labelled
    point cloud containing an individual-tree ID field.
 
-Predicted and reference coordinates are quantised using the configured
-coordinate tolerance. Point-set IoU for each candidate pair is:
+This fallback is intended for methods that provide separate tree point clouds
+without stable source-point identifiers. Predicted and reference coordinates
+are quantised using the configured coordinate tolerance. Point-set IoU for
+each candidate pair is:
 
 ```text
 IoU = intersection point count / union point count
@@ -103,7 +132,8 @@ F1 = 2 * precision * recall / (precision + recall)
 ```
 
 F1 must be calculated only after this instance matching. Semantic wood/non-wood
-agreement is not an instance F1 score.
+agreement is not an instance F1 score. Coordinate-based and aligned point-wise
+results must use different evaluation-mode labels and must not be combined.
 
 ## Required Accuracy Result Fields
 
@@ -114,12 +144,14 @@ Every labelled accuracy run must record:
 - true positives, false positives and false negatives;
 - precision, recall and F1;
 - mean and median matched IoU;
-- IoU threshold and coordinate tolerance;
+- IoU threshold, comparison operator and point-correspondence mode;
+- coordinate tolerance when coordinate matching is used;
 - reference instance field or filename rule;
 - ignored semantic classes and instance labels;
 - dataset split and reference provenance;
 - runtime and peak memory;
 - method version, command and parameter configuration.
+- checkpoint checksum, training mode and training-data declaration.
 
 No FRDR instance accuracy value should be reported unless an external,
 documented individual-tree reference is supplied and evaluated.

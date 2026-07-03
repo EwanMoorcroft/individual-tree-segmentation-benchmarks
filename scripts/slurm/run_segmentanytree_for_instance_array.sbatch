@@ -23,5 +23,10 @@ module load miniforge3/25.3.0-python3.12.10
 module load apptainer/1.3.6
 source "$HOME/fastscratch/venvs/treebench/bin/activate"
 
+SELECTION_ARGS=(--array-index "$SLURM_ARRAY_TASK_ID")
+if [[ -n "${FOR_INSTANCE_SPLIT:-}" ]]; then
+  SELECTION_ARGS+=(--split "$FOR_INSTANCE_SPLIT")
+fi
+
 bash scripts/slurm/run_segmentanytree_for_instance_task.sh \
-  --array-index "$SLURM_ARRAY_TASK_ID"
+  "${SELECTION_ARGS[@]}"

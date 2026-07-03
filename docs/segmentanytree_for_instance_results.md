@@ -1,12 +1,26 @@
 # SegmentAnyTree FOR-instance Results
 
-## Scope And Completion
+## Status
+
+Inference completed for all 32 files, but the accuracy values below are
+**provisional and must not be cited as the final SegmentAnyTree benchmark**.
+They were calculated by splitting the final exported LAZ into predicted trees
+and matching rounded coordinates back to the source LAS.
+
+This route does not reproduce the published aligned point-wise evaluation.
+The NIBIO F1 differs from the published result by approximately 0.87, and the
+initial CULS export contained more rows than its source file. The accuracy
+evaluation is therefore being repeated using
+[`for_instance_pointwise_v1`](for_instance_cross_method_protocol.md).
+
+## Completed Workflow Scope
 
 SegmentAnyTree prediction, normalisation and labelled instance evaluation
 completed for all 32 annotated FOR-instance LAS files. The run includes five
 collections, 21 development plots and 11 test plots. Every plot has a completed
-prediction, normalisation record and evaluation row; no failed or missing plot
-is included in the summary.
+prediction and normalisation record. The provisional coordinate evaluator also
+produced one row per plot; no failed or missing plot is included in that
+diagnostic summary.
 
 The benchmark evaluated 151,478,959 input points and 1,130 positive reference
 trees. Reference instances use `treeID`. Reference points are restricted to
@@ -14,7 +28,7 @@ semantic classes `4`, `5` and `6`; classes `0`, `1`, `2` and `3`, and
 non-positive tree IDs, are ignored. Predictions and references were matched
 one-to-one at an IoU threshold of 0.5 after coordinate quantisation at 0.02 m.
 
-## Overall Results
+## Provisional Coordinate-Rematched Results
 
 | Metric | Result |
 | --- | ---: |
@@ -35,13 +49,15 @@ one-to-one at an IoU threshold of 0.5 after coordinate quantisation at 0.02 m.
 | Mean per-plot runtime | 419.688 s |
 | Maximum recorded task memory | 9.608 GiB |
 
-The pooled IoU values describe the 376 accepted matches only. They therefore
+These values describe the coordinate-rematched route, not the accepted
+paper-aligned result. The pooled IoU values describe the 376 accepted matches
+only. They therefore
 measure overlap quality after a prediction has been matched and must be read
 alongside the low detection precision and recall. The cumulative runtime is
 the sum of per-plot task runtimes, not the wall-clock duration of the Slurm
 array.
 
-## Results By Collection
+## Provisional Results By Collection
 
 | Collection | Plots | References | Predictions | TP | FP | FN | Precision | Recall | F1 | Pooled matched IoU |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -53,23 +69,23 @@ array.
 
 Collection-level performance is highly uneven. NIBIO accounts for 575
 reference trees but only 12 accepted matches; 16 of its 20 plots have no
-accepted match. Four NIBIO plots do produce matches, and the other collections
-complete under the same coordinate and evaluation workflow. This pattern
-requires collection-specific validation of segmentation behaviour, coordinate
-alignment and reference compatibility before it is attributed solely to model
-performance.
+accepted match. The SegmentAnyTree paper reports NIBIO F1 near 0.88 under its
+aligned evaluation, compared with 0.011 here. The discrepancy is treated as an
+evaluation failure until the internal prediction arrays and final export have
+been audited.
 
-## Results By Supplied Split
+## Provisional Results By Supplied Split
 
 | Split | Plots | References | Predictions | TP | FP | FN | Precision | Recall | F1 | Pooled matched IoU |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Development | 21 | 807 | 1,743 | 265 | 1,478 | 542 | 0.152037 | 0.328377 | 0.207843 | 0.720764 |
 | Test | 11 | 323 | 789 | 111 | 678 | 212 | 0.140684 | 0.343653 | 0.199640 | 0.739771 |
 
-The split labels are reported for transparency. Test plots were not used to
-select the semantic filter, IoU threshold or coordinate tolerance.
+The split labels are reported for transparency. These diagnostic values include
+development and test data. The final comparable headline result will use the
+test split only.
 
-## Public-Safe Result Files
+## Provisional Public-Safe Files
 
 - [`segmentanytree_for_instance_full_results.xlsx`](../examples/segmentanytree_for_instance_full_results.xlsx):
   formatted workbook containing the overall, per-plot, collection, split,
@@ -89,8 +105,10 @@ select the semantic filter, IoU threshold or coordinate tolerance.
   public-safe plot inventory fields used by the report.
 
 These files exclude coordinates, point clouds, predictions, checkpoints,
-absolute machine paths and scheduler logs. The ignored working results remain
-under `results/`, `data/` and `logs/` on Barkla.
+absolute machine paths and scheduler logs. They are retained to document the
+failed coordinate-rematching route and will be replaced after revalidation.
+The ignored working results remain under `results/`, `data/` and `logs/` on
+Barkla.
 
 The CSV publication step is reproducible with
 [`build_segmentanytree_public_results.py`](../scripts/reporting/build_segmentanytree_public_results.py),
@@ -98,16 +116,15 @@ using a transferred copy of the ignored full result tables as its input.
 
 ## Interpretation And Remaining Validation
 
-The run establishes that the full deployment and evaluation workflow is
-operational, but the aggregate F1 is not sufficient on its own to explain the
-method's behaviour. Immediate follow-up work should:
+The run establishes that full inference is operational. Accuracy acceptance
+requires:
 
-1. inspect NIBIO prediction and reference overlays on development plots;
-2. quantify the upstream output point-count differences for every collection;
-3. review unmatched predictions for over-segmentation and duplicate crowns;
-4. retain the fixed evaluation protocol while investigating collection
-   compatibility; and
-5. compare against a second method using the same references and split policy.
+1. inventorying the internal aligned semantic and instance PLY files;
+2. auditing source and final-export point counts and coordinate multiplicity;
+3. evaluating aligned point labels with the released matching policy;
+4. reporting a separate harmonised one-to-one test-split result;
+5. recording the checkpoint checksum and training-data provenance; and
+6. replacing these provisional tables only after the reproduction gates pass.
 
 No FRDR accuracy values are combined with these results because the FRDR inputs
 do not contain individual-tree reference IDs.

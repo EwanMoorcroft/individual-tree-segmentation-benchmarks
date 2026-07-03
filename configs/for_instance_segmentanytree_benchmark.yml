@@ -2,7 +2,8 @@ project:
   name: tree-seg-benchmark
   benchmark_name: for_instance_segmentanytree
   mode: labelled_accuracy_benchmark
-  status: completed
+  status: inference_complete_evaluation_revalidation_required
+  protocol_id: for_instance_pointwise_v1
   barkla_root: "~/scratch/tree-seg-benchmark"
   barkla_specific: true
 
@@ -50,11 +51,13 @@ benchmark:
   selected_split: null
   preserve_split_labels: true
   prevent_test_split_tuning: true
+  primary_reporting_split: test
   array_size: 32
   completed_plot_count: 32
   completed_prediction_count: 32
   completed_normalisation_count: 32
-  completed_evaluation_count: 32
+  provisional_coordinate_evaluation_count: 32
+  validated_pointwise_evaluation_count: 0
 
 method:
   name: SegmentAnyTree
@@ -74,14 +77,36 @@ method:
   prediction_output_subpath: final_results
   output_format: labelled_point_cloud
   prediction_instance_field: PredInstance
+  prediction_semantic_field: PredSemantic
   ignored_prediction_labels:
     - -1
     - 0
   gpu_required: true
+  checkpoint:
+    filename: PointGroup-PAPER.pt
+    sha256: null
+    provenance_status: pending_checksum_verification
+    training_performed_in_this_repository: false
+    execution_entrypoint: eval.py
+
+training:
+  current_mode: published_pretrained
+  local_weight_updates_performed: false
+  permitted_for_instance_training_split:
+    - dev
+  forbidden_training_split:
+    - test
+  note: "The completed jobs ran inference with a supplied checkpoint; they did not train SegmentAnyTree."
 
 evaluation:
+  protocol_id: for_instance_pointwise_v1
+  status: revalidation_required
+  primary_input: aligned_internal_prediction_arrays
+  primary_reporting_split: test
   reference_instance_field: treeID
   reference_semantic_field: classification
+  prediction_instance_field: PredInstance
+  prediction_semantic_field: PredSemantic
   reference_classes:
     - 4
     - 5
@@ -94,7 +119,27 @@ evaluation:
   ignored_tree_ids:
     - 0
   iou_threshold: 0.5
-  coordinate_tolerance: 0.02
+  threshold_operator: greater_than_or_equal
+  published_reproduction_matching_policy: paper_per_prediction_best_iou
+  harmonised_matching_policy: one_to_one
+  point_correspondence: source_row_or_stable_point_identifier
+  coordinate_rematching:
+    status: provisional_only
+    tolerance: 0.02
+    reason: "Coordinate rematching is not the paper-aligned evaluation route and must not replace aligned point-wise labels."
+  export_validation:
+    required: true
+    coordinate_tolerance: 0.001
+    require_equal_point_count: true
+    require_equal_coordinate_multiset: true
+  published_reference_f1:
+    CULS: 1.00
+    NIBIO: 0.88
+    RMIT: 0.84
+    SCION: 0.91
+    TUWIEN: 0.57
+    source: "SegmentAnyTree paper, scenario 5, original-resolution FOR-instance test data."
+  reproduction_alert_absolute_f1_difference: 0.10
   metrics:
     - reference_tree_count
     - predicted_tree_count
@@ -106,6 +151,8 @@ evaluation:
     - f1
     - mean_matched_iou
     - median_matched_iou
+    - mean_unweighted_coverage
+    - mean_weighted_coverage
     - runtime_seconds
     - peak_memory_gb
   unsupported_metrics:
@@ -123,7 +170,11 @@ paths:
   run_metadata_root: "results/metadata/segmentanytree_for_instance/runs"
   normalisation_metadata_root: "results/metadata/segmentanytree_for_instance/normalisation"
   evaluation_metadata_root: "results/metadata/segmentanytree_for_instance/evaluations"
+  export_validation_root: "results/metadata/segmentanytree_for_instance/export_validation"
+  internal_output_inventory_root: "results/metadata/segmentanytree_for_instance/internal_output_inventory"
+  pointwise_evaluation_root: "results/metadata/segmentanytree_for_instance/pointwise"
   per_plot_metrics_root: "results/tables/segmentanytree_for_instance/per_plot"
+  pointwise_tables_root: "results/tables/segmentanytree_for_instance/pointwise"
   tables_root: "results/tables/segmentanytree_for_instance"
   plot_metrics_csv: "results/tables/segmentanytree_for_instance_plot_metrics.csv"
   collection_summary_csv: "results/tables/segmentanytree_for_instance_summary_by_collection.csv"

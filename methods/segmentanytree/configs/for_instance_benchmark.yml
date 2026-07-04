@@ -1,0 +1,205 @@
+project:
+  name: tree-seg-benchmark
+  benchmark_name: for_instance_segmentanytree
+  mode: labelled_accuracy_benchmark
+  status: inference_complete_evaluation_revalidation_required
+  protocol_id: for_instance_pointwise_v1
+  barkla_root: "~/scratch/tree-seg-benchmark"
+  barkla_specific: true
+
+environment:
+  operating_system: "Rocky Linux 9"
+  module: "miniforge3/25.3.0-python3.12.10"
+  python_environment: "~/fastscratch/venvs/treebench"
+  activation: "source ~/fastscratch/venvs/treebench/bin/activate"
+  python_version_tested: "3.12.10"
+  apptainer_module: "apptainer/1.3.6"
+
+dataset:
+  name: FOR-instance
+  source_url: "https://doi.org/10.5281/zenodo.8287792"
+  root: "~/data/datasets/for_instance/FORinstance_dataset"
+  input_glob: "**/*.las"
+  split_metadata_file: "data_split_metadata.csv"
+  reference_instance_field: treeID
+  semantic_field: classification
+  reference_classes:
+    - 4
+    - 5
+    - 6
+  ignored_classes:
+    - 0
+    - 1
+    - 2
+    - 3
+  ignored_tree_ids:
+    - 0
+  inventory:
+    expected_file_count: 32
+    observed_total_points: 151478959
+    observed_reference_tree_count: 1130
+  pilot:
+    collection: CULS
+    relative_path: "CULS/plot_1_annotated.las"
+    plot_name: plot_1_annotated
+    split: dev
+    observed_point_count: 1816672
+    observed_reference_tree_count: 6
+
+benchmark:
+  default_selection: all
+  selected_split: null
+  preserve_split_labels: true
+  prevent_test_split_tuning: true
+  primary_reporting_split: test
+  array_size: 32
+  completed_plot_count: 32
+  completed_prediction_count: 32
+  completed_normalisation_count: 32
+  provisional_coordinate_evaluation_count: 32
+  validated_pointwise_evaluation_count: 0
+
+method:
+  name: SegmentAnyTree
+  repo_url: "https://github.com/SmartForest-no/SegmentAnyTree"
+  repo_path: "external/SegmentAnyTree"
+  external_commit_tested: "a3561ed8447bbb7938f059ba65a3e9c97d6e2ee9"
+  execution_mode: apptainer_slurm
+  apptainer_image: "~/scratch/containers/segment-any-tree_latest.sif"
+  container_source: "docker://maciekwielgosz/segment-any-tree:latest"
+  container_working_directory: "/home/nibio/mutable-outside-world"
+  container_interface: "bash run_inference.sh <input_dir> <output_dir> <clean_output_dir>"
+  python_userbase: "~/fastscratch/segmentanytree_pyuser_v1"
+  runtime_root: "~/fastscratch/segmentanytree_runtime"
+  runtime_patch_root: "methods/segmentanytree/scripts/runtime/patches"
+  command_template: null
+  command_template_note: "Inference is run by the Apptainer Slurm scripts; native execution is not configured."
+  prediction_output_subpath: final_results
+  output_format: labelled_point_cloud
+  prediction_instance_field: PredInstance
+  prediction_semantic_field: PredSemantic
+  ignored_prediction_labels:
+    - -1
+    - 0
+  gpu_required: true
+  checkpoint:
+    filename: PointGroup-PAPER.pt
+    sha256: "0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a"
+    provenance_status: "container_checkpoint_hash_verified_repository_overrides_record_mixed_training_but_exact_scenario_unconfirmed"
+    training_performed_in_this_repository: false
+    execution_entrypoint: eval.py
+
+training:
+  current_mode: published_pretrained
+  local_weight_updates_performed: false
+  permitted_for_instance_training_split:
+    - dev
+  forbidden_training_split:
+    - test
+  note: "The completed jobs ran inference with a supplied checkpoint; they did not train SegmentAnyTree."
+  corrected_experiment:
+    config: "methods/segmentanytree/configs/for_instance_training.yml"
+    primary_mode: retrained_from_dev
+    status: full_training_in_progress_validation_queued
+    final_test_status: not_started
+
+evaluation:
+  protocol_id: for_instance_pointwise_v1
+  status: revalidation_required
+  primary_input: aligned_internal_prediction_arrays
+  primary_reporting_split: test
+  reference_instance_field: treeID
+  reference_semantic_field: classification
+  prediction_instance_field: PredInstance
+  prediction_semantic_field: PredSemantic
+  reference_classes:
+    - 4
+    - 5
+    - 6
+  ignored_classes:
+    - 0
+    - 1
+    - 2
+    - 3
+  ignored_tree_ids:
+    - 0
+  iou_threshold: 0.5
+  threshold_operator: greater_than_or_equal
+  published_reproduction_matching_policy: paper_per_prediction_best_iou
+  harmonised_matching_policy: one_to_one
+  point_correspondence: source_row_or_stable_point_identifier
+  coordinate_rematching:
+    status: provisional_only
+    tolerance: 0.02
+    reason: "Coordinate rematching is not the paper-aligned evaluation route and must not replace aligned point-wise labels."
+  export_validation:
+    required: true
+    coordinate_tolerance: 0.001
+    require_equal_point_count: true
+    require_equal_coordinate_multiset: true
+  published_reference_f1:
+    CULS: 1.00
+    NIBIO: 0.88
+    RMIT: 0.84
+    SCION: 0.91
+    TUWIEN: 0.57
+    source: "SegmentAnyTree paper, scenario 5, original-resolution FOR-instance test data."
+  reproduction_alert_absolute_f1_difference: 0.10
+  metrics:
+    - reference_tree_count
+    - predicted_tree_count
+    - true_positives
+    - false_positives
+    - false_negatives
+    - precision
+    - recall
+    - f1
+    - mean_matched_iou
+    - median_matched_iou
+    - mean_unweighted_coverage
+    - mean_weighted_coverage
+    - runtime_seconds
+    - peak_memory_gb
+  unsupported_metrics:
+    - over_segmentation_count
+    - under_segmentation_count
+  unsupported_metrics_note: "These require an explicit many-to-one and one-to-many definition beyond the current one-to-one evaluator."
+
+paths:
+  staged_inputs_root: "data/interim/segmentanytree/for_instance/staged_inputs"
+  predictions_root: "data/predictions/segmentanytree/for_instance"
+  normalised_predictions_root: "data/interim/segmentanytree/for_instance"
+  metadata_root: "results/metadata/segmentanytree_for_instance"
+  inventory_csv: "results/metadata/segmentanytree_for_instance/inventory.csv"
+  inventory_json: "results/metadata/segmentanytree_for_instance/inventory.json"
+  run_metadata_root: "results/metadata/segmentanytree_for_instance/runs"
+  normalisation_metadata_root: "results/metadata/segmentanytree_for_instance/normalisation"
+  evaluation_metadata_root: "results/metadata/segmentanytree_for_instance/evaluations"
+  export_validation_root: "results/metadata/segmentanytree_for_instance/export_validation"
+  internal_output_inventory_root: "results/metadata/segmentanytree_for_instance/internal_output_inventory"
+  pointwise_evaluation_root: "results/metadata/segmentanytree_for_instance/pointwise"
+  paper_aligned_predictions_root: "data/predictions/segmentanytree/for_instance_pointwise"
+  paper_aligned_run_metadata_root: "results/metadata/segmentanytree_for_instance/pointwise_runs"
+  paper_aligned_evaluation_root: "results/metadata/segmentanytree_for_instance/pointwise_paper"
+  paper_aligned_tables_root: "results/tables/segmentanytree_for_instance/pointwise_paper"
+  per_plot_metrics_root: "results/tables/segmentanytree_for_instance/per_plot"
+  pointwise_tables_root: "results/tables/segmentanytree_for_instance/pointwise"
+  tables_root: "results/tables/segmentanytree_for_instance"
+  plot_metrics_csv: "results/tables/segmentanytree_for_instance_plot_metrics.csv"
+  collection_summary_csv: "results/tables/segmentanytree_for_instance_summary_by_collection.csv"
+  split_summary_csv: "results/tables/segmentanytree_for_instance_summary_by_split.csv"
+  benchmark_summary_json: "results/metadata/segmentanytree_for_instance/benchmark_summary.json"
+  public_results_root: "methods/segmentanytree/examples"
+  public_workbook: "methods/segmentanytree/examples/provisional_released_checkpoint_results.xlsx"
+  logs_root: "logs/segmentanytree_for_instance"
+
+runtime:
+  overwrite: false
+  capture_stdout_stderr: true
+  prediction_time_limit: "01:00:00"
+  prediction_memory: "48G"
+  prediction_cpus: 8
+  normalisation_memory: "16G"
+  evaluation_memory: "32G"
+  gpu_partition: gpu-l40s-low
+  gpu_request: "gpu:1"

@@ -1,3 +1,5 @@
+"""Minimal PLY readers shared by synthetic tests and benchmark utilities."""
+
 from __future__ import annotations
 
 import os

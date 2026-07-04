@@ -54,7 +54,7 @@ def write_xyz_las(path: Path, coordinates: list[tuple[float, float, float]]) -> 
 
 def test_frdr_conversion_writes_tls2trees_schema(tmp_path: Path) -> None:
     converter = load_script(
-        "scripts/data/convert_frdr_woods_to_tls2trees_ply.py", "frdr_converter"
+        "methods/tls2trees/scripts/data/convert_frdr_woods_to_tls2trees_ply.py", "frdr_converter"
     )
     input_path = tmp_path / "plot.las"
     output_dir = tmp_path / "converted"
@@ -89,7 +89,7 @@ def test_frdr_conversion_writes_tls2trees_schema(tmp_path: Path) -> None:
 
 def test_frdr_conversion_unknown_policy_drop(tmp_path: Path) -> None:
     converter = load_script(
-        "scripts/data/convert_frdr_woods_to_tls2trees_ply.py", "frdr_converter_unknown"
+        "methods/tls2trees/scripts/data/convert_frdr_woods_to_tls2trees_ply.py", "frdr_converter_unknown"
     )
     input_path = tmp_path / "unknown.las"
     write_woods_las(input_path, woods=[0, 1, 2])
@@ -133,7 +133,7 @@ def test_frdr_conversion_unknown_policy_drop(tmp_path: Path) -> None:
 
 def test_inventory_reports_unknown_woods_values(tmp_path: Path) -> None:
     inventory = load_script(
-        "scripts/data/inspect_frdr_dataset_inventory.py", "frdr_inventory"
+        "methods/tls2trees/scripts/data/inspect_frdr_dataset_inventory.py", "frdr_inventory"
     )
     input_path = tmp_path / "NSpruce_plot2.las"
     write_woods_las(input_path, woods=[0, 1, 2])
@@ -148,10 +148,10 @@ def test_inventory_reports_unknown_woods_values(tmp_path: Path) -> None:
 
 def test_tls2trees_output_summary_reads_tree_ply(tmp_path: Path) -> None:
     converter = load_script(
-        "scripts/data/convert_frdr_woods_to_tls2trees_ply.py", "frdr_converter_summary"
+        "methods/tls2trees/scripts/data/convert_frdr_woods_to_tls2trees_ply.py", "frdr_converter_summary"
     )
     summariser = load_script(
-        "scripts/methods/summarise_tls2trees_outputs.py", "tls2trees_summariser"
+        "methods/tls2trees/scripts/runtime/summarise_tls2trees_outputs.py", "tls2trees_summariser"
     )
     input_path = tmp_path / "plot.las"
     converted_dir = tmp_path / "converted"
@@ -183,7 +183,7 @@ def test_tls2trees_output_summary_reads_tree_ply(tmp_path: Path) -> None:
 
 def test_combined_summary_merges_conversion_and_run_metadata() -> None:
     summariser = load_script(
-        "scripts/methods/summarise_tls2trees_outputs.py",
+        "methods/tls2trees/scripts/runtime/summarise_tls2trees_outputs.py",
         "tls2trees_combined_summariser",
     )
     summary = {
@@ -222,7 +222,7 @@ def test_combined_summary_merges_conversion_and_run_metadata() -> None:
 
 def test_instance_command_uses_patched_cli_arguments(tmp_path: Path) -> None:
     runner = load_script(
-        "scripts/methods/run_tls2trees_instance_for_plot.py", "tls2trees_plot_runner"
+        "methods/tls2trees/scripts/runtime/run_tls2trees_instance_for_plot.py", "tls2trees_plot_runner"
     )
     command = runner.build_command(
         tmp_path / "instance_patched.py",
@@ -251,7 +251,7 @@ def test_instance_command_uses_patched_cli_arguments(tmp_path: Path) -> None:
 
 def test_pandas_patch_restores_clstr_column() -> None:
     patch = load_script(
-        "scripts/methods/tls2trees_patched/instance_patched.py",
+        "methods/tls2trees/scripts/runtime/patches/instance_patched.py",
         "tls2trees_instance_patch",
     )
     source = "before\n    chull = chull.reset_index(drop=True)\nafter\n"
@@ -263,7 +263,7 @@ def test_pandas_patch_restores_clstr_column() -> None:
 
 
 def test_evaluator_refuses_missing_reference(monkeypatch, capsys) -> None:
-    evaluator = load_script("scripts/evaluation/instance_iou_f1.py", "instance_iou_f1")
+    evaluator = load_script("shared/evaluation/instance_iou_f1.py", "instance_iou_f1")
     monkeypatch.setattr(
         sys,
         "argv",
@@ -275,7 +275,7 @@ def test_evaluator_refuses_missing_reference(monkeypatch, capsys) -> None:
 
 
 def test_synthetic_examples_are_parseable() -> None:
-    examples = ROOT / "examples"
+    examples = ROOT / "methods/tls2trees/examples"
     conversion = json.loads(
         (examples / "tls2trees_conversion_metadata_example.json").read_text(
             encoding="utf-8"
@@ -305,7 +305,7 @@ def test_synthetic_examples_are_parseable() -> None:
 
 
 def test_completed_frdr_summary_is_consistent() -> None:
-    path = ROOT / "examples/tls2trees_frdr_prediction_summary.csv"
+    path = ROOT / "methods/tls2trees/examples/tls2trees_frdr_prediction_summary.csv"
     with path.open(encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
 
@@ -325,11 +325,18 @@ def test_completed_frdr_summary_is_consistent() -> None:
 
 
 def test_all_benchmark_configs_parse() -> None:
-    config_paths = sorted((ROOT / "configs").glob("*.yml"))
-    assert {path.name for path in config_paths} >= {
-        "for_instance_accuracy_benchmark.yml",
-        "frdr_tls2trees_benchmark.yml",
-        "wytham_accuracy_benchmark.yml",
+    config_paths = sorted(ROOT.glob("**/configs/*.yml")) + sorted(
+        ROOT.glob("datasets/*/benchmark.yml")
+    )
+    assert {
+        path.relative_to(ROOT).as_posix() for path in config_paths
+    } >= {
+        "datasets/for-instance/benchmark.yml",
+        "datasets/wytham-woods/benchmark.yml",
+        "methods/segmentanytree/configs/for_instance_benchmark.yml",
+        "methods/segmentanytree/configs/for_instance_training.yml",
+        "methods/tls2trees/configs/for_instance_accuracy.yml",
+        "methods/tls2trees/configs/frdr_benchmark.yml",
     }
     for path in config_paths:
         payload = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -339,7 +346,7 @@ def test_all_benchmark_configs_parse() -> None:
 
 
 def test_for_instance_inventory_example_schema() -> None:
-    path = ROOT / "examples/for_instance_inventory_summary.csv"
+    path = ROOT / "methods/tls2trees/examples/for_instance_inventory_summary.csv"
     with path.open(encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
         rows = list(reader)
@@ -376,7 +383,7 @@ def test_evaluator_calculates_synthetic_instance_metrics(
     tmp_path: Path, monkeypatch
 ) -> None:
     evaluator = load_script(
-        "scripts/evaluation/instance_iou_f1.py", "instance_iou_f1_synthetic"
+        "shared/evaluation/instance_iou_f1.py", "instance_iou_f1_synthetic"
     )
     predictions = tmp_path / "predictions"
     references = tmp_path / "references"

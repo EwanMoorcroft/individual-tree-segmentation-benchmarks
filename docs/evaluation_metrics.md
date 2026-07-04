@@ -58,8 +58,8 @@ The first SegmentAnyTree metrics are stored outside Git under
 `results/tables/segmentanytree_for_instance/per_plot/`, with evaluation
 metadata under `results/metadata/segmentanytree_for_instance/`. Public-safe
 per-plot, collection, split, matched-pair and inventory tables are retained in
-[`examples/`](../examples/), and the interpretation is documented in
-[`segmentanytree_for_instance_results.md`](segmentanytree_for_instance_results.md).
+[`SegmentAnyTree examples`](../methods/segmentanytree/examples/), and the interpretation is documented in
+[`provisional_released_checkpoint_results.md`](../methods/segmentanytree/docs/provisional_released_checkpoint_results.md).
 These coordinate-rematched values are provisional and are not the accepted
 paper reproduction or trained-model result. The corrected
 `retrained_from_dev` experiment writes separate training metadata,
@@ -77,7 +77,7 @@ precision, recall and F1 because unmatched predictions and references do not
 contribute an IoU value.
 
 The coordinate evaluator in
-[`scripts/evaluation/instance_iou_f1.py`](../scripts/evaluation/instance_iou_f1.py)
+[`shared/evaluation/instance_iou_f1.py`](../shared/evaluation/instance_iou_f1.py)
 intentionally refuses to run without a reference instance source:
 
 ```text
@@ -91,7 +91,7 @@ one reference `treeID` for each evaluated point. Point correspondence must
 come from source row order or a stable point identifier, not rounded
 coordinates.
 
-[`pointwise_instance_metrics.py`](../scripts/evaluation/pointwise_instance_metrics.py)
+[`pointwise_instance_metrics.py`](../methods/segmentanytree/scripts/evaluation/pointwise_instance_metrics.py)
 reports:
 
 - the released SegmentAnyTree per-prediction-best-IoU policy for paper
@@ -106,7 +106,7 @@ released SegmentAnyTree evaluator. Primary comparable results use only the
 supplied test split. Development plots are retained for diagnostics.
 
 The full protocol is
-[`for_instance_cross_method_protocol.md`](for_instance_cross_method_protocol.md).
+[`for-instance.md`](protocols/for-instance.md).
 
 ## Coordinate-Based One-To-One Evaluation
 

@@ -8,12 +8,12 @@ adapter, method runner, scheduler workflow, metadata outputs and focused tests.
 
 | Dataset | Method | Status | Configuration or note |
 | --- | --- | --- | --- |
-| FRDR treeiso TLS | TLS2trees | Prediction benchmark completed | [`frdr_tls2trees_benchmark.yml`](configs/frdr_tls2trees_benchmark.yml) |
-| FOR-instance | SegmentAnyTree released checkpoint | Provisional inference-only run completed; export audit failed | [`for_instance_segmentanytree_benchmark.yml`](configs/for_instance_segmentanytree_benchmark.yml) |
-| FOR-instance | SegmentAnyTree retrained from development split | Training preflight ready; full training and held-out test evaluation pending | [`for_instance_segmentanytree_train_finetune.yml`](configs/for_instance_segmentanytree_train_finetune.yml) |
-| FOR-instance | TLS2trees | Candidate compatibility test | [`for_instance_tls2trees_accuracy.yml`](configs/for_instance_tls2trees_accuracy.yml) |
+| FRDR treeiso TLS | TLS2trees | Prediction benchmark completed | [`frdr_benchmark.yml`](methods/tls2trees/configs/frdr_benchmark.yml) |
+| FOR-instance | SegmentAnyTree released checkpoint | Provisional inference-only run completed; export audit failed | [`for_instance_benchmark.yml`](methods/segmentanytree/configs/for_instance_benchmark.yml) |
+| FOR-instance | SegmentAnyTree retrained from development split | Full training running; development validation queued; held-out test untouched | [`for_instance_training.yml`](methods/segmentanytree/configs/for_instance_training.yml) |
+| FOR-instance | TLS2trees | Candidate compatibility test | [`for_instance_accuracy.yml`](methods/tls2trees/configs/for_instance_accuracy.yml) |
 | FOR-instance | TreeLearn or another deep learning method | Candidate accuracy benchmark | Respect the supplied development/test split |
-| Wytham Woods | TLS2trees | Candidate TLS accuracy benchmark | [`wytham_accuracy_benchmark.yml`](configs/wytham_accuracy_benchmark.yml) |
+| Wytham Woods | TLS2trees | Candidate TLS accuracy benchmark | [`benchmark.yml`](datasets/wytham-woods/benchmark.yml) |
 | Wytham Woods | SegmentAnyTree | Candidate accuracy benchmark | Plot-level input reconstruction required |
 | Wytham Woods | Traditional TLS method | Candidate baseline | Plot-level input reconstruction required |
 | NEWFOR | SegmentAnyTree | External comparison dataset; not implemented here | Add only through a separate documented dataset config |
@@ -32,10 +32,12 @@ provisional because they neither preserve point alignment nor represent a
 model trained under the local development/test protocol. The corrected primary
 experiment trains from scratch on FOR-instance development data, selects the
 configuration on an internal development validation split and evaluates the
-held-out test split once. See the
-[`shared protocol`](docs/for_instance_cross_method_protocol.md),
-[`runbook`](docs/segmentanytree_for_instance_benchmark.md) and
-[`results note`](docs/segmentanytree_for_instance_results.md).
+held-out test split once. Full training began on 4 July 2026; this status does
+not imply that a checkpoint has passed validation or that final accuracy has
+been measured. See the
+[`shared protocol`](docs/protocols/for-instance.md),
+[`runbook`](methods/segmentanytree/docs/for_instance_benchmark.md) and
+[`results note`](methods/segmentanytree/docs/provisional_released_checkpoint_results.md).
 
 ## Adding A Benchmark
 

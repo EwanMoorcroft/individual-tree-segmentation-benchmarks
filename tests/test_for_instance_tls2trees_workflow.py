@@ -65,7 +65,7 @@ def write_prediction_ply(
 
 
 def test_for_instance_tls2trees_config_parses() -> None:
-    path = ROOT / "configs/for_instance_tls2trees_accuracy.yml"
+    path = ROOT / "methods/tls2trees/configs/for_instance_accuracy.yml"
     config = yaml.safe_load(path.read_text(encoding="utf-8"))
 
     assert config["dataset"]["name"] == "FOR-instance"
@@ -83,11 +83,11 @@ def test_for_instance_runner_uses_conservative_instance_parameters(
     tmp_path: Path,
 ) -> None:
     runner = load_script(
-        "scripts/methods/run_tls2trees_for_instance_plot.py",
+        "methods/tls2trees/scripts/runtime/run_tls2trees_for_instance_plot.py",
         "for_instance_runner",
     )
     config, _, _ = runner.load_config(
-        str(ROOT / "configs/for_instance_tls2trees_accuracy.yml")
+        str(ROOT / "methods/tls2trees/configs/for_instance_accuracy.yml")
     )
     command = runner.build_command(
         tmp_path / "instance_patched.py",
@@ -109,7 +109,7 @@ def test_for_instance_runner_uses_conservative_instance_parameters(
 
 def test_for_instance_inventory_reads_reference_fields(tmp_path: Path) -> None:
     inventory = load_script(
-        "scripts/data/inspect_for_instance_inventory.py", "for_inventory"
+        "methods/segmentanytree/scripts/data/inspect_for_instance_inventory.py", "for_inventory"
     )
     dataset_root = tmp_path / "FORinstance_dataset"
     collection = dataset_root / "CULS"
@@ -132,7 +132,7 @@ def test_for_instance_inventory_reads_reference_fields(tmp_path: Path) -> None:
 
 def test_converter_writes_leaf_off_mapping(tmp_path: Path) -> None:
     converter = load_script(
-        "scripts/data/convert_for_instance_to_tls2trees_ply.py",
+        "methods/tls2trees/scripts/data/convert_for_instance_to_tls2trees_ply.py",
         "for_converter",
     )
     input_path = tmp_path / "plot_1_annotated.las"
@@ -161,7 +161,7 @@ def test_converter_writes_leaf_off_mapping(tmp_path: Path) -> None:
 
 def test_converter_can_retain_live_branches_as_nonwood(tmp_path: Path) -> None:
     converter = load_script(
-        "scripts/data/convert_for_instance_to_tls2trees_ply.py",
+        "methods/tls2trees/scripts/data/convert_for_instance_to_tls2trees_ply.py",
         "for_converter_live",
     )
     input_path = tmp_path / "plot_1_annotated.las"
@@ -187,7 +187,7 @@ def test_evaluator_filters_leaf_off_classes_and_writes_tables(
     tmp_path: Path, monkeypatch
 ) -> None:
     evaluator = load_script(
-        "scripts/evaluation/instance_iou_f1.py",
+        "shared/evaluation/instance_iou_f1.py",
         "for_instance_evaluator",
     )
     reference_path = tmp_path / "plot_1_annotated.las"

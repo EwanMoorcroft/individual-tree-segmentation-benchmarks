@@ -1,0 +1,124 @@
+project:
+  name: tree-seg-benchmark
+  mode: for_instance_tls2trees_leaf_off_accuracy_pilot
+  barkla_root: "~/scratch/tree-seg-benchmark"
+
+environment:
+  module: "miniforge3/25.3.0-python3.12.10"
+  python_environment: "~/fastscratch/venvs/treebench"
+  type: venv
+  activation: "source ~/fastscratch/venvs/treebench/bin/activate"
+  python_version_tested: "3.12.10"
+
+dataset:
+  name: FOR-instance
+  source_url: "https://doi.org/10.5281/zenodo.8287792"
+  root: "~/data/datasets/for_instance/FORinstance_dataset"
+  reference_instance_field: treeID
+  semantic_field: classification
+  pilot:
+    collection: CULS
+    relative_path: "CULS/plot_1_annotated.las"
+    plot_name: plot_1_annotated
+    point_count: 1816672
+    reference_tree_count: 6
+
+conversion:
+  evaluation_mode: leaf_off
+  reference_classes:
+    - 4
+    - 6
+  ignored_classes:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 5
+  retain_live_branches: false
+  input_label_mapping:
+    4: 3
+    6: 3
+    5: 1
+  live_branch_note: "Class 5 maps to label 1 only when retained for a separately labelled leaf-on experiment."
+  tile_name: "001"
+  tile_filename: "001.downsample.segmented.ply"
+  chunk_size_points: 1000000
+  z_normalisation: local_minimum
+  warning: "Local minimum z normalisation is a feasibility approximation, not terrain normalisation."
+
+method:
+  name: tls2trees
+  repo_url: "https://github.com/tls-tools-ucl/TLS2trees.git"
+  repo_path: "external/TLS2trees"
+  tested_commit: "ca12cb73b2c736d80b020e8025f8d975d42e6f01"
+  require_tested_commit: true
+  patched_instance_script: "methods/tls2trees/scripts/runtime/patches/instance_patched.py"
+  compatibility_note: "FOR-instance is UAV laser scanning data; this pilot tests compatibility with the TLS2trees instance stage."
+  instance_parameters:
+    n_tiles: 1
+    n_zeros: 3
+    overlap: false
+    slice_thickness: 0.5
+    find_stems_boundary:
+      - 1.5
+      - 2.0
+    find_stems_min_radius: 0.025
+    find_stems_min_points: 50
+    graph_edge_length: 1.0
+    graph_maximum_cumulative_gap: 3.0
+    min_points_per_tree: 100
+    add_leaves: false
+    add_leaves_voxel_length: 0.5
+    add_leaves_edge_length: 1.0
+    save_diameter_class: false
+    ignore_missing_tiles: true
+    pandarallel: false
+    verbose: true
+
+evaluation:
+  enabled: true
+  mode: leaf_off
+  reference_instance_field: treeID
+  reference_semantic_field: classification
+  reference_classes:
+    - 4
+    - 6
+  ignored_classes:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 5
+  ignore_nonpositive_reference_ids: true
+  iou_threshold: 0.5
+  coordinate_tolerance: 0.02
+  metrics:
+    - precision
+    - recall
+    - f1
+    - mean_matched_iou
+    - true_positives
+    - false_positives
+    - false_negatives
+    - predicted_tree_count
+    - reference_tree_count
+
+outputs:
+  converted_root: "data/interim/tls2trees/for_instance"
+  predictions_root: "data/predictions/tls2trees/for_instance"
+  logs_root: "logs/for_instance_tls2trees"
+  metadata_root: "results/metadata/for_instance_tls2trees"
+  inventory_csv: "results/metadata/for_instance_tls2trees/inventory.csv"
+  inventory_json: "results/metadata/for_instance_tls2trees/inventory.json"
+  conversion_metadata_root: "results/metadata/for_instance_tls2trees/conversions"
+  run_metadata_root: "results/metadata/for_instance_tls2trees/runs"
+  evaluation_metadata_root: "results/metadata/for_instance_tls2trees/evaluations"
+  tables_root: "results/tables"
+
+runtime:
+  overwrite: false
+  capture_stdout_stderr: true
+  slurm_partition: nodes
+  conversion_memory: "16G"
+  instance_memory: "32G"
+  evaluation_memory: "32G"

@@ -5,6 +5,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 from types import ModuleType
 
@@ -94,7 +95,7 @@ def minimal_runner_config(project_root: Path, dataset_root: Path) -> dict:
 
 def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     config = yaml.safe_load(
-        (ROOT / "configs/for_instance_segmentanytree_benchmark.yml").read_text(
+        (ROOT / "methods/segmentanytree/configs/for_instance_benchmark.yml").read_text(
             encoding="utf-8"
         )
     )
@@ -152,9 +153,9 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
 
 def test_required_for_instance_scripts_are_present_and_tracked() -> None:
     relative_paths = [
-        "scripts/data/inspect_for_instance_inventory.py",
-        "scripts/data/convert_for_instance_to_tls2trees_ply.py",
-        "scripts/data/select_for_instance_plot.py",
+        "methods/segmentanytree/scripts/data/inspect_for_instance_inventory.py",
+        "methods/tls2trees/scripts/data/convert_for_instance_to_tls2trees_ply.py",
+        "methods/segmentanytree/scripts/data/select_for_instance_plot.py",
     ]
     assert all((ROOT / relative_path).is_file() for relative_path in relative_paths)
 
@@ -170,7 +171,7 @@ def test_required_for_instance_scripts_are_present_and_tracked() -> None:
 
 def test_split_aware_plot_selection_is_deterministic(tmp_path: Path) -> None:
     selector = load_script(
-        "scripts/data/select_for_instance_plot.py", "segmentanytree_selector"
+        "methods/segmentanytree/scripts/data/select_for_instance_plot.py", "segmentanytree_selector"
     )
     dataset_root = tmp_path / "FORinstance_dataset"
     for relative_path in (
@@ -201,7 +202,7 @@ def test_split_aware_plot_selection_is_deterministic(tmp_path: Path) -> None:
 
 def test_inventory_records_split_and_required_fields(tmp_path: Path) -> None:
     inventory = load_script(
-        "scripts/data/inspect_for_instance_inventory.py",
+        "methods/segmentanytree/scripts/data/inspect_for_instance_inventory.py",
         "segmentanytree_inventory",
     )
     dataset_root = tmp_path / "FORinstance_dataset"
@@ -225,7 +226,7 @@ def test_inventory_records_split_and_required_fields(tmp_path: Path) -> None:
 
 def test_inventory_cli_accepts_public_output_argument_names(monkeypatch) -> None:
     inventory = load_script(
-        "scripts/data/inspect_for_instance_inventory.py",
+        "methods/segmentanytree/scripts/data/inspect_for_instance_inventory.py",
         "segmentanytree_inventory_cli",
     )
     monkeypatch.setattr(
@@ -252,7 +253,7 @@ def test_segmentanytree_runner_help_loads_selector() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            str(ROOT / "scripts/methods/run_segmentanytree_for_instance.py"),
+            str(ROOT / "methods/segmentanytree/scripts/runtime/run_segmentanytree_for_instance.py"),
             "--help",
         ],
         cwd=ROOT,
@@ -270,7 +271,7 @@ def test_wrapper_dry_run_does_not_execute_method(
     tmp_path: Path, monkeypatch, capsys
 ) -> None:
     runner = load_script(
-        "scripts/methods/run_segmentanytree_for_instance.py",
+        "methods/segmentanytree/scripts/runtime/run_segmentanytree_for_instance.py",
         "segmentanytree_runner_dry",
     )
     dataset_root = tmp_path / "dataset"
@@ -315,7 +316,7 @@ def test_configured_wrapper_delegates_to_apptainer_slurm(
     tmp_path: Path, monkeypatch, capsys
 ) -> None:
     runner = load_script(
-        "scripts/methods/run_segmentanytree_for_instance.py",
+        "methods/segmentanytree/scripts/runtime/run_segmentanytree_for_instance.py",
         "segmentanytree_runner_slurm",
     )
     dataset_root = tmp_path / "dataset"
@@ -365,7 +366,7 @@ def test_configured_wrapper_delegates_to_apptainer_slurm(
 
 def test_wrapper_parses_peak_memory_only_with_units(tmp_path: Path) -> None:
     runner = load_script(
-        "scripts/methods/run_segmentanytree_for_instance.py",
+        "methods/segmentanytree/scripts/runtime/run_segmentanytree_for_instance.py",
         "segmentanytree_runner_memory",
     )
     log_path = tmp_path / "method.log"
@@ -381,7 +382,7 @@ def test_wrapper_fails_clearly_when_preflight_is_unresolved(
     tmp_path: Path, monkeypatch, capsys, missing: str
 ) -> None:
     runner = load_script(
-        "scripts/methods/run_segmentanytree_for_instance.py",
+        "methods/segmentanytree/scripts/runtime/run_segmentanytree_for_instance.py",
         f"segmentanytree_runner_missing_{missing}",
     )
     dataset_root = tmp_path / "dataset"
@@ -418,7 +419,7 @@ def test_wrapper_fails_clearly_when_preflight_is_unresolved(
 
 def test_normaliser_splits_tiny_labelled_prediction(tmp_path: Path) -> None:
     normaliser = load_script(
-        "scripts/methods/normalise_segmentanytree_predictions.py",
+        "methods/segmentanytree/scripts/runtime/normalise_segmentanytree_predictions.py",
         "segmentanytree_normaliser",
     )
     input_path = tmp_path / "prediction.las"
@@ -448,7 +449,7 @@ def test_normaliser_splits_tiny_labelled_prediction(tmp_path: Path) -> None:
 def test_export_patch_is_narrow_and_requires_expected_source() -> None:
     patcher = load_script(
         (
-            "scripts/methods/segmentanytree_runtime_patches/"
+            "methods/segmentanytree/scripts/runtime/patches/"
             "prepare_pandas_to_las_patch.py"
         ),
         "segmentanytree_export_patch",
@@ -479,7 +480,7 @@ for column in standard_columns_with_data_types:
 
 def test_serial_pool_preserves_map_order() -> None:
     serial = load_script(
-        "scripts/methods/segmentanytree_runtime_patches/sitecustomize.py",
+        "methods/segmentanytree/scripts/runtime/patches/sitecustomize.py",
         "segmentanytree_serial_pool",
     )
 
@@ -491,7 +492,7 @@ def test_evaluator_uses_for_instance_tree_classes(
     tmp_path: Path, monkeypatch
 ) -> None:
     evaluator = load_script(
-        "scripts/evaluation/instance_iou_f1.py",
+        "shared/evaluation/instance_iou_f1.py",
         "segmentanytree_evaluator",
     )
     reference_path = tmp_path / "reference.las"
@@ -558,7 +559,7 @@ def test_evaluator_uses_for_instance_tree_classes(
 
 def test_summariser_computes_micro_metrics() -> None:
     summariser = load_script(
-        "scripts/evaluation/summarise_for_instance_segmentanytree_benchmark.py",
+        "methods/segmentanytree/scripts/evaluation/summarise_for_instance_segmentanytree_benchmark.py",
         "segmentanytree_summariser",
     )
     rows = [
@@ -609,7 +610,7 @@ def test_summariser_computes_micro_metrics() -> None:
 
 def test_pointwise_evaluator_reports_paper_and_harmonized_metrics() -> None:
     evaluator = load_script(
-        "scripts/evaluation/pointwise_instance_metrics.py",
+        "methods/segmentanytree/scripts/evaluation/pointwise_instance_metrics.py",
         "segmentanytree_pointwise_evaluator",
     )
     labels = evaluator.PointLabels(
@@ -640,7 +641,7 @@ def test_pointwise_evaluator_reports_paper_and_harmonized_metrics() -> None:
 
 def test_pointwise_evaluator_exposes_matching_policy_difference() -> None:
     evaluator = load_script(
-        "scripts/evaluation/pointwise_instance_metrics.py",
+        "methods/segmentanytree/scripts/evaluation/pointwise_instance_metrics.py",
         "segmentanytree_pointwise_matching",
     )
     labels = evaluator.PointLabels(
@@ -667,7 +668,7 @@ def test_pointwise_evaluator_exposes_matching_policy_difference() -> None:
 
 def test_pointwise_evaluator_rejects_unaligned_arrays() -> None:
     evaluator = load_script(
-        "scripts/evaluation/pointwise_instance_metrics.py",
+        "methods/segmentanytree/scripts/evaluation/pointwise_instance_metrics.py",
         "segmentanytree_pointwise_alignment",
     )
     labels = evaluator.PointLabels(
@@ -690,7 +691,7 @@ def test_pointwise_evaluator_rejects_unaligned_arrays() -> None:
 
 def test_run_metadata_hashes_checkpoint(tmp_path: Path) -> None:
     recorder = load_script(
-        "scripts/methods/record_segmentanytree_run.py",
+        "methods/segmentanytree/scripts/runtime/record_segmentanytree_run.py",
         "segmentanytree_run_recorder",
     )
     checkpoint = tmp_path / "PointGroup-PAPER.pt"
@@ -705,7 +706,7 @@ def test_run_metadata_hashes_checkpoint(tmp_path: Path) -> None:
 def test_tracker_patch_enables_aligned_instance_output() -> None:
     patcher = load_script(
         (
-            "scripts/methods/segmentanytree_runtime_patches/"
+            "methods/segmentanytree/scripts/runtime/patches/"
             "prepare_pointgroup_tracker_patch.py"
         ),
         "segmentanytree_tracker_patcher",
@@ -728,7 +729,7 @@ def test_tracker_patch_enables_aligned_instance_output() -> None:
 
 def test_training_split_is_seeded_and_excludes_test_data(tmp_path: Path) -> None:
     preparer = load_script(
-        "scripts/data/prepare_segmentanytree_for_instance_training.py",
+        "methods/segmentanytree/scripts/data/prepare_segmentanytree_for_instance_training.py",
         "segmentanytree_training_preparer_split",
     )
     dataset_root = tmp_path / "FORinstance_dataset"
@@ -745,7 +746,9 @@ def test_training_split_is_seeded_and_excludes_test_data(tmp_path: Path) -> None
         rows.append(f"CULS/{path.name},CULS,test")
     metadata = dataset_root / "data_split_metadata.csv"
     metadata.write_text(
-        "relative_path,collection,split\n" + "\n".join(rows) + "\n",
+        "relative_path,collection,split\n"
+        + "\n".join(rows)
+        + "\nNIBIO2/missing_plot.las,NIBIO2,dev\n",
         encoding="utf-8",
     )
 
@@ -761,11 +764,33 @@ def test_training_split_is_seeded_and_excludes_test_data(tmp_path: Path) -> None
     assert sum(row["training_role"] == "held_out_test" for row in first) == 2
 
 
+def test_training_split_rejects_unassigned_local_las(tmp_path: Path) -> None:
+    preparer = load_script(
+        "methods/segmentanytree/scripts/data/prepare_segmentanytree_for_instance_training.py",
+        "segmentanytree_training_preparer_unassigned",
+    )
+    dataset_root = tmp_path / "FORinstance_dataset"
+    for name in ("listed.las", "unlisted.las"):
+        path = dataset_root / "CULS" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_annotated_las(path)
+    metadata = dataset_root / "data_split_metadata.csv"
+    metadata.write_text(
+        "relative_path,collection,split\n"
+        "CULS/listed.las,CULS,dev\n"
+        "NIBIO2/not_downloaded.las,NIBIO2,dev\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="no split metadata"):
+        preparer.read_split_rows(dataset_root, metadata)
+
+
 def test_training_preparation_writes_expected_ply_without_test(
     tmp_path: Path,
 ) -> None:
     preparer = load_script(
-        "scripts/data/prepare_segmentanytree_for_instance_training.py",
+        "methods/segmentanytree/scripts/data/prepare_segmentanytree_for_instance_training.py",
         "segmentanytree_training_preparer_convert",
     )
     dataset_root = tmp_path / "FORinstance_dataset"
@@ -840,7 +865,7 @@ def test_training_preparation_writes_expected_ply_without_test(
 def test_training_config_and_slurm_gates_are_explicit() -> None:
     config = yaml.safe_load(
         (
-            ROOT / "configs/for_instance_segmentanytree_train_finetune.yml"
+            ROOT / "methods/segmentanytree/configs/for_instance_training.yml"
         ).read_text(encoding="utf-8")
     )
     assert config["method"]["primary_training_mode"] == "retrained_from_dev"
@@ -852,30 +877,60 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
     assert config["evaluation"]["use_test_for_model_selection"] is False
 
     training_task = (
-        ROOT / "scripts/slurm/train_segmentanytree_for_instance_task.sh"
+        ROOT / "methods/segmentanytree/slurm/training/train_segmentanytree_for_instance_task.sh"
     ).read_text(encoding="utf-8")
     final_test = (
         ROOT
-        / "scripts/slurm/run_segmentanytree_for_instance_test_from_checkpoint.sbatch"
+        / "methods/segmentanytree/slurm/inference/run_segmentanytree_for_instance_test_from_checkpoint.sbatch"
     ).read_text(encoding="utf-8")
     assert "SEGMENTANYTREE_EXECUTE" in training_task
-    assert "training.wandb.log=false" in training_task
-    assert "training.tensorboard.log=false" in training_task
+    assert "wandb.log=false" in training_task
+    assert "tensorboard.log=false" in training_task
+    assert '"epochs=$HYDRA_STOP_EPOCH"' in training_task
+    assert '"batch_size=$BATCH_SIZE"' in training_task
+    assert "training.epochs=" not in training_task
+    assert "prepare_dev_only_trainer_patch.py" in training_task
+    assert "trainer.py:ro" in training_task
     assert "data.dataroot=/sat_data" in training_task
     assert "SEGMENTANYTREE_FINAL_TEST_CONFIRMED" in final_test
 
 
+def test_dev_only_trainer_patch_preserves_validation() -> None:
+    patcher = load_script(
+        (
+            "methods/segmentanytree/scripts/runtime/patches/"
+            "prepare_dev_only_trainer_patch.py"
+        ),
+        "segmentanytree_dev_only_trainer_patcher",
+    )
+    block = patcher.TEST_EVALUATION_BLOCK
+    source = (
+        "def train(self):\n"
+        + block
+        + "    if self._dataset.has_val_loader:\n"
+        + '        self._test_epoch(epoch, "val")\n'
+        + block
+    )
+
+    patched = patcher.patch_source(source)
+
+    assert patched.count("if False:") == 2
+    assert 'self._test_epoch(epoch, "val")' in patched
+    assert 'self._test_epoch(epoch, "test")' in patched
+
+
 def test_segmentanytree_training_shell_scripts_parse() -> None:
     scripts = [
-        "scripts/slurm/prepare_for_instance_segmentanytree_splits.sbatch",
-        "scripts/slurm/train_segmentanytree_for_instance_task.sh",
-        "scripts/slurm/train_segmentanytree_for_instance_pilot.sbatch",
-        "scripts/slurm/train_segmentanytree_for_instance_full.sbatch",
-        "scripts/slurm/evaluate_segmentanytree_pointwise_task.sh",
-        "scripts/slurm/run_segmentanytree_for_instance_trained_validation.sbatch",
-        "scripts/slurm/evaluate_segmentanytree_for_instance_trained_validation.sbatch",
-        "scripts/slurm/run_segmentanytree_for_instance_test_from_checkpoint.sbatch",
-        "scripts/slurm/evaluate_segmentanytree_for_instance_test_from_checkpoint.sbatch",
+        "methods/segmentanytree/slurm/training/prepare_for_instance_segmentanytree_splits.sbatch",
+        "methods/segmentanytree/slurm/training/train_segmentanytree_for_instance_task.sh",
+        "methods/segmentanytree/slurm/training/train_segmentanytree_for_instance_pilot.sbatch",
+        "methods/segmentanytree/slurm/training/train_segmentanytree_for_instance_full.sbatch",
+        "methods/segmentanytree/slurm/evaluation/evaluate_segmentanytree_pointwise_task.sh",
+        "methods/segmentanytree/slurm/inference/run_segmentanytree_for_instance_trained_validation.sbatch",
+        "methods/segmentanytree/slurm/evaluation/evaluate_segmentanytree_for_instance_trained_validation.sbatch",
+        "methods/segmentanytree/slurm/inference/run_segmentanytree_for_instance_test_from_checkpoint.sbatch",
+        "methods/segmentanytree/slurm/evaluation/evaluate_segmentanytree_for_instance_test_from_checkpoint.sbatch",
+        "methods/segmentanytree/slurm/submit_full_training_chain.sh",
     ]
     for relative_path in scripts:
         completed = subprocess.run(
@@ -889,11 +944,32 @@ def test_segmentanytree_training_shell_scripts_parse() -> None:
             completed.stderr,
         )
 
+    full_training = (
+        ROOT
+        / "methods/segmentanytree/slurm/training/"
+        "train_segmentanytree_for_instance_full.sbatch"
+    ).read_text(encoding="utf-8")
+    assert "#SBATCH --time=23:59:00" in full_training
+
+
+def test_full_training_submission_wrapper_derives_validation_array() -> None:
+    wrapper = (
+        ROOT
+        / "methods/segmentanytree/slurm/submit_full_training_chain.sh"
+    ).read_text(encoding="utf-8")
+
+    assert 'mkdir -p "$LOG_ROOT"' in wrapper
+    assert 'VALIDATION_LAST=$((VALIDATION_COUNT - 1))' in wrapper
+    assert '--array="0-${VALIDATION_LAST}%1"' in wrapper
+    assert '--array="0-${VALIDATION_LAST}%4"' in wrapper
+    assert "held_out_test" in wrapper
+    assert "test_from_checkpoint" not in wrapper
+
 
 def test_paper_aligned_inference_stops_before_export_merge() -> None:
     script = (
         ROOT
-        / "scripts/methods/segmentanytree_runtime_patches/"
+        / "methods/segmentanytree/scripts/runtime/patches/"
         "run_inference_for_pointwise_evaluation.sh"
     ).read_text(encoding="utf-8")
 
@@ -901,14 +977,22 @@ def test_paper_aligned_inference_stops_before_export_merge() -> None:
     assert "rename_result_files_instance.py" in script
     assert "Instance_results_forEval_" in script
     assert "merge_pt_ss_is" not in script
+    assert "SEGMENTANYTREE_CHECKPOINT_DATA_CACHE" in script
+
+    task = (
+        ROOT
+        / "methods/segmentanytree/slurm/inference/run_segmentanytree_for_instance_paper_test_task.sh"
+    ).read_text(encoding="utf-8")
+    assert 'CUSTOM_DATA_ROOT="$RUNTIME_DIR/checkpoint_data"' in task
+    assert '--bind "$CUSTOM_DATA_ROOT:/sat_data"' in task
 
 
 def test_revalidation_slurm_scripts_support_test_only_selection() -> None:
     scripts = [
-        "scripts/slurm/run_segmentanytree_for_instance_array.sbatch",
-        "scripts/slurm/inspect_segmentanytree_internal_outputs.sbatch",
-        "scripts/slurm/audit_segmentanytree_for_instance_export_array.sbatch",
-        "scripts/slurm/evaluate_segmentanytree_pointwise_array.sbatch",
+        "methods/segmentanytree/slurm/inference/run_segmentanytree_for_instance_array.sbatch",
+        "methods/segmentanytree/slurm/evaluation/inspect_segmentanytree_internal_outputs.sbatch",
+        "methods/segmentanytree/slurm/evaluation/audit_segmentanytree_for_instance_export_array.sbatch",
+        "methods/segmentanytree/slurm/evaluation/evaluate_segmentanytree_pointwise_array.sbatch",
     ]
 
     for relative_path in scripts:
@@ -919,7 +1003,7 @@ def test_revalidation_slurm_scripts_support_test_only_selection() -> None:
 
 def test_export_validator_detects_coordinate_and_label_conflicts() -> None:
     validator = load_script(
-        "scripts/evaluation/validate_segmentanytree_export.py",
+        "methods/segmentanytree/scripts/evaluation/validate_segmentanytree_export.py",
         "segmentanytree_export_validator",
     )
     source = np.array([[0, 0, 0], [0, 0, 0], [1, 1, 1]], dtype=np.int64)
@@ -944,7 +1028,7 @@ def test_export_validator_accepts_row_preserving_labelled_las(
     tmp_path: Path,
 ) -> None:
     validator = load_script(
-        "scripts/evaluation/validate_segmentanytree_export.py",
+        "methods/segmentanytree/scripts/evaluation/validate_segmentanytree_export.py",
         "segmentanytree_export_validator_las",
     )
     source_path = tmp_path / "source.las"
@@ -974,7 +1058,7 @@ def test_internal_output_inspector_identifies_evaluation_candidates(
     tmp_path: Path,
 ) -> None:
     inspector = load_script(
-        "scripts/evaluation/inspect_segmentanytree_outputs.py",
+        "methods/segmentanytree/scripts/evaluation/inspect_segmentanytree_outputs.py",
         "segmentanytree_output_inspector",
     )
     (tmp_path / "semantic.ply").write_text(
@@ -1014,7 +1098,7 @@ def test_revalidation_summary_combines_audit_and_inventory(
     tmp_path: Path,
 ) -> None:
     summariser = load_script(
-        "scripts/evaluation/summarise_segmentanytree_revalidation.py",
+        "methods/segmentanytree/scripts/evaluation/summarise_segmentanytree_revalidation.py",
         "segmentanytree_revalidation_summary",
     )
     metadata = tmp_path / "metadata"
@@ -1061,7 +1145,7 @@ def test_revalidation_summary_combines_audit_and_inventory(
 
 
 def test_public_inventory_example_has_required_columns() -> None:
-    with (ROOT / "examples/for_instance_inventory_summary.csv").open(
+    with (ROOT / "methods/tls2trees/examples/for_instance_inventory_summary.csv").open(
         encoding="utf-8", newline=""
     ) as handle:
         reader = csv.DictReader(handle)
@@ -1083,7 +1167,7 @@ def test_public_inventory_example_has_required_columns() -> None:
 
 def test_public_segmentanytree_pilot_record_matches_evaluation() -> None:
     with (
-        ROOT / "examples/segmentanytree_for_instance_pilot_metrics.csv"
+        ROOT / "methods/segmentanytree/examples/pilot_metrics.csv"
     ).open(encoding="utf-8", newline="") as handle:
         row = next(csv.DictReader(handle))
 
@@ -1100,7 +1184,7 @@ def test_public_segmentanytree_pilot_record_matches_evaluation() -> None:
     assert row["status"] == "completed_with_postprocess_repair"
     status = json.loads(
         (
-            ROOT / "examples/segmentanytree_for_instance_pilot_status.json"
+            ROOT / "methods/segmentanytree/examples/pilot_status.json"
         ).read_text(encoding="utf-8")
     )
     assert status["status"] == "provisional_coordinate_evaluation"
@@ -1109,8 +1193,8 @@ def test_public_segmentanytree_pilot_record_matches_evaluation() -> None:
     )
 
 
-def test_public_full_segmentanytree_results_are_complete_and_sanitised() -> None:
-    prefix = ROOT / "examples/segmentanytree_for_instance_full"
+def test_public_provisional_segmentanytree_diagnostics_are_sanitised() -> None:
+    prefix = ROOT / "methods/segmentanytree/examples/provisional_released_checkpoint"
     with Path(f"{prefix}_plot_metrics.csv").open(
         encoding="utf-8", newline=""
     ) as handle:
@@ -1151,12 +1235,31 @@ def test_public_full_segmentanytree_results_are_complete_and_sanitised() -> None
 
     published_text = "\n".join(
         path.read_text(encoding="utf-8")
-        for path in ROOT.glob("examples/segmentanytree_for_instance_full_*.*")
+        for path in ROOT.glob("methods/segmentanytree/examples/provisional_released_checkpoint_*.*")
         if path.suffix in {".csv", ".json"}
     )
     assert "/" + "Users/" not in published_text
     assert "/mnt/" not in published_text
     assert "sge" + "moorc" not in published_text
+
+
+def test_provisional_workbook_cannot_claim_final_accuracy() -> None:
+    workbook = (
+        ROOT
+        / "methods/segmentanytree/examples/"
+        "provisional_released_checkpoint_results.xlsx"
+    )
+    with zipfile.ZipFile(workbook) as archive:
+        workbook_text = "\n".join(
+            archive.read(name).decode("utf-8", errors="ignore")
+            for name in archive.namelist()
+            if name.endswith(".xml")
+        )
+
+    assert "Provisional Released-Checkpoint Diagnostic" in workbook_text
+    assert "not accepted accuracy results" in workbook_text
+    assert "Completed SegmentAnyTree accuracy benchmark" not in workbook_text
+    assert "All 32 completed SegmentAnyTree evaluations" not in workbook_text
 
 
 def test_no_raw_point_cloud_or_archive_is_tracked() -> None:
@@ -1167,7 +1270,22 @@ def test_no_raw_point_cloud_or_archive_is_tracked() -> None:
         capture_output=True,
         text=True,
     )
-    forbidden = {".las", ".laz", ".ply", ".zip", ".npy", ".npz"}
+    forbidden = {
+        ".las",
+        ".laz",
+        ".ply",
+        ".zip",
+        ".npy",
+        ".npz",
+        ".sif",
+        ".pt",
+        ".pth",
+        ".ckpt",
+        ".h5",
+        ".hdf5",
+        ".pkl",
+        ".joblib",
+    }
     tracked = [Path(line) for line in completed.stdout.splitlines()]
 
     assert not [path for path in tracked if path.suffix.lower() in forbidden]

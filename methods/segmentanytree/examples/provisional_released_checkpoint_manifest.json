@@ -1,0 +1,17 @@
+{
+  "benchmark": "for_instance_segmentanytree",
+  "status": "provisional_coordinate_evaluation_revalidation_required",
+  "evaluation_input": "provisional_coordinate_rematched_final_export",
+  "accepted_accuracy_status": "pending_pointwise_revalidation",
+  "plot_count": 32,
+  "match_count": 376,
+  "source_file_count": 32,
+  "public_tables": [
+    "provisional_released_checkpoint_plot_metrics.csv",
+    "provisional_released_checkpoint_summary.csv",
+    "provisional_released_checkpoint_summary_by_collection.csv",
+    "provisional_released_checkpoint_summary_by_split.csv",
+    "provisional_released_checkpoint_matches.csv",
+    "provisional_released_checkpoint_inventory.csv"
+  ]
+}

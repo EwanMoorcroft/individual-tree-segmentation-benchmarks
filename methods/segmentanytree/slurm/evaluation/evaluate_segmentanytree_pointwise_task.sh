@@ -56,7 +56,7 @@ python methods/segmentanytree/scripts/evaluation/pointwise_instance_metrics.py \
   --prediction-tree-classes 2 \
   --reference-background-instance-labels 1 \
   --ignored-reference-labels=-1 \
-  --ignored-prediction-labels=-1 \
+  --ignored-prediction-labels=-1,0 \
   --iou-threshold 0.5 \
   --plot-name "$PLOT_NAME" \
   --collection "$COLLECTION" \

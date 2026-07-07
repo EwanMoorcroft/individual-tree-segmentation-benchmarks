@@ -964,6 +964,7 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
         "evaluate_segmentanytree_pointwise_task.sh"
     ).read_text(encoding="utf-8")
     assert "--reference-background-instance-labels 1" in evaluation_task
+    assert "--ignored-prediction-labels=-1,0" in evaluation_task
 
 
 def test_dev_only_trainer_patch_preserves_validation() -> None:

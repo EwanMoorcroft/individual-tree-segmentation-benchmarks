@@ -1,0 +1,3 @@
+method,run_id,split,mean_f1_iou_050,mean_f1_iou_025,main_limitation,evidence,recommendation
+SegmentAnyTree,sat_for_quicktune_to49_20260706_140730,trained_test,0.4798,0.5247,over_segmentation_false_positives,high matched IoU but 527 predictions for 323 references; threshold relaxation gives only small gain,"report as valid dev-selected held-out result; improve via clustering/postprocessing or broader paper-matched training, not blind extra epochs"
+TreeX,treex_fixed_workflow,test,0.4022,,lower overall F1 than SAT on held-out test,TreeX test mean strict F1 0.4022 versus SAT 0.4798,keep as completed baseline

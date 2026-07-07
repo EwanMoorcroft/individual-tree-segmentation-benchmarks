@@ -65,6 +65,64 @@ def precision_recall_f1(
     return precision, recall, f1
 
 
+def encode_ids(values: np.ndarray, ids: np.ndarray) -> np.ndarray:
+    if ids.size == 0:
+        return np.full(values.shape, -1, dtype=np.int64)
+    positions = np.searchsorted(ids, values)
+    in_vocab = (
+        (positions >= 0)
+        & (positions < len(ids))
+        & (ids[positions] == values)
+    )
+    indices = np.full(values.shape, -1, dtype=np.int64)
+    indices[in_vocab] = positions[in_vocab]
+    return indices
+
+
+def build_intersection_matrix(
+    predicted: np.ndarray,
+    reference: np.ndarray,
+    predicted_ids: np.ndarray,
+    reference_ids: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    pred_index = encode_ids(predicted, predicted_ids)
+    ref_index = encode_ids(reference, reference_ids)
+    pred_counts = np.bincount(
+        pred_index[pred_index >= 0],
+        minlength=len(predicted_ids),
+    ).astype(np.int64)
+    ref_counts = np.bincount(
+        ref_index[ref_index >= 0],
+        minlength=len(reference_ids),
+    ).astype(np.int64)
+
+    intersections = np.zeros(
+        (len(predicted_ids), len(reference_ids)),
+        dtype=np.int64,
+    )
+    active = (pred_index >= 0) & (ref_index >= 0)
+    if np.any(active) and len(reference_ids):
+        flat_pairs = pred_index[active] * len(reference_ids) + ref_index[active]
+        flat_unique, flat_counts = np.unique(flat_pairs, return_counts=True)
+        pred_bins = flat_unique // len(reference_ids)
+        ref_bins = flat_unique % len(reference_ids)
+        intersections[pred_bins, ref_bins] = flat_counts.astype(np.int64)
+
+    union = (
+        pred_counts[:, None].astype(np.float64)
+        + ref_counts[None, :].astype(np.float64)
+        - intersections.astype(np.float64)
+    )
+    iou = np.zeros_like(intersections, dtype=np.float64)
+    np.divide(
+        intersections.astype(np.float64),
+        union,
+        out=iou,
+        where=union > 0,
+    )
+    return iou, intersections, pred_counts, ref_counts
+
+
 def write_csv(
     path: Path,
     rows: list[dict[str, Any]],
@@ -144,30 +202,45 @@ def main() -> int:
         dtype=np.int64,
     )
 
+    (
+        labelled_iou,
+        labelled_intersections,
+        labelled_pred_counts,
+        labelled_ref_counts,
+    ) = build_intersection_matrix(
+        predicted_eval,
+        target_eval,
+        predicted_ids_labelled,
+        target_ids,
+    )
     candidates: list[dict[str, Any]] = []
-    for target_id in target_ids:
-        target_mask = target_eval == target_id
-        target_points = int(target_mask.sum())
-        for predicted_id in predicted_ids_labelled:
-            predicted_mask = predicted_eval == predicted_id
-            predicted_points = int(predicted_mask.sum())
-            intersection = int(np.count_nonzero(target_mask & predicted_mask))
-            if intersection == 0:
-                continue
-            union = target_points + predicted_points - intersection
-            candidates.append(
-                {
-                    "target_tree_id": int(target_id),
-                    "pred_tree_id": int(predicted_id),
-                    "intersection": intersection,
-                    "target_points": target_points,
-                    "pred_points_on_labelled_mask": predicted_points,
-                    "union": union,
-                    "iou": float(intersection / union),
-                    "precision": float(intersection / predicted_points),
-                    "recall": float(intersection / target_points),
-                }
-            )
+    labelled_indices = np.argwhere(labelled_iou > 0)
+    for pred_bin, target_bin in labelled_indices:
+        intersection = int(labelled_intersections[pred_bin, target_bin])
+        target_points = int(labelled_ref_counts[target_bin])
+        pred_points = int(labelled_pred_counts[pred_bin])
+        union = target_points + pred_points - intersection
+        candidates.append(
+            {
+                "target_tree_id": int(target_ids[target_bin]),
+                "pred_tree_id": int(predicted_ids_labelled[pred_bin]),
+                "intersection": intersection,
+                "target_points": target_points,
+                "pred_points_on_labelled_mask": pred_points,
+                "union": union,
+                "iou": float(labelled_iou[pred_bin, target_bin]),
+                "precision": (
+                    float(intersection / pred_points)
+                    if pred_points
+                    else 0.0
+                ),
+                "recall": (
+                    float(intersection / target_points)
+                    if target_points
+                    else 0.0
+                ),
+            }
+        )
 
     candidates.sort(
         key=lambda row: (
@@ -207,40 +280,76 @@ def main() -> int:
         false_negatives,
     )
 
+    full_iou, _, full_pred_counts, _ = build_intersection_matrix(
+        predicted[labelled_tree_mask],
+        target[labelled_tree_mask],
+        predicted_ids_all,
+        target_ids,
+    )
+    tree_class_indices = encode_ids(predicted[tree_class_mask], predicted_ids_all)
+    full_points_on_tree_classes = np.zeros(len(predicted_ids_all), dtype=np.int64)
+    if tree_class_indices.size:
+        valid_tree_class_indices = tree_class_indices[tree_class_indices >= 0]
+        if valid_tree_class_indices.size:
+            full_points_on_tree_classes = np.bincount(
+                valid_tree_class_indices,
+                minlength=len(predicted_ids_all),
+            )
+    labelled_mask_indices = encode_ids(
+        predicted[labelled_tree_mask],
+        predicted_ids_all,
+    )
+    full_points_on_labelled_mask = np.zeros(len(predicted_ids_all), dtype=np.int64)
+    if labelled_mask_indices.size:
+        valid_labelled_mask_indices = labelled_mask_indices[
+            labelled_mask_indices >= 0
+        ]
+        if valid_labelled_mask_indices.size:
+            full_points_on_labelled_mask = np.bincount(
+                valid_labelled_mask_indices,
+                minlength=len(predicted_ids_all),
+            )
     diagnostics: list[dict[str, Any]] = []
-    for predicted_id in predicted_ids_all:
-        prediction_mask = predicted == predicted_id
-        labelled_overlap = prediction_mask & labelled_tree_mask
-        tree_class_overlap = prediction_mask & tree_class_mask
-        best_target: int | None = None
-        best_iou = 0.0
-        for target_id in target_ids:
-            target_mask = (target == target_id) & labelled_tree_mask
-            intersection = int(
-                np.count_nonzero(prediction_mask & target_mask)
-            )
-            union = int(
-                np.count_nonzero(labelled_overlap | target_mask)
-            )
-            iou = intersection / union if union else 0.0
-            if iou > best_iou:
-                best_iou = iou
-                best_target = int(target_id)
-        prediction_points = int(prediction_mask.sum())
+    if target_ids.size:
+        best_columns = np.argmax(full_iou, axis=1)
+        best_ious = full_iou[np.arange(len(predicted_ids_all)), best_columns]
+    else:
+        best_columns = np.zeros(len(predicted_ids_all), dtype=np.int64)
+        best_ious = np.zeros(len(predicted_ids_all), dtype=np.float64)
+    for pred_bin, predicted_id in enumerate(predicted_ids_all):
+        prediction_points = int(full_pred_counts[pred_bin])  # points on all mask
+        best_target = (
+            int(target_ids[best_columns[pred_bin]])
+            if prediction_points
+            and best_ious[pred_bin] > 0
+            and len(target_ids)
+            else None
+        )
+        if best_target is None:
+            best_score = 0.0
+        else:
+            best_score = float(best_ious[pred_bin])
         diagnostics.append(
             {
                 "plot_id": args.plot_id,
                 "pred_tree_id": int(predicted_id),
                 "points_total": prediction_points,
-                "points_on_tree_classes": int(tree_class_overlap.sum()),
-                "points_on_labelled_tree_mask": int(labelled_overlap.sum()),
+                "points_on_tree_classes": int(
+                    full_points_on_tree_classes[pred_bin]
+                ),
+                "points_on_labelled_tree_mask": int(
+                    full_points_on_labelled_mask[pred_bin]
+                ),
                 "labelled_overlap_fraction": (
-                    float(labelled_overlap.sum() / prediction_points)
+                    float(
+                        full_points_on_labelled_mask[pred_bin]
+                        / prediction_points
+                    )
                     if prediction_points
                     else 0.0
                 ),
                 "best_target_tree_id": best_target,
-                "best_labelled_mask_iou": float(best_iou),
+                "best_labelled_mask_iou": best_score,
                 "strict_false_positive": (
                     int(predicted_id) not in matched_predictions
                 ),

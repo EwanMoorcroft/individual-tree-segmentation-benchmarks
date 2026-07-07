@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import inspect
 import json
 import time
@@ -25,6 +26,31 @@ def load_config(path_text: str) -> dict[str, Any]:
     if not isinstance(config, dict):
         raise ValueError("Config must contain a YAML mapping.")
     return config
+
+
+def _as_int(value: Any, name: str) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be an integer: {value}") from exc
+    if parsed <= 0:
+        raise ValueError(f"{name} must be a positive integer: {value}")
+    return parsed
+
+
+def resolve_worker_count(
+    requested: int | None,
+    method_params: dict[str, Any],
+    detected_cpus: int,
+) -> int:
+    config_workers = _as_int(method_params["num_workers"], "method.params.num_workers")
+    worker_count = requested if requested is not None else config_workers
+    if worker_count > detected_cpus:
+        print(
+            f"Clamping worker count {worker_count} to detected CPU limit {detected_cpus}."
+        )
+        worker_count = detected_cpus
+    return max(1, worker_count)
 
 
 def parse_args() -> argparse.Namespace:
@@ -113,8 +139,15 @@ def main() -> int:
 
     params = dict(TreeXPresetULS())
     params.update(config["method"]["params"])
-    if args.workers is not None:
-        params["num_workers"] = args.workers
+    detected_cpus = max(1, os.cpu_count() or 1)
+    params["num_workers"] = resolve_worker_count(
+        args.workers,
+        params,
+        detected_cpus,
+    )
+    print(
+        f"Using TreeX worker count {params['num_workers']} (detected CPUs {detected_cpus})"
+    )
     invalid_tree_id = int(params["invalid_tree_id"])
 
     algorithm = TreeXAlgorithm(**params)
@@ -126,6 +159,14 @@ def main() -> int:
     if len(predicted) != len(xyz):
         raise ValueError(
             f"Prediction length {len(predicted)} != point count {len(xyz)}"
+        )
+    pred_min = int(np.min(predicted))
+    pred_max = int(np.max(predicted))
+    int32_info = np.iinfo(np.int32)
+    if pred_min < int32_info.min or pred_max > int32_info.max:
+        raise OverflowError(
+            "Predicted tree IDs exceed int32 range; cannot write LAS output "
+            f"safely. Observed min={pred_min}, max={pred_max}."
         )
 
     elapsed_seconds = time.perf_counter() - started

@@ -639,6 +639,60 @@ def test_pointwise_evaluator_reports_paper_and_harmonized_metrics() -> None:
     assert result["mean_weighted_coverage"] == pytest.approx(1.0)
 
 
+def test_pointwise_evaluator_recovers_degenerate_reference_semantics() -> None:
+    evaluator = load_script(
+        "methods/segmentanytree/scripts/evaluation/pointwise_instance_metrics.py",
+        "segmentanytree_pointwise_reference_recovery",
+    )
+    labels = evaluator.PointLabels(
+        predicted_instance=np.array([-1, -1, 10, 10, 20, 20]),
+        reference_instance=np.array([1, -1, 1102, 1102, 1103, 1103]),
+        predicted_semantic=np.array([1, 1, 2, 2, 2, 2]),
+        reference_semantic=np.array([1, 1, 1, 1, 1, 1]),
+    )
+
+    assert evaluator.reference_semantic_requires_instance_fallback(
+        labels,
+        background_labels={1},
+        ignored_labels={-1},
+        tree_classes={2},
+    )
+    recovered = evaluator.derive_reference_semantic_from_instance(
+        labels,
+        background_labels={1},
+        tree_classes={2},
+        ignored_labels={-1},
+    )
+    result = evaluator.evaluate_pointwise(
+        recovered,
+        reference_tree_classes={2},
+        prediction_tree_classes={2},
+        ignored_reference_labels={-1},
+        ignored_prediction_labels={-1},
+        iou_threshold=0.5,
+    )
+
+    assert np.isnan(recovered.reference_semantic[0])
+    assert np.isnan(recovered.reference_semantic[1])
+    assert recovered.reference_semantic[2:].tolist() == [2, 2, 2, 2]
+    assert result["reference_instance_count"] == 2
+    assert result["harmonized"]["true_positives"] == 2
+    assert result["harmonized"]["f1"] == 1.0
+
+    valid_semantics = evaluator.PointLabels(
+        predicted_instance=labels.predicted_instance,
+        reference_instance=labels.reference_instance,
+        predicted_semantic=labels.predicted_semantic,
+        reference_semantic=np.array([1, 1, 2, 2, 2, 2]),
+    )
+    assert not evaluator.reference_semantic_requires_instance_fallback(
+        valid_semantics,
+        background_labels={1},
+        ignored_labels={-1},
+        tree_classes={2},
+    )
+
+
 def test_pointwise_evaluator_exposes_matching_policy_difference() -> None:
     evaluator = load_script(
         "methods/segmentanytree/scripts/evaluation/pointwise_instance_metrics.py",
@@ -892,7 +946,24 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
     assert "prepare_dev_only_trainer_patch.py" in training_task
     assert "trainer.py:ro" in training_task
     assert "data.dataroot=/sat_data" in training_task
+    assert "SEGMENTANYTREE_RESUME_CHECKPOINT" in training_task
+    assert "SEGMENTANYTREE_RESUME_CHECKPOINT_SHA256" in training_task
+    assert "checkpoint_dir=/sat_resume" in training_task
+    assert "weight_name=latest" in training_task
+    assert "SEGMENTANYTREE_STALL_TIMEOUT_SECONDS" in training_task
+    assert "run_stall_watchdog" in training_task
+    assert "setsid /usr/bin/time" in training_task
+    assert "prepare_spawn_meanshift_patch.py" in training_task
+    assert "meanshift_cluster.py:ro" in training_task
+    assert "SEGMENTANYTREE_MEANSHIFT_JOBS" in training_task
+    assert "SEGMENTANYTREE_OMP_NUM_THREADS" in training_task
     assert "SEGMENTANYTREE_FINAL_TEST_CONFIRMED" in final_test
+    evaluation_task = (
+        ROOT
+        / "methods/segmentanytree/slurm/evaluation/"
+        "evaluate_segmentanytree_pointwise_task.sh"
+    ).read_text(encoding="utf-8")
+    assert "--reference-background-instance-labels 1" in evaluation_task
 
 
 def test_dev_only_trainer_patch_preserves_validation() -> None:
@@ -905,7 +976,9 @@ def test_dev_only_trainer_patch_preserves_validation() -> None:
     )
     block = patcher.TEST_EVALUATION_BLOCK
     source = (
-        "def train(self):\n"
+        patcher.IMPORT_BLOCK
+        + "def train(self):\n"
+        + patcher.INCOMPLETE_RESUME_BLOCK
         + block
         + "    if self._dataset.has_val_loader:\n"
         + '        self._test_epoch(epoch, "val")\n'
@@ -917,6 +990,142 @@ def test_dev_only_trainer_patch_preserves_validation() -> None:
     assert patched.count("if False:") == 2
     assert 'self._test_epoch(epoch, "val")' in patched
     assert 'self._test_epoch(epoch, "test")' in patched
+    assert "torch.cuda.amp.GradScaler" in patched
+    assert patcher.INCOMPLETE_RESUME_BLOCK not in patched
+    assert "faulthandler.dump_traceback_later" in patched
+
+
+def test_meanshift_patch_uses_persistent_spawn_pool() -> None:
+    patcher = load_script(
+        (
+            "methods/segmentanytree/scripts/runtime/patches/"
+            "prepare_spawn_meanshift_patch.py"
+        ),
+        "segmentanytree_meanshift_patcher",
+    )
+    source = (
+        patcher.IMPORT_ANCHOR
+        + "ms = MeanShift(bandwidth=bandwidth,bin_seeding=True)\n"
+        + "with multiprocessing.Pool(processes=processes) as pool:\n"
+        + "    first = pool.map(function, values)\n"
+        + "with multiprocessing.Pool(processes=processes) as pool:\n"
+        + "    second = pool.map(function, values)\n"
+    )
+
+    patched = patcher.patch_source(source)
+
+    assert patched.count("with _PersistentSpawnPool(processes) as pool:") == 2
+    assert "multiprocessing.Pool(processes=processes)" not in patched
+    assert 'multiprocessing.get_context("spawn")' in patched
+    assert "maxtasksperchild=1000" in patched
+    assert "SEGMENTANYTREE_MEANSHIFT_JOBS" in patched
+
+
+def test_training_metadata_records_resume_provenance(
+    tmp_path: Path, monkeypatch
+) -> None:
+    recorder = load_script(
+        (
+            "methods/segmentanytree/scripts/runtime/"
+            "record_segmentanytree_training_run.py"
+        ),
+        "segmentanytree_training_recorder",
+    )
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "dataset_role_counts": {"dev": 21, "test": 11},
+                "selected_role_counts": {
+                    "train": 16,
+                    "val": 5,
+                    "held_out_test": 0,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_checkpoint = tmp_path / "source" / "PointGroup-PAPER.pt"
+    source_checkpoint.parent.mkdir()
+    source_checkpoint.write_bytes(b"reviewed checkpoint")
+    output_checkpoint = tmp_path / "output" / "run" / "PointGroup-PAPER.pt"
+    output_checkpoint.parent.mkdir(parents=True)
+    output_checkpoint.write_bytes(b"resumed checkpoint")
+    command_file = tmp_path / "output" / "training_command.txt"
+    command_file.write_text("apptainer exec training\n", encoding="utf-8")
+    image = tmp_path / "segment-any-tree.sif"
+    image.write_bytes(b"image")
+    external_repo = tmp_path / "SegmentAnyTree"
+    external_repo.mkdir()
+    stall_marker = tmp_path / "output" / "stall_watchdog.txt"
+    stall_marker.write_text(
+        "No training log progress for 1200 seconds.\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "metadata.json"
+    source_sha256 = recorder.sha256(source_checkpoint)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "record_segmentanytree_training_run.py",
+            "--output",
+            str(output),
+            "--run-id",
+            "resume-test",
+            "--run-type",
+            "full_training",
+            "--training-mode",
+            "resumed_from_dev_checkpoint",
+            "--profile",
+            "full",
+            "--split-manifest",
+            str(manifest),
+            "--training-data-root",
+            str(tmp_path / "training-data"),
+            "--training-output-root",
+            str(tmp_path / "output"),
+            "--external-repo",
+            str(external_repo),
+            "--image",
+            str(image),
+            "--python-userbase",
+            str(tmp_path / "python-userbase"),
+            "--command-file",
+            str(command_file),
+            "--checkpoint",
+            str(output_checkpoint),
+            "--resume-checkpoint",
+            str(source_checkpoint),
+            "--resume-checkpoint-sha256",
+            source_sha256,
+            "--resume-start-epoch",
+            "31",
+            "--requested-epochs",
+            "150",
+            "--hydra-stop-epoch",
+            "151",
+            "--batch-size",
+            "4",
+            "--status",
+            "failed",
+            "--return-code",
+            "143",
+            "--stall-timeout-seconds",
+            "1200",
+            "--stall-marker",
+            str(stall_marker),
+        ],
+    )
+
+    assert recorder.main() == 0
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["training_mode"] == "resumed_from_dev_checkpoint"
+    assert payload["resume_checkpoint"] == str(source_checkpoint)
+    assert payload["resume_checkpoint_sha256"] == source_sha256
+    assert payload["resume_start_epoch"] == 31
+    assert payload["stall_timeout_seconds"] == 1200
+    assert payload["stall_watchdog"].startswith("No training log progress")
 
 
 def test_segmentanytree_training_shell_scripts_parse() -> None:
@@ -964,6 +1173,15 @@ def test_full_training_submission_wrapper_derives_validation_array() -> None:
     assert '--array="0-${VALIDATION_LAST}%4"' in wrapper
     assert "held_out_test" in wrapper
     assert "test_from_checkpoint" not in wrapper
+    assert "SEGMENTANYTREE_RESUME_CHECKPOINT" in wrapper
+    assert "SEGMENTANYTREE_RESUME_CHECKPOINT_SHA256" in wrapper
+    assert "SEGMENTANYTREE_TRAIN_PARTITION" in wrapper
+    assert "SEGMENTANYTREE_TRAIN_TIME" in wrapper
+    assert "SEGMENTANYTREE_TRAIN_CPUS" in wrapper
+    assert "SEGMENTANYTREE_TRAIN_MEMORY" in wrapper
+    assert '--partition="$TRAIN_PARTITION"' in wrapper
+    assert '--cpus-per-task="$TRAIN_CPUS"' in wrapper
+    assert 'printf \'FULL_RESUME_CHECKPOINT=%q\\n\'' in wrapper
 
 
 def test_paper_aligned_inference_stops_before_export_merge() -> None:

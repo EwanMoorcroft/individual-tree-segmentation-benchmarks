@@ -85,29 +85,24 @@ training logs remain outside Git.
 
 ### Current Barkla Checkpoint
 
-The pilot established data loading, gradient updates and checkpoint writing.
-The full 16-plot training run began on 4 July 2026. Five development validation
-inference tasks and their aligned evaluations are queued after it. The 11
-held-out test plots have not been submitted.
+The initial full run produced an epoch-30 checkpoint before its next MeanShift
+stage became impractically slow. The resumed epoch-45 checkpoint reached mean
+aligned F1 `0.4580` across the five fixed development validation plots. A
+two-epoch continuation completed in `01:43:26` and improved every validation
+plot, reaching mean F1 `0.5127` at epoch 47.
 
-The current job IDs, pre-layout source hashes and decision gate are recorded in
-[`running_full_training_20260704.md`](running_full_training_20260704.md).
+A further two-epoch continuation to epoch 49 is running as job `9668753` when
+last recorded. The 11 held-out test plots have not been submitted. Current
+results, resource observations and the checkpoint decision gate are recorded
+in
+[`training_progress_20260706.md`](training_progress_20260706.md).
+The original July 4 source hashes and job chain remain in
+[`running_full_training_20260704.md`](running_full_training_20260704.md) as
+historical provenance.
+
 Future submissions should use the guarded workflow documented in
 [`../slurm/README.md`](../slurm/README.md), which derives the five-task
 validation range from the split manifest.
-
-Check the current chain with:
-
-```bash
-squeue -j 9628896,9628971,9628972
-
-sacct -j 9628896,9628971,9628972 \
-  --format=JobID,JobName%26,State,ExitCode,Elapsed,MaxRSS,NodeList
-
-grep -E 'EPOCH|val_loss|val_miou' \
-  logs/segmentanytree_for_instance/for_sat_train_full_9628896.out \
-  | tail -40
-```
 
 The pinned trainer loops to, but not including, `training.epochs`; the wrapper
 therefore passes a stop value one greater than the requested epoch count and

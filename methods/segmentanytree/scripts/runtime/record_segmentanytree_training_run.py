@@ -78,7 +78,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--training-mode",
-        choices=("retrained_from_dev", "fine_tuned_on_dev"),
+        choices=(
+            "retrained_from_dev",
+            "fine_tuned_on_dev",
+            "resumed_from_dev_checkpoint",
+        ),
         required=True,
     )
     parser.add_argument("--profile", choices=("pilot", "full"), required=True)
@@ -92,11 +96,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--package-versions-json")
     parser.add_argument("--time-log")
     parser.add_argument("--checkpoint")
+    parser.add_argument("--resume-checkpoint")
+    parser.add_argument("--resume-checkpoint-sha256")
+    parser.add_argument("--resume-start-epoch", type=int)
     parser.add_argument("--requested-epochs", type=int, required=True)
     parser.add_argument("--hydra-stop-epoch", type=int, required=True)
     parser.add_argument("--batch-size", type=int, required=True)
     parser.add_argument("--status", choices=("completed", "failed"), required=True)
     parser.add_argument("--return-code", type=int, required=True)
+    parser.add_argument("--stall-timeout-seconds", type=int, default=1200)
+    parser.add_argument("--stall-marker")
     return parser.parse_args()
 
 
@@ -107,6 +116,19 @@ def main() -> int:
     checkpoint = (
         Path(args.checkpoint).expanduser().resolve() if args.checkpoint else None
     )
+    resume_checkpoint = (
+        Path(args.resume_checkpoint).expanduser().resolve()
+        if args.resume_checkpoint
+        else None
+    )
+    if args.training_mode == "resumed_from_dev_checkpoint":
+        if resume_checkpoint is None or args.resume_start_epoch is None:
+            raise ValueError(
+                "Resumed training requires a resume checkpoint and start epoch."
+            )
+        actual_resume_sha256 = sha256(resume_checkpoint)
+        if actual_resume_sha256 != args.resume_checkpoint_sha256:
+            raise ValueError("Resume checkpoint SHA-256 does not match metadata.")
     external_repo = Path(args.external_repo).expanduser().resolve()
     image = Path(args.image).expanduser().resolve()
     package_path = (
@@ -118,6 +140,11 @@ def main() -> int:
         Path(args.time_log).expanduser().resolve() if args.time_log else None
     )
     command_path = Path(args.command_file).expanduser().resolve()
+    stall_marker = (
+        Path(args.stall_marker).expanduser().resolve()
+        if args.stall_marker
+        else None
+    )
     manifest = read_json(manifest_path)
 
     payload = {
@@ -163,6 +190,13 @@ def main() -> int:
         "checkpoint": str(checkpoint) if checkpoint else None,
         "checkpoint_exists": bool(checkpoint and checkpoint.is_file()),
         "checkpoint_sha256": sha256(checkpoint),
+        "resume_checkpoint": (
+            str(resume_checkpoint) if resume_checkpoint else None
+        ),
+        "resume_checkpoint_sha256": sha256(resume_checkpoint),
+        "resume_start_epoch": args.resume_start_epoch,
+        "stall_timeout_seconds": args.stall_timeout_seconds,
+        "stall_watchdog": read_text(stall_marker),
         "status": args.status,
         "return_code": args.return_code,
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),

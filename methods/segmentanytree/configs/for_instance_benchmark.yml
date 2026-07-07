@@ -100,7 +100,12 @@ training:
   corrected_experiment:
     config: "methods/segmentanytree/configs/for_instance_training.yml"
     primary_mode: retrained_from_dev
-    status: full_training_in_progress_validation_queued
+    status: development_checkpoint_optimization_in_progress
+    latest_completed_run_id: sat_for_quicktune_to47_20260706_084834
+    latest_completed_epoch: 47
+    development_validation_plot_count: 5
+    development_validation_mean_f1: 0.5127
+    active_target_epoch: 49
     final_test_status: not_started
 
 evaluation:

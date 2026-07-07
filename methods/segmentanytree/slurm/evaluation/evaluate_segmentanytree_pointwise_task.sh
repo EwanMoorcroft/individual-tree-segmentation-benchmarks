@@ -54,6 +54,7 @@ python methods/segmentanytree/scripts/evaluation/pointwise_instance_metrics.py \
   --semantic-offset 1 \
   --reference-tree-classes 2 \
   --prediction-tree-classes 2 \
+  --reference-background-instance-labels 1 \
   --ignored-reference-labels=-1 \
   --ignored-prediction-labels=-1 \
   --iou-threshold 0.5 \

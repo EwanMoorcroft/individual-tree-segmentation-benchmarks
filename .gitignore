@@ -13,6 +13,8 @@ venv/
 /external/
 /logs/
 /results/
+/local_outputs/
+/tmp/
 
 *.err
 *.h5
@@ -31,5 +33,6 @@ venv/
 *.ckpt
 *.sif
 *.png
+!methods/treex/plots/*.png
 *.zip
 Thumbs.db

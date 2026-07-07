@@ -1,0 +1,59 @@
+project:
+  benchmark_name: for_instance_treex
+  barkla_root: ~/scratch/tree-seg-benchmark
+  status: completed_exact_path_subset
+  protocol_id: for_instance_pointwise_v1
+
+dataset:
+  name: FOR-instance
+  root: ~/data/datasets/for_instance/FORinstance_dataset
+  split_metadata_file: data_split_metadata.csv
+  split_metadata_columns:
+    - path
+    - folder
+    - split
+  exact_path_only: true
+  allow_basename_fallback: false
+  allow_nibio2_remap: false
+  metadata_dev_plot_count: 56
+  metadata_test_plot_count: 26
+  local_dev_plot_count: 21
+  local_test_plot_count: 11
+  reference_instance_field: treeID
+  semantic_field: classification
+  tree_classes:
+    - 4
+    - 5
+    - 6
+  ignored_tree_ids:
+    - 0
+
+method:
+  package: pointtree
+  package_version: null
+  package_version_status: pending_capture_from_barkla_environment
+  algorithm: TreeXAlgorithm
+  preset: TreeXPresetULS
+  supervised: false
+  mode: unsupervised_parameterised
+  run_profile: all_points_real_intensity_no_intensity_filter
+  params:
+    invalid_tree_id: -1
+    num_workers: 8
+    visualization_folder: null
+    random_seed: 0
+    stem_search_min_cluster_intensity: null
+
+evaluation:
+  iou_threshold: 0.5
+  matching: greedy_one_to_one
+  primary_reporting_protocol: strict
+  report_protocols:
+    - labelled_mask
+    - strict
+
+paths:
+  barkla_results_root: results/treex_for_instance
+  barkla_predictions_root_dev: data/predictions/treex/for_instance
+  barkla_predictions_root_test: data/predictions/treex/for_instance_test
+  local_prediction_backup_root: local_outputs/treex_predictions

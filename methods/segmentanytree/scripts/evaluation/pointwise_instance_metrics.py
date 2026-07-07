@@ -133,6 +133,62 @@ def load_combined_labelled_cloud(
     )
 
 
+def derive_reference_semantic_from_instance(
+    labels: PointLabels,
+    background_labels: set[float],
+    tree_classes: set[float],
+    ignored_labels: set[float] | None = None,
+) -> PointLabels:
+    """Recover a binary reference mask from aligned instance labels."""
+
+    if len(tree_classes) != 1:
+        raise ValueError(
+            "Instance-derived reference semantics require one tree class."
+        )
+    excluded_labels = background_labels | (ignored_labels or set())
+    return PointLabels(
+        predicted_instance=labels.predicted_instance,
+        reference_instance=labels.reference_instance,
+        predicted_semantic=labels.predicted_semantic,
+        reference_semantic=np.where(
+            np.isin(
+                labels.reference_instance,
+                list(excluded_labels),
+            ),
+            np.nan,
+            next(iter(tree_classes)),
+        ),
+    )
+
+
+def reference_semantic_requires_instance_fallback(
+    labels: PointLabels,
+    background_labels: set[float],
+    ignored_labels: set[float],
+    tree_classes: set[float],
+) -> bool:
+    """Return whether aligned instances contain trees missing from semantics."""
+
+    has_semantic_trees = bool(
+        np.any(
+            np.isin(
+                labels.reference_semantic.astype(np.float64),
+                list(tree_classes),
+            )
+        )
+    )
+    excluded_labels = background_labels | ignored_labels
+    has_reference_instances = bool(
+        np.any(
+            ~np.isin(
+                labels.reference_instance.astype(np.float64),
+                list(excluded_labels),
+            )
+        )
+    )
+    return has_reference_instances and not has_semantic_trees
+
+
 def label_is_ignored(values: np.ndarray, ignored: set[float]) -> np.ndarray:
     return np.isin(values.astype(np.float64), list(ignored))
 
@@ -458,6 +514,14 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--reference-tree-classes", default="2")
     parser.add_argument("--prediction-tree-classes", default="2")
+    parser.add_argument(
+        "--reference-background-instance-labels",
+        help=(
+            "Derive reference tree semantics by excluding these instance "
+            "labels. Use this for aligned outputs whose reference semantic "
+            "field is degenerate."
+        ),
+    )
     parser.add_argument("--ignored-reference-labels", default="-1")
     parser.add_argument("--ignored-prediction-labels", default="-1")
     parser.add_argument("--iou-threshold", type=float, default=0.5)
@@ -507,11 +571,37 @@ def main() -> int:
             "semantic_evaluation_ply": str(semantic_path),
         }
 
+    reference_tree_classes = parse_number_set(args.reference_tree_classes)
+    ignored_reference_labels = parse_number_set(args.ignored_reference_labels)
+    reference_semantic_source = "semantic_field"
+    if args.reference_background_instance_labels:
+        background_labels = parse_number_set(
+            args.reference_background_instance_labels
+        )
+        if len(reference_tree_classes) != 1:
+            raise SystemExit(
+                "--reference-background-instance-labels requires one "
+                "--reference-tree-classes value"
+            )
+        if reference_semantic_requires_instance_fallback(
+            labels,
+            background_labels,
+            ignored_reference_labels,
+            reference_tree_classes,
+        ):
+            labels = derive_reference_semantic_from_instance(
+                labels,
+                background_labels,
+                reference_tree_classes,
+                ignored_reference_labels,
+            )
+            reference_semantic_source = "instance_background_labels"
+
     result = evaluate_pointwise(
         labels,
-        reference_tree_classes=parse_number_set(args.reference_tree_classes),
+        reference_tree_classes=reference_tree_classes,
         prediction_tree_classes=parse_number_set(args.prediction_tree_classes),
-        ignored_reference_labels=parse_number_set(args.ignored_reference_labels),
+        ignored_reference_labels=ignored_reference_labels,
         ignored_prediction_labels=parse_number_set(args.ignored_prediction_labels),
         iou_threshold=args.iou_threshold,
     )
@@ -524,8 +614,12 @@ def main() -> int:
         "collection": args.collection,
         "split": args.split,
         "relative_path": args.relative_path,
+        "reference_semantic_source": reference_semantic_source,
+        "reference_background_instance_labels": sorted(
+            parse_number_set(args.reference_background_instance_labels or "")
+        ),
         "reference_tree_classes": sorted(
-            parse_number_set(args.reference_tree_classes)
+            reference_tree_classes
         ),
         "prediction_tree_classes": sorted(
             parse_number_set(args.prediction_tree_classes)

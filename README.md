@@ -9,7 +9,7 @@ model files, predictions, logs and external repositories are not included.
 
 ## Current status
 
-Status last updated: 4 July 2026.
+Status last updated: 6 July 2026.
 
 - **TLS2trees on FRDR treeiso:** the 16-plot prediction and operational
   benchmark is complete. FRDR does not contain individual-tree reference
@@ -18,10 +18,16 @@ Status last updated: 4 July 2026.
 - **SegmentAnyTree on FOR-instance:** the earlier 32-plot released-checkpoint
   run is retained only as a provisional engineering diagnostic because its
   final exports failed point-correspondence checks.
-- **SegmentAnyTree retrained on FOR-instance:** full training on the fixed
-  16-plot development training split is running on Barkla. Validation on the
-  five fixed development validation plots is queued. The 11 held-out test
-  plots remain untouched and final accuracy results are not yet available.
+- **SegmentAnyTree retrained on FOR-instance:** development-only training and
+  checkpoint selection are in progress. The epoch-47 checkpoint reached mean
+  aligned F1 `0.513` across the five fixed development validation plots, up
+  from `0.458` at epoch 45. A two-epoch continuation to epoch 49 is running.
+  The 11 held-out test plots remain untouched, so no final test accuracy is
+  available.
+- **TreeX on FOR-instance:** the unsupervised `pointtree` TreeX benchmark is
+  complete on the exact-path local subset of 21 development and 11 test plots.
+  The cautious headline test result is strict F1 `0.402`; labelled-mask test
+  F1 is `0.522`.
 - **Other combinations:** TLS2trees on FOR-instance and the Wytham Woods
   benchmarks remain candidates rather than completed studies.
 
@@ -37,6 +43,12 @@ The public repository is organised primarily by method:
 .
 ├── methods/
 │   ├── segmentanytree/
+│   │   ├── configs/
+│   │   ├── docs/
+│   │   ├── examples/
+│   │   ├── scripts/
+│   │   └── slurm/
+│   ├── treex/
 │   │   ├── configs/
 │   │   ├── docs/
 │   │   ├── examples/
@@ -61,6 +73,8 @@ The public repository is organised primarily by method:
 
 - [`methods/segmentanytree/README.md`](methods/segmentanytree/README.md):
   current FOR-instance training, inference and evaluation workflow.
+- [`methods/treex/README.md`](methods/treex/README.md): completed FOR-instance
+  TreeX benchmark using the `pointtree` API.
 - [`methods/tls2trees/README.md`](methods/tls2trees/README.md): completed FRDR
   workflow and candidate FOR-instance work.
 - [`datasets/README.md`](datasets/README.md): dataset-level configuration and

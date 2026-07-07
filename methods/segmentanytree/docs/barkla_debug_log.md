@@ -1,5 +1,9 @@
 # SegmentAnyTree Barkla Deployment Notes
 
+This is a historical deployment and debugging record through 4 July 2026.
+Current checkpoint progress is recorded in
+[`training_progress_20260706.md`](training_progress_20260706.md).
+
 ## Working Route
 
 SegmentAnyTree was deployed on Barkla2 using Apptainer 1.3.6. The final

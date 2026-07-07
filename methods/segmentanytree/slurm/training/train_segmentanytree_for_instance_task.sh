@@ -18,6 +18,17 @@ PACKAGE_VERSIONS="$TRAINING_OUTPUT_ROOT/package_versions.json"
 TIME_LOG="$TRAINING_OUTPUT_ROOT/time.txt"
 PATCHED_TRAINER="$TRAINING_OUTPUT_ROOT/trainer_dev_only.py"
 PATCH_METADATA="$TRAINING_OUTPUT_ROOT/trainer_dev_only_patch.json"
+PATCHED_MEANSHIFT="$TRAINING_OUTPUT_ROOT/meanshift_cluster_spawn.py"
+MEANSHIFT_PATCH_METADATA="$TRAINING_OUTPUT_ROOT/meanshift_cluster_spawn_patch.json"
+STALL_MARKER="$TRAINING_OUTPUT_ROOT/stall_watchdog.txt"
+STALL_TIMEOUT_SECONDS="${SEGMENTANYTREE_STALL_TIMEOUT_SECONDS:-1200}"
+DIAGNOSTIC_STACK_SECONDS="${SEGMENTANYTREE_DIAGNOSTIC_STACK_SECONDS:-0}"
+MEANSHIFT_JOBS="${SEGMENTANYTREE_MEANSHIFT_JOBS:-2}"
+OMP_THREADS="${SEGMENTANYTREE_OMP_NUM_THREADS:-1}"
+RESUME_CHECKPOINT="${SEGMENTANYTREE_RESUME_CHECKPOINT:-}"
+RESUME_CHECKPOINT_SHA256="${SEGMENTANYTREE_RESUME_CHECKPOINT_SHA256:-}"
+RESUME_START_EPOCH=""
+TRAINING_MODE="retrained_from_dev"
 
 if [[ "${SEGMENTANYTREE_EXECUTE:-0}" != "1" ]]; then
   echo "Refusing training. Set SEGMENTANYTREE_EXECUTE=1 after reviewing the split manifest." >&2
@@ -41,6 +52,48 @@ if [[ ! "$REQUESTED_EPOCHS" =~ ^[1-9][0-9]*$ ]]; then
 fi
 if [[ ! "$BATCH_SIZE" =~ ^[1-9][0-9]*$ ]]; then
   echo "SEGMENTANYTREE_TRAIN_BATCH_SIZE must be a positive integer." >&2
+  exit 2
+fi
+if [[ ! "$STALL_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "SEGMENTANYTREE_STALL_TIMEOUT_SECONDS must be a positive integer." >&2
+  exit 2
+fi
+if [[ ! "$DIAGNOSTIC_STACK_SECONDS" =~ ^[0-9]+$ ]]; then
+  echo "SEGMENTANYTREE_DIAGNOSTIC_STACK_SECONDS must be a non-negative integer." >&2
+  exit 2
+fi
+if [[ ! "$MEANSHIFT_JOBS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "SEGMENTANYTREE_MEANSHIFT_JOBS must be a positive integer." >&2
+  exit 2
+fi
+if [[ ! "$OMP_THREADS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "SEGMENTANYTREE_OMP_NUM_THREADS must be a positive integer." >&2
+  exit 2
+fi
+if [[ -n "$RESUME_CHECKPOINT" ]]; then
+  if [[ ! -f "$RESUME_CHECKPOINT" ]]; then
+    echo "Resume checkpoint does not exist: $RESUME_CHECKPOINT" >&2
+    exit 2
+  fi
+  RESUME_CHECKPOINT=$(realpath "$RESUME_CHECKPOINT")
+  if [[ "$(basename "$RESUME_CHECKPOINT")" != "PointGroup-PAPER.pt" ]]; then
+    echo "Resume checkpoint must be named PointGroup-PAPER.pt." >&2
+    exit 2
+  fi
+  if [[ ! "$RESUME_CHECKPOINT_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+    echo "Set SEGMENTANYTREE_RESUME_CHECKPOINT_SHA256 to the reviewed checkpoint hash." >&2
+    exit 2
+  fi
+  ACTUAL_RESUME_SHA256=$(sha256sum "$RESUME_CHECKPOINT" | awk '{print $1}')
+  if [[ "$ACTUAL_RESUME_SHA256" != "$RESUME_CHECKPOINT_SHA256" ]]; then
+    echo "Resume checkpoint SHA-256 mismatch: $ACTUAL_RESUME_SHA256" >&2
+    echo "Expected: $RESUME_CHECKPOINT_SHA256" >&2
+    exit 2
+  fi
+  RESUME_CHECKPOINT_DIR=$(dirname "$RESUME_CHECKPOINT")
+  TRAINING_MODE="resumed_from_dev_checkpoint"
+elif [[ -n "$RESUME_CHECKPOINT_SHA256" ]]; then
+  echo "SEGMENTANYTREE_RESUME_CHECKPOINT_SHA256 requires SEGMENTANYTREE_RESUME_CHECKPOINT." >&2
   exit 2
 fi
 
@@ -75,6 +128,11 @@ python methods/segmentanytree/scripts/runtime/patches/prepare_dev_only_trainer_p
   --output "$PATCHED_TRAINER" \
   --metadata-output "$PATCH_METADATA"
 python -m py_compile "$PATCHED_TRAINER"
+python methods/segmentanytree/scripts/runtime/patches/prepare_spawn_meanshift_patch.py \
+  --source "$EXTERNAL_REPO/torch_points3d/utils/meanshift_cluster.py" \
+  --output "$PATCHED_MEANSHIFT" \
+  --metadata-output "$MEANSHIFT_PATCH_METADATA"
+python -m py_compile "$PATCHED_MEANSHIFT"
 
 APPTAINER_ARGS=(
   exec
@@ -84,12 +142,20 @@ APPTAINER_ARGS=(
   --bind "$TRAINING_OUTPUT_ROOT:/sat_output"
   --bind "$USERBASE:/sat_pyuser:ro"
   --bind "$PATCHED_TRAINER:/sat_repo/torch_points3d/trainer.py:ro"
+  --bind "$PATCHED_MEANSHIFT:/sat_repo/torch_points3d/utils/meanshift_cluster.py:ro"
   --env "PYTHONUSERBASE=/sat_pyuser"
   --env "PYTHONPATH=/sat_pyuser/lib/python3.8/site-packages:/sat_repo"
   --env "HYDRA_FULL_ERROR=1"
-  --env "OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-8}"
-  "$IMAGE"
+  --env "OMP_NUM_THREADS=$OMP_THREADS"
+  --env "MKL_NUM_THREADS=$OMP_THREADS"
+  --env "OPENBLAS_NUM_THREADS=$OMP_THREADS"
+  --env "SEGMENTANYTREE_MEANSHIFT_JOBS=$MEANSHIFT_JOBS"
+  --env "SEGMENTANYTREE_DIAGNOSTIC_STACK_SECONDS=$DIAGNOSTIC_STACK_SECONDS"
 )
+if [[ -n "$RESUME_CHECKPOINT" ]]; then
+  APPTAINER_ARGS+=(--bind "$RESUME_CHECKPOINT_DIR:/sat_resume:ro")
+fi
+APPTAINER_ARGS+=("$IMAGE")
 
 TRAIN_COMMAND=(
   python3
@@ -113,6 +179,40 @@ TRAIN_COMMAND=(
   pretty_print=true
   hydra.run.dir=/sat_output/run
 )
+if [[ -n "$RESUME_CHECKPOINT" ]]; then
+  TRAIN_COMMAND+=(
+    checkpoint_dir=/sat_resume
+    weight_name=latest
+  )
+  read -r COMPLETED_TRAIN_COUNT COMPLETED_TRAIN_EPOCH \
+    COMPLETED_VAL_COUNT COMPLETED_VAL_EPOCH < <(
+    apptainer "${APPTAINER_ARGS[@]}" python3 -c '
+import torch
+checkpoint = torch.load("/sat_resume/PointGroup-PAPER.pt", map_location="cpu")
+stats = checkpoint["stats"]
+train = stats.get("train", [])
+val = stats.get("val", [])
+print(
+    len(train),
+    train[-1]["epoch"] if train else 0,
+    len(val),
+    val[-1]["epoch"] if val else 0,
+)
+'
+  )
+  if [[ "$COMPLETED_TRAIN_COUNT" -le 0 ||
+        "$COMPLETED_TRAIN_COUNT" != "$COMPLETED_TRAIN_EPOCH" ||
+        "$COMPLETED_VAL_COUNT" != "$COMPLETED_VAL_EPOCH" ||
+        "$COMPLETED_TRAIN_EPOCH" != "$COMPLETED_VAL_EPOCH" ]]; then
+    echo "Resume checkpoint has inconsistent epoch history." >&2
+    exit 2
+  fi
+  RESUME_START_EPOCH=$((COMPLETED_TRAIN_COUNT + 1))
+  if (( RESUME_START_EPOCH > REQUESTED_EPOCHS )); then
+    echo "Resume checkpoint already reached requested epoch $REQUESTED_EPOCHS." >&2
+    exit 2
+  fi
+fi
 
 {
   printf 'apptainer'
@@ -143,11 +243,52 @@ with open("/sat_output/package_versions.json", "w", encoding="utf-8") as handle:
     handle.write("\n")
 '
 
+run_stall_watchdog() {
+  local process_group_id="$1"
+  local progress_log="$2"
+  local last_update now
+
+  while kill -0 "$process_group_id" 2>/dev/null; do
+    sleep 60
+    kill -0 "$process_group_id" 2>/dev/null || return 0
+    [[ -f "$progress_log" ]] || continue
+    last_update=$(stat -c %Y "$progress_log")
+    now=$(date +%s)
+    if (( now - last_update >= STALL_TIMEOUT_SECONDS )); then
+      printf 'No training log progress for %s seconds at %s.\n' \
+        "$STALL_TIMEOUT_SECONDS" "$(date --iso-8601=seconds)" > "$STALL_MARKER"
+      kill -TERM -- "-$process_group_id" 2>/dev/null || true
+      sleep 60
+      kill -KILL -- "-$process_group_id" 2>/dev/null || true
+      return 0
+    fi
+  done
+}
+
+WATCHDOG_PID=""
+if [[ -n "${SLURM_JOB_ID:-}" && -n "${SLURM_JOB_NAME:-}" ]]; then
+  PROGRESS_LOG="$PROJECT_ROOT/logs/segmentanytree_for_instance/${SLURM_JOB_NAME}_${SLURM_JOB_ID}.err"
+fi
+
 set +e
-/usr/bin/time -v -o "$TIME_LOG" \
+setsid /usr/bin/time -v -o "$TIME_LOG" \
   apptainer "${APPTAINER_ARGS[@]}" \
-  bash -lc 'cd /sat_output && "$@"' training "${TRAIN_COMMAND[@]}"
+  bash -lc 'cd /sat_output && "$@"' training "${TRAIN_COMMAND[@]}" &
+TRAIN_PID=$!
+if [[ -n "${PROGRESS_LOG:-}" ]]; then
+  run_stall_watchdog "$TRAIN_PID" "$PROGRESS_LOG" &
+  WATCHDOG_PID=$!
+fi
+wait "$TRAIN_PID"
 RETURN_CODE=$?
+if [[ -n "$WATCHDOG_PID" ]]; then
+  if [[ -f "$STALL_MARKER" ]]; then
+    wait "$WATCHDOG_PID" 2>/dev/null || true
+  else
+    kill "$WATCHDOG_PID" 2>/dev/null || true
+    wait "$WATCHDOG_PID" 2>/dev/null || true
+  fi
+fi
 set -e
 
 CHECKPOINT=$(find "$TRAINING_OUTPUT_ROOT" -type f -name 'PointGroup-PAPER.pt' -print -quit)
@@ -162,7 +303,7 @@ RECORD_ARGS=(
   --output "$RUN_METADATA"
   --run-id "$RUN_ID"
   --run-type "$RUN_TYPE"
-  --training-mode retrained_from_dev
+  --training-mode "$TRAINING_MODE"
   --profile "$PROFILE"
   --split-manifest "$MANIFEST"
   --training-data-root "$TRAINING_DATA_ROOT"
@@ -178,9 +319,20 @@ RECORD_ARGS=(
   --batch-size "$BATCH_SIZE"
   --status "$STATUS"
   --return-code "$RETURN_CODE"
+  --stall-timeout-seconds "$STALL_TIMEOUT_SECONDS"
 )
 if [[ -n "$CHECKPOINT" ]]; then
   RECORD_ARGS+=(--checkpoint "$CHECKPOINT")
+fi
+if [[ -n "$RESUME_CHECKPOINT" ]]; then
+  RECORD_ARGS+=(
+    --resume-checkpoint "$RESUME_CHECKPOINT"
+    --resume-checkpoint-sha256 "$RESUME_CHECKPOINT_SHA256"
+    --resume-start-epoch "$RESUME_START_EPOCH"
+  )
+fi
+if [[ -f "$STALL_MARKER" ]]; then
+  RECORD_ARGS+=(--stall-marker "$STALL_MARKER")
 fi
 python methods/segmentanytree/scripts/runtime/record_segmentanytree_training_run.py "${RECORD_ARGS[@]}"
 

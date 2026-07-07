@@ -37,9 +37,59 @@ fi
 
 RUN_ID="${SEGMENTANYTREE_TRAINING_RUN_ID:-sat_for_train_full_$(date +%Y%m%d_%H%M%S)}"
 VALIDATION_LAST=$((VALIDATION_COUNT - 1))
+RESUME_CHECKPOINT="${SEGMENTANYTREE_RESUME_CHECKPOINT:-}"
+RESUME_CHECKPOINT_SHA256="${SEGMENTANYTREE_RESUME_CHECKPOINT_SHA256:-}"
+TRAIN_PARTITION="${SEGMENTANYTREE_TRAIN_PARTITION:-gpu-l40s-low}"
+TRAIN_TIME="${SEGMENTANYTREE_TRAIN_TIME:-23:59:00}"
+TRAIN_CPUS="${SEGMENTANYTREE_TRAIN_CPUS:-8}"
+TRAIN_MEMORY="${SEGMENTANYTREE_TRAIN_MEMORY:-48G}"
+TRAIN_EXPORT="ALL,SEGMENTANYTREE_EXECUTE=1,SEGMENTANYTREE_FULL_TRAIN_CONFIRMED=1,SEGMENTANYTREE_TRAIN_PROFILE=full,SEGMENTANYTREE_TRAINING_RUN_ID=$RUN_ID"
+
+if [[ ! "$TRAIN_PARTITION" =~ ^[A-Za-z0-9_-]+$ ]]; then
+  echo "SEGMENTANYTREE_TRAIN_PARTITION contains unsupported characters." >&2
+  exit 2
+fi
+if [[ ! "$TRAIN_TIME" =~ ^[0-9]+(-[0-9]{2})?:[0-9]{2}:[0-9]{2}$ ]]; then
+  echo "SEGMENTANYTREE_TRAIN_TIME must use HH:MM:SS or D-HH:MM:SS." >&2
+  exit 2
+fi
+if [[ ! "$TRAIN_CPUS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "SEGMENTANYTREE_TRAIN_CPUS must be a positive integer." >&2
+  exit 2
+fi
+if [[ ! "$TRAIN_MEMORY" =~ ^[1-9][0-9]*[KMGT]?$ ]]; then
+  echo "SEGMENTANYTREE_TRAIN_MEMORY must be a Slurm memory value." >&2
+  exit 2
+fi
+
+if [[ -n "$RESUME_CHECKPOINT" ]]; then
+  if [[ ! -f "$RESUME_CHECKPOINT" ]]; then
+    echo "Resume checkpoint does not exist: $RESUME_CHECKPOINT" >&2
+    exit 2
+  fi
+  RESUME_CHECKPOINT=$(realpath "$RESUME_CHECKPOINT")
+  if [[ ! "$RESUME_CHECKPOINT_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+    echo "Set SEGMENTANYTREE_RESUME_CHECKPOINT_SHA256 to the reviewed checkpoint hash." >&2
+    exit 2
+  fi
+  ACTUAL_RESUME_SHA256=$(sha256sum "$RESUME_CHECKPOINT" | awk '{print $1}')
+  if [[ "$ACTUAL_RESUME_SHA256" != "$RESUME_CHECKPOINT_SHA256" ]]; then
+    echo "Resume checkpoint SHA-256 mismatch: $ACTUAL_RESUME_SHA256" >&2
+    echo "Expected: $RESUME_CHECKPOINT_SHA256" >&2
+    exit 2
+  fi
+  TRAIN_EXPORT+=",SEGMENTANYTREE_RESUME_CHECKPOINT=$RESUME_CHECKPOINT,SEGMENTANYTREE_RESUME_CHECKPOINT_SHA256=$RESUME_CHECKPOINT_SHA256"
+elif [[ -n "$RESUME_CHECKPOINT_SHA256" ]]; then
+  echo "SEGMENTANYTREE_RESUME_CHECKPOINT_SHA256 requires SEGMENTANYTREE_RESUME_CHECKPOINT." >&2
+  exit 2
+fi
 
 TRAIN_JOB=$(sbatch --parsable \
-  --export="ALL,SEGMENTANYTREE_EXECUTE=1,SEGMENTANYTREE_FULL_TRAIN_CONFIRMED=1,SEGMENTANYTREE_TRAIN_PROFILE=full,SEGMENTANYTREE_TRAINING_RUN_ID=$RUN_ID" \
+  --partition="$TRAIN_PARTITION" \
+  --time="$TRAIN_TIME" \
+  --cpus-per-task="$TRAIN_CPUS" \
+  --mem="$TRAIN_MEMORY" \
+  --export="$TRAIN_EXPORT" \
   methods/segmentanytree/slurm/training/train_segmentanytree_for_instance_full.sbatch)
 
 VALIDATE_JOB=$(sbatch --parsable \
@@ -60,6 +110,12 @@ STATE_FILE="$HOME/fastscratch/segmentanytree_full_jobs_${RUN_ID}.env"
   printf 'FULL_TRAIN_JOB=%q\n' "$TRAIN_JOB"
   printf 'FULL_VALIDATE_JOB=%q\n' "$VALIDATE_JOB"
   printf 'FULL_EVALUATE_JOB=%q\n' "$EVALUATE_JOB"
+  printf 'FULL_RESUME_CHECKPOINT=%q\n' "$RESUME_CHECKPOINT"
+  printf 'FULL_RESUME_CHECKPOINT_SHA256=%q\n' "$RESUME_CHECKPOINT_SHA256"
+  printf 'FULL_TRAIN_PARTITION=%q\n' "$TRAIN_PARTITION"
+  printf 'FULL_TRAIN_TIME=%q\n' "$TRAIN_TIME"
+  printf 'FULL_TRAIN_CPUS=%q\n' "$TRAIN_CPUS"
+  printf 'FULL_TRAIN_MEMORY=%q\n' "$TRAIN_MEMORY"
 } > "$STATE_FILE"
 
 echo "RUN_ID=$RUN_ID"

@@ -10,7 +10,8 @@ adapter, method runner, scheduler workflow, metadata outputs and focused tests.
 | --- | --- | --- | --- |
 | FRDR treeiso TLS | TLS2trees | Prediction benchmark completed | [`frdr_benchmark.yml`](methods/tls2trees/configs/frdr_benchmark.yml) |
 | FOR-instance | SegmentAnyTree released checkpoint | Provisional inference-only run completed; export audit failed | [`for_instance_benchmark.yml`](methods/segmentanytree/configs/for_instance_benchmark.yml) |
-| FOR-instance | SegmentAnyTree retrained from development split | Full training running; development validation queued; held-out test untouched | [`for_instance_training.yml`](methods/segmentanytree/configs/for_instance_training.yml) |
+| FOR-instance | SegmentAnyTree retrained from development split | Development checkpoint optimization in progress; epoch-47 validation mean F1 0.513; held-out test untouched | [`training_progress_20260706.md`](methods/segmentanytree/docs/training_progress_20260706.md) |
+| FOR-instance | TreeX (`pointtree`) | Completed on exact-path local subset; strict test F1 0.402, labelled-mask test F1 0.522 | [`for_instance_benchmark.yml`](methods/treex/configs/for_instance_benchmark.yml) |
 | FOR-instance | TLS2trees | Candidate compatibility test | [`for_instance_accuracy.yml`](methods/tls2trees/configs/for_instance_accuracy.yml) |
 | FOR-instance | TreeLearn or another deep learning method | Candidate accuracy benchmark | Respect the supplied development/test split |
 | Wytham Woods | TLS2trees | Candidate TLS accuracy benchmark | [`benchmark.yml`](datasets/wytham-woods/benchmark.yml) |
@@ -31,13 +32,14 @@ LAS files with the released checkpoint. Its coordinate-rematched metrics are
 provisional because they neither preserve point alignment nor represent a
 model trained under the local development/test protocol. The corrected primary
 experiment trains from scratch on FOR-instance development data, selects the
-configuration on an internal development validation split and evaluates the
-held-out test split once. Full training began on 4 July 2026; this status does
-not imply that a checkpoint has passed validation or that final accuracy has
-been measured. See the
+checkpoint on an internal development validation split and evaluates the
+held-out test split once. Training began on 4 July 2026. The aligned five-plot
+development validation mean F1 improved from `0.458` at epoch 45 to `0.513` at
+epoch 47; optimization remains in progress. These are development results, not
+final test accuracy. See the
 [`shared protocol`](docs/protocols/for-instance.md),
 [`runbook`](methods/segmentanytree/docs/for_instance_benchmark.md) and
-[`results note`](methods/segmentanytree/docs/provisional_released_checkpoint_results.md).
+[`training progress`](methods/segmentanytree/docs/training_progress_20260706.md).
 
 ## Adding A Benchmark
 

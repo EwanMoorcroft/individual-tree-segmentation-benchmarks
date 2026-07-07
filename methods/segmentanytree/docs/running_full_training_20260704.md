@@ -1,7 +1,12 @@
 # FOR-instance full training run started 4 July 2026
 
-This note records the active SegmentAnyTree training checkpoint. It is a
+This note records the initial SegmentAnyTree full-training submission. It is a
 provenance record, not a result.
+
+The job states below are the states recorded on 4 July. The training job was
+later cancelled after producing an epoch-30 checkpoint, and its dependent
+arrays were cancelled. Resume and validation outcomes are recorded in
+[`training_progress_20260706.md`](training_progress_20260706.md).
 
 ## Scope
 

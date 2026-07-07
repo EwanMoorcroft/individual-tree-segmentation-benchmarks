@@ -1,7 +1,7 @@
 project:
   name: tree-seg-benchmark
   experiment: for_instance_segmentanytree_retrained_from_dev
-  status: full_training_in_progress_validation_queued
+  status: development_checkpoint_optimization_in_progress
   protocol_id: for_instance_pointwise_v1
   barkla_specific: true
 
@@ -92,6 +92,27 @@ training:
   checkpoint_input: null
   checkpoint_output_root: "~/fastscratch/segmentanytree_for_instance_checkpoints"
   test_evaluation_during_training: false
+  progress_as_of: "2026-07-06"
+  leading_checkpoint_candidate:
+    run_id: sat_for_quicktune_to47_20260706_084834
+    epoch: 47
+    development_validation_plots: 5
+    mean_aligned_f1: 0.5127
+    minimum_aligned_f1: 0.1797
+    maximum_aligned_f1: 0.6667
+  active_continuation:
+    target_epoch: 49
+    slurm_job_id: 9668753
+    status: running_when_last_recorded
+    resources:
+      partition: gpu-l40s
+      gpu_count: 1
+      cpu_count: 16
+      memory: 64G
+      batch_size: 8
+      meanshift_jobs: 1
+      omp_threads: 1
+  held_out_test_status: untouched
 
 paths:
   split_manifest_root: "results/metadata/segmentanytree_for_instance/training_splits"

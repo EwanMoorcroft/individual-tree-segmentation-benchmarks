@@ -137,13 +137,13 @@ The run establishes that full inference is operational and identifies the
 failure in the final export. It does not establish trained-model accuracy.
 Acceptance of the corrected experiment requires:
 
-1. completing the active development-only full training run;
-2. validating all five fixed development validation plots with aligned labels;
-3. selecting and freezing a checkpoint without consulting test results;
-4. recording the new checkpoint checksum and complete training provenance;
-5. running the frozen checkpoint once on the 11 held-out test plots;
-6. evaluating aligned point labels with both matching policies; and
-7. replacing these provisional tables only after all reproduction gates pass.
+1. selecting and freezing a checkpoint using only the five fixed development
+   validation plots;
+2. recording the selected checkpoint checksum and complete training
+   provenance;
+3. running the frozen checkpoint once on the 11 held-out test plots;
+4. evaluating aligned point labels with both matching policies; and
+5. replacing these provisional tables only after all reproduction gates pass.
 
 No FRDR accuracy values are combined with these results because the FRDR inputs
 do not contain individual-tree reference IDs.

@@ -13,6 +13,10 @@ subset that exists locally on Barkla:
 - 32 exact-path local plots retained from the Barkla mirror;
 - strict and labelled-mask instance metrics.
 
+The headline held-out test result is strict F1 `0.402`; labelled-mask test F1
+is `0.522`. TreeX is a completed deterministic baseline here, not a trained or
+fine-tuned model.
+
 Start with:
 
 - [`docs/for_instance_benchmark.md`](docs/for_instance_benchmark.md) for the

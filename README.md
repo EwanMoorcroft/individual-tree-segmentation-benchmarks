@@ -9,7 +9,7 @@ model files, predictions, logs and external repositories are not included.
 
 ## Current status
 
-Status last updated: 6 July 2026.
+Status last updated: 8 July 2026.
 
 - **TLS2trees on FRDR treeiso:** the 16-plot prediction and operational
   benchmark is complete. FRDR does not contain individual-tree reference
@@ -18,12 +18,11 @@ Status last updated: 6 July 2026.
 - **SegmentAnyTree on FOR-instance:** the earlier 32-plot released-checkpoint
   run is retained only as a provisional engineering diagnostic because its
   final exports failed point-correspondence checks.
-- **SegmentAnyTree retrained on FOR-instance:** development-only training and
-  checkpoint selection are in progress. The epoch-47 checkpoint reached mean
-  aligned F1 `0.513` across the five fixed development validation plots, up
-  from `0.458` at epoch 45. A two-epoch continuation to epoch 49 is running.
-  The 11 held-out test plots remain untouched, so no final test accuracy is
-  available.
+- **SegmentAnyTree retrained on FOR-instance:** the development-selected
+  checkpoint `sat_for_quicktune_to49_20260706_140730` is the accepted SAT run.
+  It reports mean aligned F1 `0.537` on the five validation plots and `0.480`
+  on the 11 held-out test plots. The later `to55` continuation is rejected
+  because validation fell to `0.451`.
 - **TreeX on FOR-instance:** the unsupervised `pointtree` TreeX benchmark is
   complete on the exact-path local subset of 21 development and 11 test plots.
   The cautious headline test result is strict F1 `0.402`; labelled-mask test
@@ -100,13 +99,12 @@ Files beginning with `provisional_released_checkpoint_` under
 the rejected coordinate-rematching route. They are not final SegmentAnyTree
 accuracy results and must not be compared directly with the paper.
 
-The accepted SegmentAnyTree result will be published only after:
-
-1. training completes on the 16 development training plots;
-2. a checkpoint is selected using only the five development validation plots;
-3. aligned point-wise validation outputs pass the integrity checks;
-4. the frozen checkpoint is run once on all 11 held-out test plots; and
-5. paper-compatible and harmonised one-to-one metrics are both reported.
+The accepted SegmentAnyTree result is the aligned point-wise evaluation of
+`sat_for_quicktune_to49_20260706_140730`. Failure-mode audits show that the
+main limitation is over-segmentation and background-confusion false positives,
+with TUWIEN and RMIT as the weakest domain-transfer cases. A validation-only
+post-processing sweep is retained as a diagnostic ablation; it does not replace
+the unfiltered held-out test score.
 
 ## Barkla environment
 

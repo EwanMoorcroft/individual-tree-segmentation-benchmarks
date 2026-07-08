@@ -7,7 +7,7 @@ import subprocess
 import sys
 import zipfile
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 import laspy
 import numpy as np
@@ -102,7 +102,7 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
 
     assert config["project"]["benchmark_name"] == "for_instance_segmentanytree"
     assert config["project"]["status"] == (
-        "inference_complete_evaluation_revalidation_required"
+        "accepted_retrained_checkpoint_evaluated"
     )
     assert config["project"]["protocol_id"] == "for_instance_pointwise_v1"
     assert config["dataset"]["name"] == "FOR-instance"
@@ -134,8 +134,20 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     assert config["method"]["checkpoint"]["sha256"] == (
         "0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a"
     )
-    assert config["training"]["current_mode"] == "published_pretrained"
-    assert config["training"]["local_weight_updates_performed"] is False
+    assert config["training"]["current_mode"] == "retrained_from_dev"
+    assert config["training"]["local_weight_updates_performed"] is True
+    assert (
+        config["training"]["corrected_experiment"]["latest_completed_run_id"]
+        == "sat_for_quicktune_to49_20260706_140730"
+    )
+    assert (
+        config["training"]["corrected_experiment"]["rejected_run_id"]
+        == "sat_for_quicktune_to55_20260707_214305"
+    )
+    assert (
+        config["training"]["corrected_experiment"]["final_test_status"]
+        == "completed"
+    )
     assert config["training"]["forbidden_training_split"] == ["test"]
     assert config["method"]["gpu_required"] is True
     assert config["method"]["command_template"] is None
@@ -639,6 +651,332 @@ def test_pointwise_evaluator_reports_paper_and_harmonized_metrics() -> None:
     assert result["mean_weighted_coverage"] == pytest.approx(1.0)
 
 
+def test_pointwise_evaluator_can_filter_small_predicted_instances() -> None:
+    evaluator = load_script(
+        "methods/segmentanytree/scripts/evaluation/pointwise_instance_metrics.py",
+        "segmentanytree_pointwise_min_prediction_size",
+    )
+    labels = evaluator.PointLabels(
+        predicted_instance=np.array([10, 10, 20, 20, 30]),
+        reference_instance=np.array([1, 1, 2, 2, 0]),
+        predicted_semantic=np.array([2, 2, 2, 2, 2]),
+        reference_semantic=np.array([2, 2, 2, 2, 1]),
+    )
+
+    unfiltered = evaluator.evaluate_pointwise(
+        labels,
+        reference_tree_classes={2},
+        prediction_tree_classes={2},
+        ignored_reference_labels={0, -1},
+        ignored_prediction_labels={0, -1},
+        iou_threshold=0.5,
+    )
+    filtered = evaluator.evaluate_pointwise(
+        labels,
+        reference_tree_classes={2},
+        prediction_tree_classes={2},
+        ignored_reference_labels={0, -1},
+        ignored_prediction_labels={0, -1},
+        iou_threshold=0.5,
+        min_predicted_instance_points=2,
+    )
+
+    assert unfiltered["prediction_instance_count"] == 3
+    assert unfiltered["harmonized"]["false_positives"] == 1
+    assert filtered["prediction_instance_count"] == 2
+    assert filtered["min_predicted_instance_points"] == 2
+    assert filtered["harmonized"]["false_positives"] == 0
+    assert filtered["harmonized"]["f1"] == pytest.approx(1.0)
+
+
+def test_pointwise_evaluator_can_filter_low_tree_fraction_predictions() -> None:
+    evaluator = load_script(
+        "methods/segmentanytree/scripts/evaluation/pointwise_instance_metrics.py",
+        "segmentanytree_pointwise_tree_fraction_filter",
+    )
+    labels = evaluator.PointLabels(
+        predicted_instance=np.array([10, 10, 20, 20, 20, 20, 20]),
+        reference_instance=np.array([1, 1, 2, 2, 0, 0, 0]),
+        predicted_semantic=np.array([2, 2, 2, 2, 2, 1, 1]),
+        reference_semantic=np.array([2, 2, 2, 2, 1, 1, 1]),
+    )
+
+    unfiltered = evaluator.evaluate_pointwise(
+        labels,
+        reference_tree_classes={2},
+        prediction_tree_classes={2},
+        ignored_reference_labels={0, -1},
+        ignored_prediction_labels={0, -1},
+        iou_threshold=0.5,
+    )
+    filtered = evaluator.evaluate_pointwise(
+        labels,
+        reference_tree_classes={2},
+        prediction_tree_classes={2},
+        ignored_reference_labels={0, -1},
+        ignored_prediction_labels={0, -1},
+        iou_threshold=0.5,
+        min_predicted_tree_fraction=0.75,
+    )
+
+    assert unfiltered["prediction_instance_count"] == 2
+    assert filtered["prediction_instance_count"] == 1
+    assert filtered["min_predicted_tree_fraction"] == 0.75
+    assert filtered["harmonized"]["false_positives"] == 0
+
+
+def test_sat_failure_audit_classifies_large_false_positive() -> None:
+    audit = load_script(
+        "methods/segmentanytree/scripts/diagnostics/audit_sat_failure_modes.py",
+        "segmentanytree_failure_audit_large_fp",
+    )
+    pointwise = audit.load_pointwise_module()
+    labels = pointwise.PointLabels(
+        predicted_instance=np.array([10, 10, 20, 20, 20, 20, 20, 20]),
+        reference_instance=np.array([1, 1, 2, 3, 4, 5, 6, 7]),
+        predicted_semantic=np.array([2, 2, 2, 2, 2, 2, 2, 2]),
+        reference_semantic=np.array([2, 2, 2, 2, 2, 2, 2, 2]),
+    )
+    _, prediction_rows, _ = audit.analyse_labels(
+        pointwise,
+        labels,
+        {"collection": "NIBIO", "plot_name": "synthetic"},
+        "trained_test",
+        "synthetic_run",
+        0.5,
+        0.25,
+        0.1,
+        5,
+        {2},
+        {2},
+        {-1},
+        {-1, 0},
+    )
+
+    row = next(row for row in prediction_rows if row["prediction_id"] == 20)
+    assert row["point_count"] == 6
+    assert row["best_iou"] < 0.25
+    assert row["failure_mode"] == "large_extra_instance"
+
+
+def test_sat_failure_audit_classifies_missed_reference() -> None:
+    audit = load_script(
+        "methods/segmentanytree/scripts/diagnostics/audit_sat_failure_modes.py",
+        "segmentanytree_failure_audit_missed_ref",
+    )
+    pointwise = audit.load_pointwise_module()
+    labels = pointwise.PointLabels(
+        predicted_instance=np.array([10, 10, -1, -1, -1]),
+        reference_instance=np.array([1, 1, 2, 2, 2]),
+        predicted_semantic=np.array([2, 2, 1, 1, 1]),
+        reference_semantic=np.array([2, 2, 2, 2, 2]),
+    )
+    _, _, reference_rows = audit.analyse_labels(
+        pointwise,
+        labels,
+        {"collection": "RMIT", "plot_name": "synthetic"},
+        "trained_test",
+        "synthetic_run",
+        0.5,
+        0.25,
+        0.1,
+        5,
+        {2},
+        {2},
+        {-1},
+        {-1, 0},
+    )
+
+    row = next(row for row in reference_rows if row["reference_id"] == 2)
+    assert row["point_count"] == 3
+    assert row["best_iou"] == 0.0
+    assert row["failure_mode"] == "missed_tree"
+
+
+def test_sat_failure_audit_outputs_are_public_safe() -> None:
+    audit = load_script(
+        "methods/segmentanytree/scripts/diagnostics/audit_sat_failure_modes.py",
+        "segmentanytree_failure_audit_public_safe",
+    )
+    fields = (
+        audit.PLOT_FIELDS
+        + audit.SITE_FIELDS
+        + audit.PREDICTION_FIELDS
+        + audit.REFERENCE_FIELDS
+        + audit.DOMAIN_FIELDS
+    )
+
+    assert "x" not in fields
+    assert "y" not in fields
+    assert "z" not in fields
+    assert all("coordinate" not in field for field in fields)
+
+
+def test_sat_failure_audit_cli_help_parses() -> None:
+    script = (
+        ROOT
+        / "methods/segmentanytree/scripts/diagnostics/audit_sat_failure_modes.py"
+    )
+    completed = subprocess.run(
+        [sys.executable, str(script), "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert "--run-id" in completed.stdout
+    assert "--training-manifest" in completed.stdout
+
+
+def test_sat_postprocess_sweep_cli_help_parses() -> None:
+    script = (
+        ROOT
+        / "methods/segmentanytree/scripts/diagnostics/"
+        "sweep_sat_validation_postprocessing.py"
+    )
+    completed = subprocess.run(
+        [sys.executable, str(script), "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert "--min-predicted-instance-points" in completed.stdout
+    assert "--min-predicted-tree-fraction" in completed.stdout
+
+
+def test_sat_postprocess_sweep_uses_validation_rows_only(tmp_path: Path) -> None:
+    sweep = load_script(
+        (
+            "methods/segmentanytree/scripts/diagnostics/"
+            "sweep_sat_validation_postprocessing.py"
+        ),
+        "segmentanytree_postprocess_sweep_run",
+    )
+
+    def parse_number_set(text: str) -> set[float]:
+        return {float(value) for value in text.split(",") if value}
+
+    def load_metric_rows(split_root: Path, run_id: str):
+        return [
+            ("trained_validation", tmp_path / "val.json", {"score": 0.6}),
+            ("trained_test", tmp_path / "test.json", {"score": 0.9}),
+        ]
+
+    def evaluate_pointwise(labels, **kwargs):
+        return {
+            "prediction_instance_count": 3,
+            "reference_instance_count": 2,
+            "harmonized": {
+                "f1": labels["score"],
+                "precision": labels["score"],
+                "recall": labels["score"],
+                "true_positives": 1,
+                "false_positives": 2,
+                "false_negatives": 1,
+            },
+        }
+
+    fake_audit = SimpleNamespace(
+        load_pointwise_module=lambda: SimpleNamespace(evaluate_pointwise=evaluate_pointwise),
+        load_metric_rows=load_metric_rows,
+        parse_number_set=parse_number_set,
+        load_labels_from_payload=lambda *args: args[1],
+    )
+    sweep.load_script = lambda *args: fake_audit
+
+    outputs = sweep.run_sweep(
+        SimpleNamespace(
+            run_id="synthetic_run",
+            split_root=str(tmp_path),
+            split="trained_validation",
+            output_dir=str(tmp_path / "out"),
+            min_predicted_instance_points="0",
+            min_predicted_tree_fraction="0",
+            semantic_offset=1.0,
+            reference_tree_classes="2",
+            prediction_tree_classes="2",
+            ignored_reference_labels="-1",
+            ignored_prediction_labels="-1,0",
+            reference_background_instance_labels="1",
+            iou_threshold=0.5,
+        )
+    )
+
+    best = list(csv.DictReader(outputs["best"].open(encoding="utf-8")))
+    assert len(best) == 1
+    assert best[0]["n_plots"] == "1"
+    assert best[0]["mean_f1"] == "0.6"
+
+
+def test_sat_failure_audit_writes_expected_csvs(tmp_path: Path) -> None:
+    audit = load_script(
+        "methods/segmentanytree/scripts/diagnostics/audit_sat_failure_modes.py",
+        "segmentanytree_failure_audit_outputs",
+    )
+    pointwise = audit.load_pointwise_module()
+
+    def synthetic_labels(*args, **kwargs):
+        return pointwise.PointLabels(
+            predicted_instance=np.array([10, 10, -1, -1, -1]),
+            reference_instance=np.array([1, 1, 2, 2, 2]),
+            predicted_semantic=np.array([2, 2, 1, 1, 1]),
+            reference_semantic=np.array([2, 2, 2, 2, 2]),
+        )
+
+    audit.load_labels_from_payload = synthetic_labels
+
+    run_id = "synthetic_run"
+    split_root = tmp_path / "metadata"
+    metric_root = split_root / "trained_test" / run_id / "RMIT"
+    metric_root.mkdir(parents=True)
+    (metric_root / "test.json").write_text(
+        json.dumps(
+            {
+                "evaluator": "pointwise_instance_metrics",
+                "collection": "RMIT",
+                "plot_name": "test",
+                "relative_path": "RMIT/test.las",
+                "inputs": {},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text('{"records": []}\n', encoding="utf-8")
+    output_dir = tmp_path / "audit"
+
+    outputs = audit.run_audit(
+        SimpleNamespace(
+            run_id=run_id,
+            split_root=str(split_root),
+            training_manifest=str(manifest),
+            output_dir=str(output_dir),
+            semantic_offset=1.0,
+            reference_tree_classes="2",
+            prediction_tree_classes="2",
+            ignored_reference_labels="-1",
+            ignored_prediction_labels="-1,0",
+            reference_background_instance_labels="1",
+            iou_threshold=0.5,
+            near_miss_iou=0.25,
+            fragmentation_iou=0.1,
+            large_instance_points=5,
+        )
+    )
+
+    assert set(outputs) == {"plot", "site", "prediction", "reference", "domain"}
+    assert all(path.is_file() for path in outputs.values())
+    for path in outputs.values():
+        header = path.read_text(encoding="utf-8").splitlines()[0].split(",")
+        assert "x" not in header
+        assert "y" not in header
+        assert "z" not in header
+
+
 def test_pointwise_evaluator_recovers_degenerate_reference_semantics() -> None:
     evaluator = load_script(
         "methods/segmentanytree/scripts/evaluation/pointwise_instance_metrics.py",
@@ -937,6 +1275,16 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
         ROOT
         / "methods/segmentanytree/slurm/inference/run_segmentanytree_for_instance_test_from_checkpoint.sbatch"
     ).read_text(encoding="utf-8")
+    validation_eval = (
+        ROOT
+        / "methods/segmentanytree/slurm/evaluation/"
+        "evaluate_segmentanytree_for_instance_trained_validation.sbatch"
+    ).read_text(encoding="utf-8")
+    test_eval = (
+        ROOT
+        / "methods/segmentanytree/slurm/evaluation/"
+        "evaluate_segmentanytree_for_instance_test_from_checkpoint.sbatch"
+    ).read_text(encoding="utf-8")
     assert "SEGMENTANYTREE_EXECUTE" in training_task
     assert "wandb.log=false" in training_task
     assert "tensorboard.log=false" in training_task
@@ -958,6 +1306,8 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
     assert "SEGMENTANYTREE_MEANSHIFT_JOBS" in training_task
     assert "SEGMENTANYTREE_OMP_NUM_THREADS" in training_task
     assert "SEGMENTANYTREE_FINAL_TEST_CONFIRMED" in final_test
+    assert "SEGMENTANYTREE_EVALUATION_RUN_ID" in validation_eval
+    assert "SEGMENTANYTREE_EVALUATION_RUN_ID" in test_eval
     evaluation_task = (
         ROOT
         / "methods/segmentanytree/slurm/evaluation/"
@@ -965,6 +1315,10 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
     ).read_text(encoding="utf-8")
     assert "--reference-background-instance-labels 1" in evaluation_task
     assert "--ignored-prediction-labels=-1,0" in evaluation_task
+    assert "SEGMENTANYTREE_MIN_PREDICTED_INSTANCE_POINTS" in evaluation_task
+    assert "--min-predicted-instance-points" in evaluation_task
+    assert "SEGMENTANYTREE_MIN_PREDICTED_TREE_FRACTION" in evaluation_task
+    assert "--min-predicted-tree-fraction" in evaluation_task
 
 
 def test_dev_only_trainer_patch_preserves_validation() -> None:
@@ -1140,6 +1494,8 @@ def test_segmentanytree_training_shell_scripts_parse() -> None:
         "methods/segmentanytree/slurm/evaluation/evaluate_segmentanytree_for_instance_trained_validation.sbatch",
         "methods/segmentanytree/slurm/inference/run_segmentanytree_for_instance_test_from_checkpoint.sbatch",
         "methods/segmentanytree/slurm/evaluation/evaluate_segmentanytree_for_instance_test_from_checkpoint.sbatch",
+        "methods/segmentanytree/slurm/evaluation/audit_segmentanytree_failure_modes.sbatch",
+        "methods/segmentanytree/slurm/evaluation/sweep_segmentanytree_validation_postprocessing.sbatch",
         "methods/segmentanytree/slurm/submit_full_training_chain.sh",
     ]
     for relative_path in scripts:

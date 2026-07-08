@@ -2,7 +2,7 @@ project:
   name: tree-seg-benchmark
   benchmark_name: for_instance_segmentanytree
   mode: labelled_accuracy_benchmark
-  status: inference_complete_evaluation_revalidation_required
+  status: accepted_retrained_checkpoint_evaluated
   protocol_id: for_instance_pointwise_v1
   barkla_root: "~/scratch/tree-seg-benchmark"
   barkla_specific: true
@@ -90,8 +90,8 @@ method:
     execution_entrypoint: eval.py
 
 training:
-  current_mode: published_pretrained
-  local_weight_updates_performed: false
+  current_mode: retrained_from_dev
+  local_weight_updates_performed: true
   permitted_for_instance_training_split:
     - dev
   forbidden_training_split:
@@ -100,17 +100,21 @@ training:
   corrected_experiment:
     config: "methods/segmentanytree/configs/for_instance_training.yml"
     primary_mode: retrained_from_dev
-    status: development_checkpoint_optimization_in_progress
-    latest_completed_run_id: sat_for_quicktune_to47_20260706_084834
-    latest_completed_epoch: 47
+    status: completed
+    latest_completed_run_id: sat_for_quicktune_to49_20260706_140730
+    rejected_run_id: sat_for_quicktune_to55_20260707_214305
+    latest_completed_epoch: 49
+    rejected_epoch: 55
     development_validation_plot_count: 5
-    development_validation_mean_f1: 0.5127
-    active_target_epoch: 49
-    final_test_status: not_started
+    development_validation_mean_f1: 0.5371
+    rejected_development_validation_mean_f1: 0.4505
+    final_test_plot_count: 11
+    final_test_mean_f1: 0.4798
+    final_test_status: completed
 
 evaluation:
   protocol_id: for_instance_pointwise_v1
-  status: revalidation_required
+  status: completed
   primary_input: aligned_internal_prediction_arrays
   primary_reporting_split: test
   reference_instance_field: treeID

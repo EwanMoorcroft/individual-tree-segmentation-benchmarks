@@ -14,6 +14,7 @@ set -euo pipefail
 PROJECT_ROOT="$HOME/scratch/tree-seg-benchmark"
 PROFILE="${SEGMENTANYTREE_TRAIN_PROFILE:-pilot}"
 RUN_ID="${SEGMENTANYTREE_TRAINING_RUN_ID:?Set SEGMENTANYTREE_TRAINING_RUN_ID to the completed training run.}"
+EVALUATION_RUN_ID="${SEGMENTANYTREE_EVALUATION_RUN_ID:-$RUN_ID}"
 MANIFEST="$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/training_splits/${PROFILE}_split_manifest.json"
 
 cd "$PROJECT_ROOT"
@@ -32,8 +33,8 @@ SOURCE_PATH="${RECORD[0]}"
 
 export SEGMENTANYTREE_REQUIRED_SPLIT=dev
 export SEGMENTANYTREE_POINTWISE_OUTPUT_ROOT="$PROJECT_ROOT/data/predictions/segmentanytree/for_instance_trained_validation/$RUN_ID"
-export SEGMENTANYTREE_POINTWISE_EVALUATION_ROOT="$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/trained_validation/$RUN_ID"
-export SEGMENTANYTREE_POINTWISE_TABLE_ROOT="$PROJECT_ROOT/results/tables/segmentanytree_for_instance/trained_validation/$RUN_ID"
+export SEGMENTANYTREE_POINTWISE_EVALUATION_ROOT="$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/trained_validation/$EVALUATION_RUN_ID"
+export SEGMENTANYTREE_POINTWISE_TABLE_ROOT="$PROJECT_ROOT/results/tables/segmentanytree_for_instance/trained_validation/$EVALUATION_RUN_ID"
 
 bash methods/segmentanytree/slurm/evaluation/evaluate_segmentanytree_pointwise_task.sh \
   --plot-path "$SOURCE_PATH"

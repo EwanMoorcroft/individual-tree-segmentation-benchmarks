@@ -13,6 +13,7 @@ set -euo pipefail
 
 PROJECT_ROOT="$HOME/scratch/tree-seg-benchmark"
 RUN_ID="${SEGMENTANYTREE_TRAINING_RUN_ID:?Set SEGMENTANYTREE_TRAINING_RUN_ID to the accepted full training run.}"
+EVALUATION_RUN_ID="${SEGMENTANYTREE_EVALUATION_RUN_ID:-$RUN_ID}"
 
 cd "$PROJECT_ROOT"
 module purge
@@ -21,8 +22,8 @@ source "$HOME/fastscratch/venvs/treebench/bin/activate"
 
 export SEGMENTANYTREE_REQUIRED_SPLIT=test
 export SEGMENTANYTREE_POINTWISE_OUTPUT_ROOT="$PROJECT_ROOT/data/predictions/segmentanytree/for_instance_trained_test/$RUN_ID"
-export SEGMENTANYTREE_POINTWISE_EVALUATION_ROOT="$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/trained_test/$RUN_ID"
-export SEGMENTANYTREE_POINTWISE_TABLE_ROOT="$PROJECT_ROOT/results/tables/segmentanytree_for_instance/trained_test/$RUN_ID"
+export SEGMENTANYTREE_POINTWISE_EVALUATION_ROOT="$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/trained_test/$EVALUATION_RUN_ID"
+export SEGMENTANYTREE_POINTWISE_TABLE_ROOT="$PROJECT_ROOT/results/tables/segmentanytree_for_instance/trained_test/$EVALUATION_RUN_ID"
 
 bash methods/segmentanytree/slurm/evaluation/evaluate_segmentanytree_pointwise_task.sh \
   --split test \

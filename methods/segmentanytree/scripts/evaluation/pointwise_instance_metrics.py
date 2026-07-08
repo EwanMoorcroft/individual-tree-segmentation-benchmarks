@@ -321,6 +321,8 @@ def evaluate_pointwise(
     ignored_reference_labels: set[float],
     ignored_prediction_labels: set[float],
     iou_threshold: float,
+    min_predicted_instance_points: int = 0,
+    min_predicted_tree_fraction: float = 0.0,
 ) -> dict[str, Any]:
     """Evaluate aligned labels with paper-compatible and one-to-one matching."""
 
@@ -334,6 +336,12 @@ def evaluate_pointwise(
         raise ValueError(f"Point label arrays are not aligned: {sorted(lengths)}")
     if not 0 < iou_threshold <= 1:
         raise ValueError("IoU threshold must be in the interval (0, 1]")
+    if min_predicted_instance_points < 0:
+        raise ValueError("Minimum predicted instance points cannot be negative")
+    if not 0 <= min_predicted_tree_fraction <= 1:
+        raise ValueError(
+            "Minimum predicted tree fraction must be in the interval [0, 1]"
+        )
 
     reference_tree = np.isin(
         labels.reference_semantic.astype(np.float64),
@@ -356,6 +364,36 @@ def evaluate_pointwise(
         ignored_prediction_labels,
         prediction_tree_classes,
     )
+    if min_predicted_instance_points:
+        predicted_ids = np.asarray(
+            [
+                instance_id
+                for instance_id in predicted_ids
+                if np.count_nonzero(predicted_instance == instance_id)
+                >= min_predicted_instance_points
+            ],
+            dtype=predicted_ids.dtype,
+        )
+    if min_predicted_tree_fraction:
+        predicted_ids = np.asarray(
+            [
+                instance_id
+                for instance_id in predicted_ids
+                if (
+                    np.count_nonzero(
+                        np.isin(
+                            labels.predicted_semantic[
+                                labels.predicted_instance == instance_id
+                            ],
+                            list(prediction_tree_classes),
+                        )
+                    )
+                    / np.count_nonzero(labels.predicted_instance == instance_id)
+                )
+                >= min_predicted_tree_fraction
+            ],
+            dtype=predicted_ids.dtype,
+        )
     reference_ids = allowed_instance_ids(
         reference_instance,
         reference_semantic,
@@ -458,6 +496,8 @@ def evaluate_pointwise(
         "prediction_instance_count": len(predicted_ids),
         "reference_instance_count": len(reference_ids),
         "iou_threshold": iou_threshold,
+        "min_predicted_instance_points": min_predicted_instance_points,
+        "min_predicted_tree_fraction": min_predicted_tree_fraction,
         "mean_unweighted_coverage": mean_coverage,
         "mean_weighted_coverage": weighted_coverage,
         "paper_compatible": paper_metrics,
@@ -525,6 +565,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ignored-reference-labels", default="-1")
     parser.add_argument("--ignored-prediction-labels", default="-1")
     parser.add_argument("--iou-threshold", type=float, default=0.5)
+    parser.add_argument("--min-predicted-instance-points", type=int, default=0)
+    parser.add_argument("--min-predicted-tree-fraction", type=float, default=0.0)
     parser.add_argument("--plot-name")
     parser.add_argument("--collection")
     parser.add_argument("--split")
@@ -604,6 +646,8 @@ def main() -> int:
         ignored_reference_labels=ignored_reference_labels,
         ignored_prediction_labels=parse_number_set(args.ignored_prediction_labels),
         iou_threshold=args.iou_threshold,
+        min_predicted_instance_points=args.min_predicted_instance_points,
+        min_predicted_tree_fraction=args.min_predicted_tree_fraction,
     )
     payload = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -630,6 +674,8 @@ def main() -> int:
         "ignored_prediction_labels": sorted(
             parse_number_set(args.ignored_prediction_labels)
         ),
+        "min_predicted_instance_points": args.min_predicted_instance_points,
+        "min_predicted_tree_fraction": args.min_predicted_tree_fraction,
         **result,
     }
     output_path = resolve_path(args.output_json)

@@ -1,0 +1,2 @@
+run_id,selected_using_split,min_predicted_instance_points,min_predicted_tree_fraction,n_plots,mean_f1,median_f1,min_f1,max_f1,mean_precision,mean_recall,total_predictions,total_references,total_tp,total_fp,total_fn,protocol_note
+sat_for_quicktune_to49_20260706_140730,trained_validation,5000,0.0,5,0.5514282675036258,0.5882352941176471,0.18604651162790697,0.923076923076923,0.4883755083954486,0.6534085230112217,262,223,96,166,127,validation_only_selection_no_test_access

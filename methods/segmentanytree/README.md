@@ -2,17 +2,24 @@
 
 SegmentAnyTree is the current labelled-accuracy method for FOR-instance.
 
-## Current experiment
+## Completed experiment
 
 The primary experiment trains from scratch on the supplied FOR-instance
 development split. A fixed seed-42 partition assigns 16 plots to training and
-five to internal validation. The 11 test plots are held out until model
-selection and aligned-output checks are complete.
+five to internal validation. The 11 test plots were held out until checkpoint
+selection and aligned-output checks were complete.
 
-As of 6 July 2026, the epoch-47 checkpoint has a mean aligned F1 of `0.513`
-across the five development validation plots, compared with `0.458` at epoch
-45. A two-epoch continuation to epoch 49 is running. The 11 held-out test plots
-remain untouched, and no final test accuracy is available.
+The accepted checkpoint is `sat_for_quicktune_to49_20260706_140730`. It
+reports mean aligned F1 `0.537` across the five development validation plots
+and `0.480` across the 11 held-out test plots. The continuation
+`sat_for_quicktune_to55_20260707_214305` is rejected because validation fell to
+`0.451`.
+
+Failure-mode diagnostics show that the low held-out score is mainly caused by
+over-segmentation and background-confusion false positives. TUWIEN and RMIT
+are the weakest site-transfer cases; NIBIO has relatively high recall but low
+precision. A validation-only post-processing sweep is retained as a diagnostic
+ablation and does not replace the accepted unfiltered test result.
 
 Start with:
 

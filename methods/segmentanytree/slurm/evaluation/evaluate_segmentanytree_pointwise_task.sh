@@ -8,6 +8,8 @@ REQUIRED_SPLIT="${SEGMENTANYTREE_REQUIRED_SPLIT:-test}"
 OUTPUT_BASE="${SEGMENTANYTREE_POINTWISE_OUTPUT_ROOT:-$PROJECT_ROOT/data/predictions/segmentanytree/for_instance_pointwise}"
 RESULT_BASE="${SEGMENTANYTREE_POINTWISE_EVALUATION_ROOT:-$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/pointwise_paper}"
 TABLE_BASE="${SEGMENTANYTREE_POINTWISE_TABLE_ROOT:-$PROJECT_ROOT/results/tables/segmentanytree_for_instance/pointwise_paper}"
+MIN_PREDICTED_INSTANCE_POINTS="${SEGMENTANYTREE_MIN_PREDICTED_INSTANCE_POINTS:-0}"
+MIN_PREDICTED_TREE_FRACTION="${SEGMENTANYTREE_MIN_PREDICTED_TREE_FRACTION:-0}"
 
 cd "$PROJECT_ROOT"
 mkdir -p logs/segmentanytree_for_instance
@@ -58,6 +60,8 @@ python methods/segmentanytree/scripts/evaluation/pointwise_instance_metrics.py \
   --ignored-reference-labels=-1 \
   --ignored-prediction-labels=-1,0 \
   --iou-threshold 0.5 \
+  --min-predicted-instance-points "$MIN_PREDICTED_INSTANCE_POINTS" \
+  --min-predicted-tree-fraction "$MIN_PREDICTED_TREE_FRACTION" \
   --plot-name "$PLOT_NAME" \
   --collection "$COLLECTION" \
   --split "$SPLIT" \

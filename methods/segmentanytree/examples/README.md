@@ -14,5 +14,20 @@ pilot investigation. Those values are also provisional.
 Files ending in `_example` contain fabricated values that illustrate table
 schemas. They are not benchmark results.
 
-Validated full-training results will receive a separate, explicit name only
-after the frozen checkpoint has been evaluated on all 11 held-out test plots.
+The accepted full-training SAT checkpoint is
+`sat_for_quicktune_to49_20260706_140730`.
+
+- `sat_plot_failure_modes_*.csv` contains per-plot validation and held-out
+  test metrics for the accepted checkpoint.
+- `sat_site_failure_modes_*.csv` aggregates those metrics by split and site.
+- `sat_unmatched_prediction_audit_*.csv` and
+  `sat_unmatched_reference_audit_*.csv` explain false-positive and
+  false-negative failure modes without exposing point coordinates.
+- `sat_training_vs_validation_domain_audit_*.csv` records public-safe split and
+  domain-distribution counts.
+- `sat_validation_postprocess_*` records a validation-only post-processing
+  sweep. It is an ablation, not the headline held-out test result.
+
+The headline accepted SAT result is the unfiltered aligned point-wise held-out
+test mean F1 `0.480`. The validation-selected size filter improved validation
+slightly but did not replace the accepted unfiltered test score.

@@ -87,13 +87,13 @@ training logs remain outside Git.
 
 The initial full run produced an epoch-30 checkpoint before its next MeanShift
 stage became impractically slow. The resumed epoch-45 checkpoint reached mean
-aligned F1 `0.4580` across the five fixed development validation plots. A
-two-epoch continuation completed in `01:43:26` and improved every validation
-plot, reaching mean F1 `0.5127` at epoch 47.
+aligned F1 `0.4580` across the five fixed development validation plots. The
+accepted checkpoint is `sat_for_quicktune_to49_20260706_140730`, with mean
+validation F1 `0.5371` and held-out test mean F1 `0.4798`. The later
+`sat_for_quicktune_to55_20260707_214305` continuation is rejected because
+validation fell to `0.4505`.
 
-A further two-epoch continuation to epoch 49 is running as job `9668753` when
-last recorded. The 11 held-out test plots have not been submitted. Current
-results, resource observations and the checkpoint decision gate are recorded
+Current results, resource observations and the checkpoint decision are recorded
 in
 [`training_progress_20260706.md`](training_progress_20260706.md).
 The original July 4 source hashes and job chain remain in
@@ -106,9 +106,8 @@ validation range from the split manifest.
 
 The pinned trainer loops to, but not including, `training.epochs`; the wrapper
 therefore passes a stop value one greater than the requested epoch count and
-records both values. Do not submit the guarded test scripts until the full
-checkpoint is selected from development validation and its settings are
-frozen.
+records both values. Test evaluation is guarded so future method-development
+experiments cannot overwrite the accepted unfiltered `to49` result.
 
 ## Working Barkla Setup
 

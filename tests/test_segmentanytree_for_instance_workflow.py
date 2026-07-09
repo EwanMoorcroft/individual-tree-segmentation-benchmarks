@@ -1679,6 +1679,7 @@ def test_three_variation_overnight_workflow_is_guarded() -> None:
 
     assert "SEGMENTANYTREE_THREE_VARIATION_CONFIRMED" in submitter
     assert "SEGMENTANYTREE_PRETRAINED_CHECKPOINT" in submitter
+    assert "SEGMENTANYTREE_CHECKPOINT_DIR=$RELEASED_DIR" not in submitter
     assert "SEGMENTANYTREE_TRAIN_BASE_LR=0.0001" in submitter
     assert "SEGMENTANYTREE_TRAIN_EPOCHS=$FINETUNE_EPOCHS" in submitter
     assert "afterok:$finetune_validation_gate" in submitter

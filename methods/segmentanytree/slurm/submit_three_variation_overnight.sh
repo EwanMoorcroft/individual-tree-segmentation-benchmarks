@@ -108,7 +108,7 @@ submitted_jobs+=("$checkpoint_job")
 pretrained_pilot_infer=$(sbatch --parsable \
   --array=0 \
   --dependency="afterok:$checkpoint_job" \
-  --export="ALL,SEGMENTANYTREE_EXECUTE=1,SEGMENTANYTREE_CHECKPOINT_DIR=$RELEASED_DIR,SEGMENTANYTREE_RUN_TYPE=published_pretrained_inference,SEGMENTANYTREE_POINTWISE_OUTPUT_ROOT=$PRETRAINED_PREDICTIONS,SEGMENTANYTREE_POINTWISE_RUN_METADATA_ROOT=$PRETRAINED_RUN_METADATA" \
+  --export="ALL,SEGMENTANYTREE_EXECUTE=1,SEGMENTANYTREE_RUN_TYPE=published_pretrained_inference,SEGMENTANYTREE_POINTWISE_OUTPUT_ROOT=$PRETRAINED_PREDICTIONS,SEGMENTANYTREE_POINTWISE_RUN_METADATA_ROOT=$PRETRAINED_RUN_METADATA" \
   methods/segmentanytree/slurm/inference/run_segmentanytree_for_instance_paper_test_array.sbatch)
 submitted_jobs+=("$pretrained_pilot_infer")
 pretrained_pilot_eval=$(sbatch --parsable \
@@ -125,7 +125,7 @@ submitted_jobs+=("$pretrained_pilot_gate")
 pretrained_rest_infer=$(sbatch --parsable \
   --array=1-10%2 \
   --dependency="afterok:$pretrained_pilot_gate" \
-  --export="ALL,SEGMENTANYTREE_EXECUTE=1,SEGMENTANYTREE_CHECKPOINT_DIR=$RELEASED_DIR,SEGMENTANYTREE_RUN_TYPE=published_pretrained_inference,SEGMENTANYTREE_POINTWISE_OUTPUT_ROOT=$PRETRAINED_PREDICTIONS,SEGMENTANYTREE_POINTWISE_RUN_METADATA_ROOT=$PRETRAINED_RUN_METADATA" \
+  --export="ALL,SEGMENTANYTREE_EXECUTE=1,SEGMENTANYTREE_RUN_TYPE=published_pretrained_inference,SEGMENTANYTREE_POINTWISE_OUTPUT_ROOT=$PRETRAINED_PREDICTIONS,SEGMENTANYTREE_POINTWISE_RUN_METADATA_ROOT=$PRETRAINED_RUN_METADATA" \
   methods/segmentanytree/slurm/inference/run_segmentanytree_for_instance_paper_test_array.sbatch)
 submitted_jobs+=("$pretrained_rest_infer")
 pretrained_rest_eval=$(sbatch --parsable \

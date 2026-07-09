@@ -1624,6 +1624,7 @@ def test_segmentanytree_training_shell_scripts_parse() -> None:
         "methods/segmentanytree/slurm/evaluation/summarise_segmentanytree_three_variations.sbatch",
         "methods/segmentanytree/slurm/submit_full_training_chain.sh",
         "methods/segmentanytree/slurm/submit_three_variation_overnight.sh",
+        "methods/segmentanytree/slurm/recover_three_variation_pretrained.sh",
         "methods/segmentanytree/slurm/monitor_three_variation_overnight.sh",
     ]
     for relative_path in scripts:

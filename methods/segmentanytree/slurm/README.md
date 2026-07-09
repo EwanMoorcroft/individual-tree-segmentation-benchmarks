@@ -83,3 +83,43 @@ development-only.
 Historical released-checkpoint and export-audit scripts remain available for
 traceability, but the trained validation route is the current canonical
 workflow.
+
+## Three-variation overnight run
+
+`submit_three_variation_overnight.sh` produces the two missing aligned test
+results while retaining the accepted development-retrained result:
+
+1. `published_pretrained`: the released checkpoint is extracted from the
+   pinned container, hash-checked and evaluated without weight updates;
+2. `retrained_from_dev`: the existing accepted epoch-49 result is verified by
+   checkpoint hash and reused; and
+3. `fine_tuned_on_dev`: the released weights initialise a fresh FOR-instance
+   model and optimiser, then train for a fixed 35 epochs on the 16 development
+   training plots.
+
+The fine-tune path is weight-only initialisation, not checkpoint resume. It
+requires at least 95 percent of the current model state by tensor size to be
+shape-compatible. A one-epoch full-data smoke job must complete before the
+35-epoch job starts. The held-out test array remains locked until five aligned
+development-validation metrics exist and contain predicted instances.
+
+From a clean Barkla checkout at the current `origin/main`:
+
+```bash
+cd ~/scratch/tree-seg-benchmark
+
+SEGMENTANYTREE_THREE_VARIATION_CONFIRMED=1 \
+  bash methods/segmentanytree/slurm/submit_three_variation_overnight.sh
+
+bash methods/segmentanytree/slurm/monitor_three_variation_overnight.sh --follow
+```
+
+The monitor clears and redraws five compact status lines once per minute. It
+does not print scheduler logs. Historical timings imply roughly six to eight
+hours after GPU allocation. The monitor recalculates the ETA from observed
+epoch progress once full training is running.
+
+The final CSV is written under
+`results/tables/segmentanytree_for_instance/three_variations/` and contains
+one row for each variant. A failed smoke, hash, compatibility, split,
+alignment or zero-prediction gate prevents its dependent jobs from starting.

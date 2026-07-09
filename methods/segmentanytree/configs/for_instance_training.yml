@@ -129,6 +129,17 @@ training:
     diagnostic_plots: 2
     accepted_instance_predictions: 0
     note: "The follow-up produced semantic tree predictions but all aligned instance predictions were background on the audited held-out plots."
+  replacement_fine_tuned_protocol:
+    status: ready_for_guarded_execution
+    initialisation: released_checkpoint_weights_only
+    optimizer_state: fresh
+    epoch_history: fresh
+    epochs: 35
+    base_lr: 0.0001
+    pretrained_weight_name: latest
+    minimum_compatible_weight_fraction: 0.95
+    smoke_required: true
+    development_validation_gate_required: true
   held_out_test_status: completed_once_for_selected_checkpoint
 
 paths:

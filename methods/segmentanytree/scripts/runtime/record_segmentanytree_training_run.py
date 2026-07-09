@@ -99,6 +99,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--resume-checkpoint")
     parser.add_argument("--resume-checkpoint-sha256")
     parser.add_argument("--resume-start-epoch", type=int)
+    parser.add_argument("--pretrained-checkpoint")
+    parser.add_argument("--pretrained-checkpoint-sha256")
+    parser.add_argument("--pretrained-weight-name")
+    parser.add_argument("--pretrained-validation-json")
+    parser.add_argument("--base-lr", type=float)
     parser.add_argument("--requested-epochs", type=int, required=True)
     parser.add_argument("--hydra-stop-epoch", type=int, required=True)
     parser.add_argument("--batch-size", type=int, required=True)
@@ -121,6 +126,11 @@ def main() -> int:
         if args.resume_checkpoint
         else None
     )
+    pretrained_checkpoint = (
+        Path(args.pretrained_checkpoint).expanduser().resolve()
+        if args.pretrained_checkpoint
+        else None
+    )
     if args.training_mode == "resumed_from_dev_checkpoint":
         if resume_checkpoint is None or args.resume_start_epoch is None:
             raise ValueError(
@@ -129,6 +139,14 @@ def main() -> int:
         actual_resume_sha256 = sha256(resume_checkpoint)
         if actual_resume_sha256 != args.resume_checkpoint_sha256:
             raise ValueError("Resume checkpoint SHA-256 does not match metadata.")
+    if args.training_mode == "fine_tuned_on_dev":
+        if pretrained_checkpoint is None or not args.pretrained_weight_name:
+            raise ValueError(
+                "Fine-tuning requires a pretrained checkpoint and weight name."
+            )
+        actual_pretrained_sha256 = sha256(pretrained_checkpoint)
+        if actual_pretrained_sha256 != args.pretrained_checkpoint_sha256:
+            raise ValueError("Pretrained checkpoint SHA-256 does not match metadata.")
     external_repo = Path(args.external_repo).expanduser().resolve()
     image = Path(args.image).expanduser().resolve()
     package_path = (
@@ -195,6 +213,17 @@ def main() -> int:
         ),
         "resume_checkpoint_sha256": sha256(resume_checkpoint),
         "resume_start_epoch": args.resume_start_epoch,
+        "pretrained_checkpoint": (
+            str(pretrained_checkpoint) if pretrained_checkpoint else None
+        ),
+        "pretrained_checkpoint_sha256": sha256(pretrained_checkpoint),
+        "pretrained_weight_name": args.pretrained_weight_name,
+        "pretrained_load_validation": read_json(
+            Path(args.pretrained_validation_json).expanduser().resolve()
+            if args.pretrained_validation_json
+            else None
+        ),
+        "base_lr": args.base_lr,
         "stall_timeout_seconds": args.stall_timeout_seconds,
         "stall_watchdog": read_text(stall_marker),
         "status": args.status,

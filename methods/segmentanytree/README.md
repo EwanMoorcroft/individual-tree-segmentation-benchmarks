@@ -102,3 +102,10 @@ validation fell to `0.451`. The `fine_tuned_on_dev` follow-up
 rejected because its instance output was all background on the audited
 held-out plots. The current status is recorded in
 [`../../BENCHMARKS.md`](../../BENCHMARKS.md).
+
+The canonical replacement experiment is the guarded three-variation workflow
+in [`slurm/README.md`](slurm/README.md). It evaluates the released checkpoint
+with the same aligned route as the accepted result and implements true
+`fine_tuned_on_dev` training as weight-only initialisation with a fresh
+FOR-instance optimiser and epoch history. The rejected 8 July run remains
+historical evidence and is never used as an initial checkpoint or result.

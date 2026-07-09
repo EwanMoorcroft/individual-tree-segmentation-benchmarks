@@ -29,6 +29,7 @@ import copy
 DIAGNOSTIC_IMPORT_BLOCK = """import os
 import copy
 import faulthandler
+import json
 
 _diagnostic_stack_seconds = int(
     os.environ.get("SEGMENTANYTREE_DIAGNOSTIC_STACK_SECONDS", "0")
@@ -39,6 +40,70 @@ if _diagnostic_stack_seconds > 0:
         _diagnostic_stack_seconds,
         repeat=False,
     )
+"""
+PRETRAINED_LOAD_ANCHOR = """            self._model.set_pretrained_weights()
+"""
+PRETRAINED_LOAD_VALIDATION = PRETRAINED_LOAD_ANCHOR + """            if os.environ.get("SEGMENTANYTREE_REQUIRE_PRETRAINED_LOAD") == "1":
+                pretrained_path = os.environ["SEGMENTANYTREE_PRETRAINED_PATH"]
+                weight_name = os.environ.get(
+                    "SEGMENTANYTREE_PRETRAINED_WEIGHT_NAME",
+                    "latest",
+                )
+                checkpoint = torch.load(pretrained_path, map_location="cpu")
+                models = checkpoint.get("models", {})
+                if weight_name not in models:
+                    raise ValueError(
+                        "Pretrained checkpoint does not contain weight set {}. "
+                        "Available: {}".format(weight_name, sorted(models))
+                    )
+                weights = models[weight_name]
+                model_state = self._model.state_dict()
+                compatible = {
+                    key: value
+                    for key, value in weights.items()
+                    if key in model_state and value.size() == model_state[key].size()
+                }
+                total_numel = sum(value.numel() for value in model_state.values())
+                compatible_numel = sum(value.numel() for value in compatible.values())
+                compatible_fraction = (
+                    compatible_numel / total_numel if total_numel else 0.0
+                )
+                minimum_fraction = float(
+                    os.environ.get(
+                        "SEGMENTANYTREE_PRETRAINED_MIN_COMPATIBLE_FRACTION",
+                        "0.95",
+                    )
+                )
+                if compatible_fraction < minimum_fraction:
+                    raise ValueError(
+                        "Pretrained checkpoint compatibility {:.6f} is below "
+                        "required {:.6f}.".format(
+                            compatible_fraction,
+                            minimum_fraction,
+                        )
+                    )
+                self._model.load_state_dict_with_same_shape(weights, strict=False)
+                validation_path = os.environ.get(
+                    "SEGMENTANYTREE_PRETRAINED_VALIDATION_OUTPUT"
+                )
+                if validation_path:
+                    with open(validation_path, "w", encoding="utf-8") as handle:
+                        json.dump(
+                            {
+                                "checkpoint": pretrained_path,
+                                "weight_name": weight_name,
+                                "checkpoint_state_keys": len(weights),
+                                "compatible_state_keys": len(compatible),
+                                "compatible_numel": compatible_numel,
+                                "model_numel": total_numel,
+                                "compatible_fraction": compatible_fraction,
+                                "minimum_fraction": minimum_fraction,
+                            },
+                            handle,
+                            indent=2,
+                            sort_keys=True,
+                        )
+                        handle.write("\\n")
 """
 
 
@@ -57,11 +122,17 @@ def patch_source(source: str) -> str:
         raise ValueError("Expected the pinned trainer's incomplete resume block.")
     if source.count(IMPORT_BLOCK) != 1:
         raise ValueError("Expected the pinned trainer import block.")
+    if source.count(PRETRAINED_LOAD_ANCHOR) != 1:
+        raise ValueError("Expected the pinned trainer pretrained-load anchor.")
     patched = source.replace(
         TEST_EVALUATION_BLOCK,
         DISABLED_TEST_EVALUATION_BLOCK,
     )
     patched = patched.replace(INCOMPLETE_RESUME_BLOCK, RESUME_SCALER_BLOCK)
+    patched = patched.replace(
+        PRETRAINED_LOAD_ANCHOR,
+        PRETRAINED_LOAD_VALIDATION,
+    )
     return patched.replace(IMPORT_BLOCK, DIAGNOSTIC_IMPORT_BLOCK)
 
 
@@ -101,6 +172,7 @@ def main() -> int:
                     "automatic_test_evaluation_disabled": True,
                     "validation_evaluation_preserved": True,
                     "resume_gradient_scaler_initialized": True,
+                    "pretrained_weight_compatibility_check_supported": True,
                     "diagnostic_stack_dump_supported": True,
                 },
                 indent=2,

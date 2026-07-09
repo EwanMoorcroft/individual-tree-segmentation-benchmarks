@@ -27,6 +27,12 @@ MEANSHIFT_JOBS="${SEGMENTANYTREE_MEANSHIFT_JOBS:-2}"
 OMP_THREADS="${SEGMENTANYTREE_OMP_NUM_THREADS:-1}"
 RESUME_CHECKPOINT="${SEGMENTANYTREE_RESUME_CHECKPOINT:-}"
 RESUME_CHECKPOINT_SHA256="${SEGMENTANYTREE_RESUME_CHECKPOINT_SHA256:-}"
+PRETRAINED_CHECKPOINT="${SEGMENTANYTREE_PRETRAINED_CHECKPOINT:-}"
+PRETRAINED_CHECKPOINT_SHA256="${SEGMENTANYTREE_PRETRAINED_CHECKPOINT_SHA256:-}"
+PRETRAINED_WEIGHT_NAME="${SEGMENTANYTREE_PRETRAINED_WEIGHT_NAME:-latest}"
+PRETRAINED_MIN_FRACTION="${SEGMENTANYTREE_PRETRAINED_MIN_COMPATIBLE_FRACTION:-0.95}"
+PRETRAINED_VALIDATION="$TRAINING_OUTPUT_ROOT/pretrained_load_validation.json"
+BASE_LR="${SEGMENTANYTREE_TRAIN_BASE_LR:-}"
 RESUME_START_EPOCH=""
 TRAINING_MODE="retrained_from_dev"
 
@@ -70,6 +76,14 @@ if [[ ! "$OMP_THREADS" =~ ^[1-9][0-9]*$ ]]; then
   echo "SEGMENTANYTREE_OMP_NUM_THREADS must be a positive integer." >&2
   exit 2
 fi
+if [[ -n "$BASE_LR" && ! "$BASE_LR" =~ ^[0-9]+([.][0-9]+)?([eE]-?[0-9]+)?$ ]]; then
+  echo "SEGMENTANYTREE_TRAIN_BASE_LR must be a non-negative number." >&2
+  exit 2
+fi
+if [[ -n "$RESUME_CHECKPOINT" && -n "$PRETRAINED_CHECKPOINT" ]]; then
+  echo "Resume and pretrained weight-only initialization are mutually exclusive." >&2
+  exit 2
+fi
 if [[ -n "$RESUME_CHECKPOINT" ]]; then
   if [[ ! -f "$RESUME_CHECKPOINT" ]]; then
     echo "Resume checkpoint does not exist: $RESUME_CHECKPOINT" >&2
@@ -94,6 +108,40 @@ if [[ -n "$RESUME_CHECKPOINT" ]]; then
   TRAINING_MODE="resumed_from_dev_checkpoint"
 elif [[ -n "$RESUME_CHECKPOINT_SHA256" ]]; then
   echo "SEGMENTANYTREE_RESUME_CHECKPOINT_SHA256 requires SEGMENTANYTREE_RESUME_CHECKPOINT." >&2
+  exit 2
+fi
+if [[ -n "$PRETRAINED_CHECKPOINT" ]]; then
+  if [[ ! -f "$PRETRAINED_CHECKPOINT" ]]; then
+    echo "Pretrained checkpoint does not exist: $PRETRAINED_CHECKPOINT" >&2
+    exit 2
+  fi
+  PRETRAINED_CHECKPOINT=$(realpath "$PRETRAINED_CHECKPOINT")
+  if [[ "$(basename "$PRETRAINED_CHECKPOINT")" != "PointGroup-PAPER.pt" ]]; then
+    echo "Pretrained checkpoint must be named PointGroup-PAPER.pt." >&2
+    exit 2
+  fi
+  if [[ ! "$PRETRAINED_CHECKPOINT_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+    echo "Set SEGMENTANYTREE_PRETRAINED_CHECKPOINT_SHA256 to the reviewed checkpoint hash." >&2
+    exit 2
+  fi
+  ACTUAL_PRETRAINED_SHA256=$(sha256sum "$PRETRAINED_CHECKPOINT" | awk '{print $1}')
+  if [[ "$ACTUAL_PRETRAINED_SHA256" != "$PRETRAINED_CHECKPOINT_SHA256" ]]; then
+    echo "Pretrained checkpoint SHA-256 mismatch: $ACTUAL_PRETRAINED_SHA256" >&2
+    echo "Expected: $PRETRAINED_CHECKPOINT_SHA256" >&2
+    exit 2
+  fi
+  if [[ ! "$PRETRAINED_WEIGHT_NAME" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+    echo "SEGMENTANYTREE_PRETRAINED_WEIGHT_NAME contains unsupported characters." >&2
+    exit 2
+  fi
+  if [[ ! "$PRETRAINED_MIN_FRACTION" =~ ^0([.][0-9]+)?$|^1([.]0+)?$ ]]; then
+    echo "SEGMENTANYTREE_PRETRAINED_MIN_COMPATIBLE_FRACTION must be between 0 and 1." >&2
+    exit 2
+  fi
+  PRETRAINED_CHECKPOINT_DIR=$(dirname "$PRETRAINED_CHECKPOINT")
+  TRAINING_MODE="fine_tuned_on_dev"
+elif [[ -n "$PRETRAINED_CHECKPOINT_SHA256" ]]; then
+  echo "SEGMENTANYTREE_PRETRAINED_CHECKPOINT_SHA256 requires SEGMENTANYTREE_PRETRAINED_CHECKPOINT." >&2
   exit 2
 fi
 
@@ -155,6 +203,16 @@ APPTAINER_ARGS=(
 if [[ -n "$RESUME_CHECKPOINT" ]]; then
   APPTAINER_ARGS+=(--bind "$RESUME_CHECKPOINT_DIR:/sat_resume:ro")
 fi
+if [[ -n "$PRETRAINED_CHECKPOINT" ]]; then
+  APPTAINER_ARGS+=(
+    --bind "$PRETRAINED_CHECKPOINT_DIR:/sat_pretrained:ro"
+    --env "SEGMENTANYTREE_REQUIRE_PRETRAINED_LOAD=1"
+    --env "SEGMENTANYTREE_PRETRAINED_PATH=/sat_pretrained/PointGroup-PAPER.pt"
+    --env "SEGMENTANYTREE_PRETRAINED_WEIGHT_NAME=$PRETRAINED_WEIGHT_NAME"
+    --env "SEGMENTANYTREE_PRETRAINED_MIN_COMPATIBLE_FRACTION=$PRETRAINED_MIN_FRACTION"
+    --env "SEGMENTANYTREE_PRETRAINED_VALIDATION_OUTPUT=/sat_output/pretrained_load_validation.json"
+  )
+fi
 APPTAINER_ARGS+=("$IMAGE")
 
 TRAIN_COMMAND=(
@@ -212,6 +270,9 @@ print(
     echo "Resume checkpoint already reached requested epoch $REQUESTED_EPOCHS." >&2
     exit 2
   fi
+fi
+if [[ -n "$BASE_LR" ]]; then
+  TRAIN_COMMAND+=("training.optim.base_lr=$BASE_LR")
 fi
 
 {
@@ -330,6 +391,17 @@ if [[ -n "$RESUME_CHECKPOINT" ]]; then
     --resume-checkpoint-sha256 "$RESUME_CHECKPOINT_SHA256"
     --resume-start-epoch "$RESUME_START_EPOCH"
   )
+fi
+if [[ -n "$PRETRAINED_CHECKPOINT" ]]; then
+  RECORD_ARGS+=(
+    --pretrained-checkpoint "$PRETRAINED_CHECKPOINT"
+    --pretrained-checkpoint-sha256 "$PRETRAINED_CHECKPOINT_SHA256"
+    --pretrained-weight-name "$PRETRAINED_WEIGHT_NAME"
+    --pretrained-validation-json "$PRETRAINED_VALIDATION"
+  )
+fi
+if [[ -n "$BASE_LR" ]]; then
+  RECORD_ARGS+=(--base-lr "$BASE_LR")
 fi
 if [[ -f "$STALL_MARKER" ]]; then
   RECORD_ARGS+=(--stall-marker "$STALL_MARKER")

@@ -1303,6 +1303,12 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
     assert "data.dataroot=/sat_data" in training_task
     assert "SEGMENTANYTREE_RESUME_CHECKPOINT" in training_task
     assert "SEGMENTANYTREE_RESUME_CHECKPOINT_SHA256" in training_task
+    assert "SEGMENTANYTREE_PRETRAINED_CHECKPOINT" in training_task
+    assert "SEGMENTANYTREE_PRETRAINED_CHECKPOINT_SHA256" in training_task
+    assert 'TRAINING_MODE="fine_tuned_on_dev"' in training_task
+    assert "SEGMENTANYTREE_REQUIRE_PRETRAINED_LOAD=1" in training_task
+    assert "SEGMENTANYTREE_PRETRAINED_PATH=/sat_pretrained/PointGroup-PAPER.pt" in training_task
+    assert "training.optim.base_lr=$BASE_LR" in training_task
     assert "checkpoint_dir=/sat_resume" in training_task
     assert "weight_name=latest" in training_task
     assert "SEGMENTANYTREE_STALL_TIMEOUT_SECONDS" in training_task
@@ -1341,6 +1347,7 @@ def test_dev_only_trainer_patch_preserves_validation() -> None:
         patcher.IMPORT_BLOCK
         + "def train(self):\n"
         + patcher.INCOMPLETE_RESUME_BLOCK
+        + patcher.PRETRAINED_LOAD_ANCHOR
         + block
         + "    if self._dataset.has_val_loader:\n"
         + '        self._test_epoch(epoch, "val")\n'
@@ -1355,6 +1362,115 @@ def test_dev_only_trainer_patch_preserves_validation() -> None:
     assert "torch.cuda.amp.GradScaler" in patched
     assert patcher.INCOMPLETE_RESUME_BLOCK not in patched
     assert "faulthandler.dump_traceback_later" in patched
+    assert "SEGMENTANYTREE_REQUIRE_PRETRAINED_LOAD" in patched
+    assert "compatible_fraction" in patched
+    assert "SEGMENTANYTREE_PRETRAINED_VALIDATION_OUTPUT" in patched
+
+
+def test_training_metadata_records_finetune_provenance(
+    tmp_path: Path, monkeypatch
+) -> None:
+    recorder = load_script(
+        (
+            "methods/segmentanytree/scripts/runtime/"
+            "record_segmentanytree_training_run.py"
+        ),
+        "segmentanytree_finetune_recorder",
+    )
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "dataset_role_counts": {"dev": 21, "test": 11},
+                "selected_role_counts": {
+                    "train": 16,
+                    "val": 5,
+                    "held_out_test": 0,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    pretrained = tmp_path / "pretrained" / "PointGroup-PAPER.pt"
+    pretrained.parent.mkdir()
+    pretrained.write_bytes(b"released checkpoint")
+    checkpoint = tmp_path / "output" / "run" / "PointGroup-PAPER.pt"
+    checkpoint.parent.mkdir(parents=True)
+    checkpoint.write_bytes(b"fine-tuned checkpoint")
+    validation = tmp_path / "output" / "pretrained_load_validation.json"
+    validation.write_text(
+        json.dumps({"compatible_fraction": 0.999}), encoding="utf-8"
+    )
+    command = tmp_path / "output" / "training_command.txt"
+    command.write_text("apptainer exec training\n", encoding="utf-8")
+    image = tmp_path / "segment-any-tree.sif"
+    image.write_bytes(b"image")
+    external_repo = tmp_path / "SegmentAnyTree"
+    external_repo.mkdir()
+    output = tmp_path / "metadata.json"
+    pretrained_sha256 = recorder.sha256(pretrained)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "record_segmentanytree_training_run.py",
+            "--output",
+            str(output),
+            "--run-id",
+            "finetune-test",
+            "--run-type",
+            "full_training",
+            "--training-mode",
+            "fine_tuned_on_dev",
+            "--profile",
+            "full",
+            "--split-manifest",
+            str(manifest),
+            "--training-data-root",
+            str(tmp_path / "training-data"),
+            "--training-output-root",
+            str(tmp_path / "output"),
+            "--external-repo",
+            str(external_repo),
+            "--image",
+            str(image),
+            "--python-userbase",
+            str(tmp_path / "python-userbase"),
+            "--command-file",
+            str(command),
+            "--checkpoint",
+            str(checkpoint),
+            "--pretrained-checkpoint",
+            str(pretrained),
+            "--pretrained-checkpoint-sha256",
+            pretrained_sha256,
+            "--pretrained-weight-name",
+            "latest",
+            "--pretrained-validation-json",
+            str(validation),
+            "--base-lr",
+            "0.0001",
+            "--requested-epochs",
+            "35",
+            "--hydra-stop-epoch",
+            "36",
+            "--batch-size",
+            "8",
+            "--status",
+            "completed",
+            "--return-code",
+            "0",
+        ],
+    )
+
+    assert recorder.main() == 0
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["training_mode"] == "fine_tuned_on_dev"
+    assert payload["pretrained_checkpoint"] == str(pretrained)
+    assert payload["pretrained_checkpoint_sha256"] == pretrained_sha256
+    assert payload["pretrained_weight_name"] == "latest"
+    assert payload["pretrained_load_validation"]["compatible_fraction"] == 0.999
+    assert payload["base_lr"] == 0.0001
 
 
 def test_meanshift_patch_uses_persistent_spawn_pool() -> None:
@@ -1493,6 +1609,7 @@ def test_training_metadata_records_resume_provenance(
 def test_segmentanytree_training_shell_scripts_parse() -> None:
     scripts = [
         "methods/segmentanytree/slurm/training/prepare_for_instance_segmentanytree_splits.sbatch",
+        "methods/segmentanytree/slurm/training/prepare_segmentanytree_released_checkpoint.sbatch",
         "methods/segmentanytree/slurm/training/train_segmentanytree_for_instance_task.sh",
         "methods/segmentanytree/slurm/training/train_segmentanytree_for_instance_pilot.sbatch",
         "methods/segmentanytree/slurm/training/train_segmentanytree_for_instance_full.sbatch",
@@ -1503,7 +1620,11 @@ def test_segmentanytree_training_shell_scripts_parse() -> None:
         "methods/segmentanytree/slurm/evaluation/evaluate_segmentanytree_for_instance_test_from_checkpoint.sbatch",
         "methods/segmentanytree/slurm/evaluation/audit_segmentanytree_failure_modes.sbatch",
         "methods/segmentanytree/slurm/evaluation/sweep_segmentanytree_validation_postprocessing.sbatch",
+        "methods/segmentanytree/slurm/evaluation/validate_segmentanytree_variant.sbatch",
+        "methods/segmentanytree/slurm/evaluation/summarise_segmentanytree_three_variations.sbatch",
         "methods/segmentanytree/slurm/submit_full_training_chain.sh",
+        "methods/segmentanytree/slurm/submit_three_variation_overnight.sh",
+        "methods/segmentanytree/slurm/monitor_three_variation_overnight.sh",
     ]
     for relative_path in scripts:
         completed = subprocess.run(
@@ -1546,6 +1667,84 @@ def test_full_training_submission_wrapper_derives_validation_array() -> None:
     assert '--partition="$TRAIN_PARTITION"' in wrapper
     assert '--cpus-per-task="$TRAIN_CPUS"' in wrapper
     assert 'printf \'FULL_RESUME_CHECKPOINT=%q\\n\'' in wrapper
+
+
+def test_three_variation_overnight_workflow_is_guarded() -> None:
+    submitter = (
+        ROOT / "methods/segmentanytree/slurm/submit_three_variation_overnight.sh"
+    ).read_text(encoding="utf-8")
+    monitor = (
+        ROOT / "methods/segmentanytree/slurm/monitor_three_variation_overnight.sh"
+    ).read_text(encoding="utf-8")
+
+    assert "SEGMENTANYTREE_THREE_VARIATION_CONFIRMED" in submitter
+    assert "SEGMENTANYTREE_PRETRAINED_CHECKPOINT" in submitter
+    assert "SEGMENTANYTREE_TRAIN_BASE_LR=0.0001" in submitter
+    assert "SEGMENTANYTREE_TRAIN_EPOCHS=$FINETUNE_EPOCHS" in submitter
+    assert "afterok:$finetune_validation_gate" in submitter
+    assert "SEGMENTANYTREE_FINAL_TEST_CONFIRMED=1" in submitter
+    assert "three_variations_$STAMP.csv" in submitter
+    assert "--follow" in monitor
+    assert "tail -n 20" not in monitor
+    assert "ETA:" in monitor
+
+
+def test_segmentanytree_variant_summary_rejects_zero_predictions(
+    tmp_path: Path,
+) -> None:
+    summariser = load_script(
+        (
+            "methods/segmentanytree/scripts/evaluation/"
+            "summarise_segmentanytree_variants.py"
+        ),
+        "segmentanytree_variant_summariser",
+    )
+    metrics = tmp_path / "metrics"
+    metrics.mkdir()
+    payload = {
+        "evaluator": "pointwise_instance_metrics",
+        "collection": "CULS",
+        "plot_name": "plot_2_annotated",
+        "relative_path": "CULS/plot_2_annotated.las",
+        "split": "test",
+        "point_count": 100,
+        "prediction_instance_count": 0,
+        "reference_instance_count": 2,
+        "mean_unweighted_coverage": 0.0,
+        "mean_weighted_coverage": 0.0,
+        "harmonized": {
+            "true_positives": 0,
+            "false_positives": 0,
+            "false_negatives": 2,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "mean_matched_iou": 0.0,
+        },
+        "paper_compatible": {"f1": 0.0},
+    }
+    (metrics / "plot.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="zero predicted instances"):
+        summariser.summarise_variant("fine_tuned", metrics, 1, "test", True)
+
+    payload["prediction_instance_count"] = 3
+    payload["harmonized"].update(
+        {
+            "true_positives": 1,
+            "false_positives": 2,
+            "false_negatives": 1,
+            "precision": 1 / 3,
+            "recall": 0.5,
+            "f1": 0.4,
+            "mean_matched_iou": 0.75,
+        }
+    )
+    payload["paper_compatible"]["f1"] = 0.4
+    (metrics / "plot.json").write_text(json.dumps(payload), encoding="utf-8")
+    row = summariser.summarise_variant("fine_tuned", metrics, 1, "test", True)
+    assert row["mean_f1"] == pytest.approx(0.4)
+    assert row["predicted_instances"] == 3
 
 
 def test_paper_aligned_inference_stops_before_export_merge() -> None:

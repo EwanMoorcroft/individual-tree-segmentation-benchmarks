@@ -27,8 +27,11 @@ Status last updated: 9 July 2026.
   complete on the exact-path local subset of 21 development and 11 test plots.
   The cautious headline test result is strict F1 `0.402`; labelled-mask test
   F1 is `0.522`.
-- **Other combinations:** TLS2trees on FOR-instance and the Wytham Woods
-  benchmarks remain candidates rather than completed studies.
+- **TreeLearn on FOR-instance:** a guarded one-plot development smoke route is
+  scaffolded but has not been run. It is not an accuracy benchmark.
+- **Other combinations:** TLS2trees on FOR-instance, full TreeLearn evaluation
+  and the Wytham Woods benchmarks remain candidates rather than completed
+  studies.
 
 The [benchmark registry](BENCHMARKS.md) is the short status index. Each
 completed, provisional or candidate row records a dataset slug, method slug,
@@ -50,13 +53,19 @@ The public repository is organised primarily by method:
 │   │   ├── examples/
 │   │   ├── scripts/
 │   │   └── slurm/
-│   ├── treex/
+│   ├── tls2trees/
 │   │   ├── configs/
 │   │   ├── docs/
 │   │   ├── examples/
 │   │   ├── scripts/
 │   │   └── slurm/
-│   └── tls2trees/
+│   ├── treelearn/
+│   │   ├── configs/
+│   │   ├── docs/
+│   │   ├── examples/
+│   │   ├── scripts/
+│   │   └── slurm/
+│   └── treex/
 │       ├── configs/
 │       ├── docs/
 │       ├── examples/
@@ -79,6 +88,8 @@ The public repository is organised primarily by method:
   TreeX benchmark using the `pointtree` API.
 - [`methods/tls2trees/README.md`](methods/tls2trees/README.md): completed FRDR
   workflow and candidate FOR-instance work.
+- [`methods/treelearn/README.md`](methods/treelearn/README.md): guarded
+  one-plot FOR-instance smoke route.
 - [`datasets/README.md`](datasets/README.md): dataset-level configuration and
   suitability.
 - [`docs/protocols/for-instance.md`](docs/protocols/for-instance.md): fixed
@@ -136,9 +147,9 @@ module load miniforge3/25.3.0-python3.12.10
 source ~/fastscratch/venvs/treebench/bin/activate
 ```
 
-SegmentAnyTree runs through Apptainer 1.3.6 on GPU nodes. TLS2trees and
-SegmentAnyTree are external dependencies and must be checked out separately
-under `external/`; they are not vendored here.
+SegmentAnyTree runs through Apptainer 1.3.6 on GPU nodes. SegmentAnyTree,
+TLS2trees, TreeLearn and TreeX/`pointtree` are external dependencies and are
+not vendored here.
 
 The expected Barkla repository root is `~/scratch/tree-seg-benchmark`. Dataset
 and fast-scratch paths are documented in the method configurations rather than
@@ -161,4 +172,6 @@ point-cloud data.
 Do not commit source point clouds, converted data, model files, checkpoints,
 containers, predictions, scheduler logs or full benchmark output. Small CSV,
 JSON and workbook summaries may be committed only when they contain no point
-coordinates, private paths or credentials.
+coordinates, private paths or credentials. Local prediction copies under
+`local_outputs/` are backup artifacts and must be preserved until an explicit
+archive or retention decision is made.

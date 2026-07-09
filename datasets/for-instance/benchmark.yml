@@ -1,7 +1,9 @@
-# Planning stub. Review paths, method-specific inputs, and dataset split before use.
+# FOR-instance dataset contract. Source point clouds remain outside Git.
 project:
   name: tree-seg-benchmark
+  dataset_slug: for-instance
   mode: labelled_accuracy_candidate
+  status: inspected_active_dataset
   barkla_root: "~/scratch/tree-seg-benchmark"
 
 dataset:
@@ -84,6 +86,8 @@ outputs:
   tables_root: "results/tables/for_instance"
 
 notes:
-  - "Edit paths and select a method wrapper before execution."
+  - "Use a method-specific wrapper and config before execution."
+  - "SegmentAnyTree and TreeX have completed current FOR-instance reporting routes."
+  - "TreeLearn and later methods must pass the method-adapter acceptance checklist before full evaluation."
   - "Do not use evaluation-split plots for training or parameter selection."
   - "Confirm positive treeID values before including any plot in evaluation."

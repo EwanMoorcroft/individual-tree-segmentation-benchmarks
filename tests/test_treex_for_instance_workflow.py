@@ -47,8 +47,9 @@ def test_treex_config_records_exact_path_subset_and_unsupervised_mode() -> None:
     assert config["method"]["preset"] == "TreeXPresetULS"
     assert config["method"]["supervised"] is False
     assert config["method"]["package_version_status"] == (
-        "pending_capture_from_barkla_environment"
+        "not_captured_in_completed_exact_path_run"
     )
+    assert "complete for current reporting" in config["method"]["package_version_note"]
     assert config["method"]["params"]["stem_search_min_cluster_intensity"] is None
     assert config["evaluation"]["primary_reporting_protocol"] == "strict"
 

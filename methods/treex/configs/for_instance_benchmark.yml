@@ -35,7 +35,8 @@ method:
   slug: treex
   package: pointtree
   package_version: null
-  package_version_status: pending_capture_from_barkla_environment
+  package_version_status: not_captured_in_completed_exact_path_run
+  package_version_note: "The TreeX FOR-instance exact-path subset result is complete for current reporting, but the Barkla package version was not captured in retained metadata."
   algorithm: TreeXAlgorithm
   preset: TreeXPresetULS
   supervised: false

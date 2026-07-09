@@ -60,7 +60,9 @@ benchmark:
   completed_prediction_count: 32
   completed_normalisation_count: 32
   provisional_coordinate_evaluation_count: 32
-  validated_pointwise_evaluation_count: 0
+  validated_pointwise_evaluation_count: 11
+  validated_pointwise_evaluation_scope: accepted_retrained_held_out_test
+  development_validation_pointwise_evaluation_count: 5
 
 method:
   slug: segmentanytree
@@ -100,7 +102,7 @@ training:
     - dev
   forbidden_training_split:
     - test
-  note: "The completed jobs ran inference with a supplied checkpoint; they did not train SegmentAnyTree."
+  note: "The accepted current result was retrained from FOR-instance development data. The retained released-checkpoint route was inference-only and remains provisional."
   corrected_experiment:
     config: "methods/segmentanytree/configs/for_instance_training.yml"
     primary_mode: retrained_from_dev

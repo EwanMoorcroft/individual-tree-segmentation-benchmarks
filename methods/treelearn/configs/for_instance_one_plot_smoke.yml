@@ -41,6 +41,8 @@ method:
     default_path: "~/fastscratch/treelearn_checkpoints/model_weights_with_small_20241213.pth"
     source: "TreeLearn upstream downloadable model weights"
     sha256: null
+    sha256_status: required_before_full_evaluation
+    note: "The one-plot smoke route must record the checkpoint SHA-256 before any full FOR-instance evaluation is submitted."
   upstream_pipeline:
     entrypoint: tools/pipeline/pipeline.py
     return_type: original

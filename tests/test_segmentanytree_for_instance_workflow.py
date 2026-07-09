@@ -119,7 +119,11 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     )
     assert config["benchmark"]["array_size"] == 32
     assert config["benchmark"]["provisional_coordinate_evaluation_count"] == 32
-    assert config["benchmark"]["validated_pointwise_evaluation_count"] == 0
+    assert config["benchmark"]["validated_pointwise_evaluation_count"] == 11
+    assert config["benchmark"]["validated_pointwise_evaluation_scope"] == (
+        "accepted_retrained_held_out_test"
+    )
+    assert config["benchmark"]["development_validation_pointwise_evaluation_count"] == 5
     assert config["benchmark"]["primary_reporting_split"] == "test"
     assert config["method"]["execution_mode"] == "apptainer_slurm"
     assert config["method"]["apptainer_image"] == (

@@ -1,10 +1,13 @@
 project:
   benchmark_name: for_instance_treex
+  dataset_slug: for-instance
+  method_slug: treex
   barkla_root: ~/scratch/tree-seg-benchmark
   status: completed_exact_path_subset
   protocol_id: for_instance_pointwise_v1
 
 dataset:
+  slug: for-instance
   name: FOR-instance
   root: ~/data/datasets/for_instance/FORinstance_dataset
   split_metadata_file: data_split_metadata.csv
@@ -29,6 +32,7 @@ dataset:
     - 0
 
 method:
+  slug: treex
   package: pointtree
   package_version: null
   package_version_status: pending_capture_from_barkla_environment

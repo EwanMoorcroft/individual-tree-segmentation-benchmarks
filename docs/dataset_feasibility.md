@@ -9,7 +9,7 @@ outside this repository.
 | Dataset | Inspection status | Instance labels | Accuracy status | Recommended role |
 | --- | --- | --- | --- | --- |
 | FRDR treeiso TLS | Downloaded; 16-plot TLS2trees run completed | Not present in the benchmark LAZ inputs | F1/IoU unavailable from `woods` | Completed prediction and operational benchmark |
-| FOR-instance | Downloaded and inventoried; diagnostic 32-plot SegmentAnyTree inference completed | `treeID` in annotated LAS files | Released-checkpoint metrics provisional; full development-only training running and validation queued | Primary cross-method accuracy benchmark |
+| FOR-instance | Downloaded and inventoried; SegmentAnyTree and TreeX runs evaluated | `treeID` in annotated LAS files | SegmentAnyTree released-checkpoint metrics provisional; retrained SegmentAnyTree and TreeX have documented held-out test results | Primary cross-method accuracy benchmark |
 | Wytham Woods | Downloaded, unpacked and inventoried | One segmented tree per file | F1/IoU feasible after scene reconstruction | TLS accuracy benchmark candidate |
 
 ## FRDR Treeiso TLS
@@ -60,14 +60,17 @@ The SegmentAnyTree workflow uses tree-material classes `4`, `5` and `6`, with
 classes `0`, `1`, `2` and `3` ignored. Released-checkpoint inference completed
 for all 32 plots, but all 11 test exports failed point-correspondence checks.
 That run also did not train a model under the local development/test protocol.
-The corrected experiment uses 16 development plots for training, 5 for
-internal validation and the 11 supplied test plots only after the checkpoint
-is frozen. The protocol is in
+The corrected retrained experiment used 16 development plots for training, 5
+for internal validation and the 11 supplied test plots only after the
+checkpoint was frozen. The accepted checkpoint is
+`sat_for_quicktune_to49_20260706_140730`; the `to55` continuation is rejected
+because development-validation performance regressed. The protocol is in
 [`for-instance.md`](protocols/for-instance.md)
 and the provisional values are documented in
 [`provisional_released_checkpoint_results.md`](../methods/segmentanytree/docs/provisional_released_checkpoint_results.md).
-The separate TLS2trees compatibility pilot retains its leaf-off `4` and `6`
-filter.
+The TreeX deterministic baseline has also been evaluated on the exact-path
+local FOR-instance subset. The separate TLS2trees compatibility pilot retains
+its leaf-off `4` and `6` filter.
 
 ## Wytham Woods
 

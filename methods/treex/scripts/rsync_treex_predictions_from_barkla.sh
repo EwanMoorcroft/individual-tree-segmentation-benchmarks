@@ -3,9 +3,12 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/../../.." && pwd)
-REMOTE_USER="${TREEX_BARKLA_USER:-sgemoorc}"
-REMOTE_HOST="${TREEX_BARKLA_HOST:-barklalogin1.liv.ac.uk}"
-REMOTE_ROOT="${TREEX_BARKLA_ROOT:-/mnt/scratch/users/${REMOTE_USER}/tree-seg-benchmark}"
+: "${TREEX_BARKLA_USER:?Set TREEX_BARKLA_USER to your Barkla username.}"
+: "${TREEX_BARKLA_HOST:?Set TREEX_BARKLA_HOST to the Barkla login host.}"
+: "${TREEX_BARKLA_ROOT:?Set TREEX_BARKLA_ROOT to the remote tree-seg-benchmark checkout.}"
+REMOTE_USER="$TREEX_BARKLA_USER"
+REMOTE_HOST="$TREEX_BARKLA_HOST"
+REMOTE_ROOT="$TREEX_BARKLA_ROOT"
 LOCAL_ROOT="${TREEX_LOCAL_PREDICTION_ROOT:-$REPO_ROOT/local_outputs/treex_predictions}"
 CONTROL_PATH="/tmp/treex-barkla-%C"
 SSH_OPTS=(

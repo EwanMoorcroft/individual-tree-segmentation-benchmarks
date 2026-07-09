@@ -47,8 +47,11 @@ validation plots:
 | `TUWIEN/train` | 0.1674 |
 
 The selected checkpoint has validation mean F1 `0.5371`, minimum F1 `0.1674`
-and maximum F1 `0.8571`. Held-out test evaluation was then run once for the
-selected checkpoint, giving 11-plot mean F1 `0.4798`.
+and maximum F1 `0.8571`. Held-out test evaluation was then run for the
+selected checkpoint using aligned instance and semantic outputs, giving
+11-plot mean F1 `0.4825`, mean precision `0.3807` and mean recall `0.6954`.
+The evaluated checkpoint SHA-256 is
+`9b871b15ac61589ea27c507e054ee66d3f543caa01fed9a5b790e4ce97bcecea`.
 
 The validation-only post-processing sweep selected
 `min_predicted_instance_points=5000`, with validation mean F1 `0.5514`.
@@ -92,3 +95,10 @@ NIBIO has relatively high recall with low precision, while TUWIEN and RMIT are
 weak site-transfer cases with many missed trees. The epoch-55 continuation
 worsened validation, so further blind training is not a supported improvement
 path.
+
+The later `fine_tuned_on_dev` follow-up
+`segmentanytree_for-instance_fine_tuned_on_dev_20260708_215054_full` is not an
+accepted result. A held-out smoke audit found millions of tree-semantic points
+but zero accepted instance predictions in the aligned instance output. The
+accepted SAT result therefore remains the unfiltered
+`sat_for_quicktune_to49_20260706_140730` checkpoint.

@@ -9,6 +9,7 @@ pycache/
 venv/
 
 /containers/
+/checkpoints/
 /data/
 /external/
 /logs/
@@ -26,12 +27,16 @@ venv/
 *.npy
 *.npz
 *.out
+*.pcd
 *.ply
 *.pt
 *.pth
 *.pkl
 *.ckpt
 *.sif
+*.tar
+*.tar.gz
+*.tgz
 *.png
 !methods/treex/plots/*.png
 *.zip

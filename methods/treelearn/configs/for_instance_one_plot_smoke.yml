@@ -1,0 +1,107 @@
+project:
+  name: tree-seg-benchmark
+  benchmark_name: for_instance_treelearn_one_plot_smoke
+  dataset_slug: for-instance
+  method_slug: treelearn
+  mode: labelled_accuracy_candidate
+  status: smoke_route_defined_not_run
+  protocol_id: for_instance_pointwise_v1
+  barkla_root: "~/scratch/tree-seg-benchmark"
+
+dataset:
+  slug: for-instance
+  name: FOR-instance
+  root: "~/data/datasets/for_instance/FORinstance_dataset"
+  split_metadata_file: data_split_metadata.csv
+  reference_instance_field: treeID
+  semantic_field: classification
+  reference_classes:
+    - 4
+    - 5
+    - 6
+  ignored_classes:
+    - 0
+    - 1
+    - 2
+    - 3
+  ignored_tree_ids:
+    - 0
+    - -1
+
+method:
+  slug: treelearn
+  name: TreeLearn
+  repo_url: "https://github.com/ecker-lab/TreeLearn"
+  repo_path: "~/fastscratch/external/TreeLearn"
+  execution_mode: external_checkout_slurm
+  treelearn_env: "~/fastscratch/venvs/treelearn"
+  checkpoint:
+    training_mode: published_pretrained
+    filename: model_weights_with_small_20241213.pth
+    default_path: "~/fastscratch/treelearn_checkpoints/model_weights_with_small_20241213.pth"
+    source: "TreeLearn upstream downloadable model weights"
+    sha256: null
+  upstream_pipeline:
+    entrypoint: tools/pipeline/pipeline.py
+    return_type: original
+    save_formats:
+      - laz
+      - npz
+    save_treewise: false
+    save_pointwise: true
+    use_hdbscan: true
+
+smoke:
+  relative_path: CULS/plot_1_annotated.las
+  plot_id: CULS/plot_1_annotated
+  safe_plot_id: CULS_plot_1_annotated
+  split: dev
+  expected_point_count: 1816672
+  expected_reference_tree_count: 6
+  row_coordinate_tolerance_m: 0.005
+  run_training: false
+  run_evaluation: false
+
+runtime:
+  slurm_script: methods/treelearn/slurm/run_for_instance_one_plot_smoke.sbatch
+  expected_runtime: "30-90 minutes after TreeLearn is installed and checkpoint is present"
+  partition: gpu-l40s-low
+  time_limit: "02:00:00"
+  cpus_per_task: 12
+  memory: 128G
+  gres: "gpu:1"
+  live_watch_command: "squeue -j <job_id>; tail -f logs/treelearn_for_instance/treelearn_one_plot_smoke_<job_id>.out"
+
+paths:
+  runtime_root: "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated"
+  generated_pipeline_config: "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated/treelearn_pipeline_config.yml"
+  raw_results_root: "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated/results"
+  raw_full_forest_laz: "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated/results/full_forest/CULS_plot_1_annotated.laz"
+  raw_pointwise_npz: "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated/results/pointwise_results/pointwise_results.npz"
+  predictions_root: "data/predictions/treelearn/for_instance_smoke/CULS_plot_1_annotated"
+  adapted_prediction_npz: "data/predictions/treelearn/for_instance_smoke/CULS_plot_1_annotated/CULS_plot_1_annotated_treelearn_smoke_predictions.npz"
+  adapted_prediction_las: "data/predictions/treelearn/for_instance_smoke/CULS_plot_1_annotated/CULS_plot_1_annotated_treelearn_smoke_predictions.las"
+  metadata_root: "results/metadata/treelearn_for_instance/one_plot_smoke"
+  metadata_json: "results/metadata/treelearn_for_instance/one_plot_smoke/CULS_plot_1_annotated_treelearn_smoke_metadata.json"
+  logs_root: "logs/treelearn_for_instance"
+
+success_criteria:
+  - TreeLearn imports from the active environment.
+  - The configured checkpoint exists and loads.
+  - The one-plot pipeline exits with status zero.
+  - The full-forest output exists.
+  - The adapted prediction NPZ exists.
+  - Prediction row count equals the source point count.
+  - Source and prediction coordinates are row-aligned within tolerance.
+  - Predicted instance labels contain at least one positive tree ID.
+  - Metadata JSON records runtime, checkpoint path and output paths.
+
+failure_indicators:
+  - Missing TreeLearn environment, checkout or checkpoint.
+  - CUDA, PyTorch or spconv import failure.
+  - Tile generation or feature calculation exceeds the Slurm memory request.
+  - Pipeline exits before writing full-forest output.
+  - Output point count differs from source point count.
+  - Row-wise coordinate check fails.
+  - Prediction contains only non-tree or unassigned labels.
+  - Any test-split path is used.

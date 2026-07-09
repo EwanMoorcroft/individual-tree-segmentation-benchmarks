@@ -29,5 +29,5 @@ The accepted full-training SAT checkpoint is
   sweep. It is an ablation, not the headline held-out test result.
 
 The headline accepted SAT result is the unfiltered aligned point-wise held-out
-test mean F1 `0.480`. The validation-selected size filter improved validation
+test mean F1 `0.4825`. The validation-selected size filter improved validation
 slightly but did not replace the accepted unfiltered test score.

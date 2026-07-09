@@ -1,5 +1,7 @@
 project:
   name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: tls2trees
   mode: for_instance_tls2trees_leaf_off_accuracy_pilot
   barkla_root: "~/scratch/tree-seg-benchmark"
 
@@ -11,6 +13,7 @@ environment:
   python_version_tested: "3.12.10"
 
 dataset:
+  slug: for-instance
   name: FOR-instance
   source_url: "https://doi.org/10.5281/zenodo.8287792"
   root: "~/data/datasets/for_instance/FORinstance_dataset"
@@ -47,6 +50,7 @@ conversion:
   warning: "Local minimum z normalisation is a feasibility approximation, not terrain normalisation."
 
 method:
+  slug: tls2trees
   name: tls2trees
   repo_url: "https://github.com/tls-tools-ucl/TLS2trees.git"
   repo_path: "external/TLS2trees"

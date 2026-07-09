@@ -5,7 +5,8 @@ project:
   barkla_root: "~/scratch/tree-seg-benchmark"
 
 dataset:
-  name: wytham_woods
+  slug: wytham-woods
+  name: Wytham Woods
   source_url: "https://doi.org/10.5281/zenodo.7307956"
   dataset_root: "~/data/datasets/wytham_woods/DATA_clouds_ply/DATA_clouds_ply"
   downloaded_and_inspected: true
@@ -30,10 +31,14 @@ preprocessing:
     - "Construct equivalent method inputs without using reference IDs as features."
     - "Validate coordinate alignment between predictions and references."
 
-method_candidates:
+candidate_method_slugs:
   - tls2trees
-  - segment_any_tree
-  - treelearn_or_other_deep_learning
+  - segmentanytree
+  - treelearn
+
+candidate_method_categories:
+  - tls_accuracy_benchmark
+  - deep_learning_instance_segmentation
   - traditional_tls_baseline
 
 evaluation:

@@ -1108,14 +1108,17 @@ def test_tracker_patch_enables_aligned_instance_output() -> None:
         "    def finalise(self):\n"
         "        if True:\n"
         "            if True:\n"
-        "                if True:\n"
+        "                for i in range(1):\n"
+        "                    has_prediction = test_area_i.ins_pre != -1\n"
         '                    print("writing evaluation txt")\n'
     )
 
     patched = patcher.patch_source(source)
 
-    assert patched.count("Instance_results_forEval_{}.ply") == 1
-    assert "full_ins_pred.numpy()" in patched
+    assert patched.count("Instance_results_forEval_{}.ply") == 2
+    assert 'SEGMENTANYTREE_ALIGNED_OUTPUT_DIR", "."' in patched
+    assert "if not bool(has_prediction.any())" in patched
+    assert "_sat_full_ins_pred" in patched
     assert "test_area_i.instance_labels" in patched
 
 
@@ -1314,7 +1317,7 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
         "evaluate_segmentanytree_pointwise_task.sh"
     ).read_text(encoding="utf-8")
     assert "--reference-background-instance-labels 1" in evaluation_task
-    assert "--ignored-prediction-labels=-1,0" in evaluation_task
+    assert "--ignored-prediction-labels=-1" in evaluation_task
     assert "SEGMENTANYTREE_MIN_PREDICTED_INSTANCE_POINTS" in evaluation_task
     assert "--min-predicted-instance-points" in evaluation_task
     assert "SEGMENTANYTREE_MIN_PREDICTED_TREE_FRACTION" in evaluation_task
@@ -1549,6 +1552,9 @@ def test_paper_aligned_inference_stops_before_export_merge() -> None:
     ).read_text(encoding="utf-8")
 
     assert "python3 eval.py" in script
+    assert "eval_status=$?" in script
+    assert "eval_status\" -ne 139" in script
+    assert "Continuing after eval.py exit 139" in script
     assert "rename_result_files_instance.py" in script
     assert "Instance_results_forEval_" in script
     assert "merge_pt_ss_is" not in script
@@ -1560,6 +1566,7 @@ def test_paper_aligned_inference_stops_before_export_merge() -> None:
     ).read_text(encoding="utf-8")
     assert 'CUSTOM_DATA_ROOT="$RUNTIME_DIR/checkpoint_data"' in task
     assert '--bind "$CUSTOM_DATA_ROOT:/sat_data"' in task
+    assert "SEGMENTANYTREE_ALIGNED_OUTPUT_DIR=/sat_output" in task
 
 
 def test_revalidation_slurm_scripts_support_test_only_selection() -> None:

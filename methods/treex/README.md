@@ -1,9 +1,40 @@
 # TreeX
 
-TreeX is the completed unsupervised FOR-instance benchmark implemented through
-the `pointtree` package API.
+## Method Summary
 
-## Completed work
+TreeX is the completed unsupervised FOR-instance benchmark implemented through
+the `pointtree` package API. It is a deterministic baseline rather than a
+trained or fine-tuned neural model.
+
+## Upstream Repository And Citation
+
+TreeX / `pointtree` is an external dependency and is not vendored here. The
+package provenance that still needs to be captured from Barkla is recorded in
+[`configs/for_instance_benchmark.yml`](configs/for_instance_benchmark.yml).
+
+## Training Mode Support
+
+The registry records this row as `external_training_only` to show that no
+FOR-instance development or test data were used for weight fitting. The method
+configuration records the more specific method mode
+`unsupervised_parameterised`.
+
+## Input Requirements
+
+The run uses the FOR-instance exact-path subset available locally on Barkla,
+with annotated LAS inputs containing `treeID` and `classification` fields.
+Tree material uses classes `4`, `5` and `6`.
+
+## Output Contract
+
+TreeX predictions are converted to public-safe per-plot and aggregate summary
+tables. Full prediction outputs are local artifacts and must remain outside
+Git.
+
+## FOR-instance Compatibility
+
+The run follows the `for_instance_pointwise_v1` protocol on the exact-path
+local subset:
 
 The committed public-safe results describe the exact-path-only FOR-instance
 subset that exists locally on Barkla:
@@ -13,9 +44,13 @@ subset that exists locally on Barkla:
 - 32 exact-path local plots retained from the Barkla mirror;
 - strict and labelled-mask instance metrics.
 
-The headline held-out test result is strict F1 `0.402`; labelled-mask test F1
-is `0.522`. TreeX is a completed deterministic baseline here, not a trained or
-fine-tuned model.
+## Barkla Environment
+
+The run depends on the Barkla `pointtree` environment documented in the method
+config and runbook. External packages, full predictions and local backups are
+not part of the public repository.
+
+## Slurm Workflow
 
 Start with:
 
@@ -26,7 +61,28 @@ Start with:
 - [`examples/treex_combined_dev_test_summary.csv`](examples/treex_combined_dev_test_summary.csv)
   for the authoritative 32-plot result table.
 
-## Tracking boundary
+Current canonical equivalents are:
+
+- preparation: [`scripts/make_treex_for_instance_exact_split_lists.py`](scripts/make_treex_for_instance_exact_split_lists.py);
+- inference: [`scripts/run_treex_for_instance_plot.py`](scripts/run_treex_for_instance_plot.py);
+- prediction adaptation and evaluation: [`scripts/evaluate_treex_for_instance_plot.py`](scripts/evaluate_treex_for_instance_plot.py);
+- summarisation: [`scripts/create_treex_split_summary.py`](scripts/create_treex_split_summary.py) and [`scripts/create_treex_final_summaries.py`](scripts/create_treex_final_summaries.py);
+- inference Slurm entrypoints: [`slurm/run_treex_for_instance_dev_array.sbatch`](slurm/run_treex_for_instance_dev_array.sbatch) and [`slurm/run_treex_for_instance_test_array.sbatch`](slurm/run_treex_for_instance_test_array.sbatch); and
+- evaluation Slurm entrypoints: [`slurm/evaluate_treex_for_instance_array.sbatch`](slurm/evaluate_treex_for_instance_array.sbatch) and [`slurm/evaluate_treex_for_instance_test_array.sbatch`](slurm/evaluate_treex_for_instance_test_array.sbatch).
+
+## Evaluation Route
+
+The headline held-out test result is strict F1 `0.402`; labelled-mask test F1
+is `0.522`. The strict result is the cautious headline because it counts all
+predicted trees, including predictions outside the labelled mask.
+
+## Known Limitations
+
+The benchmark is limited to the exact-path local subset available on Barkla.
+The full upstream split metadata lists more development and test paths than
+were locally available for this run.
+
+## Current Benchmark Status
 
 - TreeX was run and evaluated, not trained or fine-tuned.
 - Public-safe summary CSVs, JSON metadata and small plots can be committed.
@@ -37,4 +93,4 @@ The local backup was audited on 6 July 2026 and contains one `.npz` and one
 `.las` final prediction for each of the 32 evaluated plots. These files are not
 part of the public repository.
 
-TreeX / `pointtree` is an external dependency and is not vendored here.
+The current status is recorded in [`../../BENCHMARKS.md`](../../BENCHMARKS.md).

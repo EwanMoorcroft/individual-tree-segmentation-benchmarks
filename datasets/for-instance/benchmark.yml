@@ -5,7 +5,8 @@ project:
   barkla_root: "~/scratch/tree-seg-benchmark"
 
 dataset:
-  name: for_instance
+  slug: for-instance
+  name: FOR-instance
   source_url: "https://doi.org/10.5281/zenodo.8287792"
   dataset_root: "~/data/datasets/for_instance/FORinstance_dataset"
   downloaded_and_inspected: true
@@ -47,11 +48,22 @@ semantic:
     - 2
     - 3
 
-method_candidates:
-  - segment_any_tree
-  - tls2trees_compatibility_test
-  - treelearn_or_other_deep_learning
-  - traditional_baseline
+candidate_method_slugs:
+  - segmentanytree
+  - tls2trees
+  - treex
+  - treelearn
+  - randlanet
+  - pointnetpp
+  - pointgroup
+  - softgroup
+  - hais
+  - mask3d
+
+candidate_method_categories:
+  - deep_learning_instance_segmentation
+  - lightweight_neural_baseline
+  - deterministic_or_traditional_baseline
 
 evaluation:
   enabled: false

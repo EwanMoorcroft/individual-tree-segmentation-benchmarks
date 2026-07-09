@@ -8,11 +8,37 @@ from pathlib import Path
 
 
 ANCHOR = '                    print("writing evaluation txt")'
-INSERTION = """                    self._dataset.to_eval_ply(
+EMPTY_PREDICTION_ANCHOR = "                    has_prediction = test_area_i.ins_pre != -1"
+EMPTY_PREDICTION_GUARD = """                    has_prediction = test_area_i.ins_pre != -1
+                    if not bool(has_prediction.any()):
+                        _sat_os = __import__("os")
+                        _sat_np = __import__("numpy")
+                        _sat_output_dir = _sat_os.environ.get("SEGMENTANYTREE_ALIGNED_OUTPUT_DIR", ".")
+                        self._dataset.to_eval_ply(
+                            test_area_i.pos,
+                            _sat_np.full(test_area_i.pos.shape[0], -1, dtype=_sat_np.int64),
+                            test_area_i.instance_labels,
+                            _sat_os.path.join(
+                                _sat_output_dir,
+                                "Instance_results_forEval_{}.ply".format(i),
+                            ),
+                        )
+                        continue"""
+INSERTION = """                    _sat_os = __import__("os")
+                    _sat_output_dir = _sat_os.environ.get("SEGMENTANYTREE_ALIGNED_OUTPUT_DIR", ".")
+                    _sat_full_ins_pred = (
+                        full_ins_pred.detach().cpu().numpy()
+                        if hasattr(full_ins_pred, "detach")
+                        else full_ins_pred
+                    )
+                    self._dataset.to_eval_ply(
                         test_area_i.pos,
-                        full_ins_pred.numpy(),
+                        _sat_full_ins_pred,
                         test_area_i.instance_labels,
-                        "Instance_results_forEval_{}.ply".format(i),
+                        _sat_os.path.join(
+                            _sat_output_dir,
+                            "Instance_results_forEval_{}.ply".format(i),
+                        ),
                     )
 
 """
@@ -21,9 +47,12 @@ INSERTION = """                    self._dataset.to_eval_ply(
 def patch_source(source: str) -> str:
     if source.count(ANCHOR) != 1:
         raise ValueError("Expected one final evaluation output anchor")
+    if source.count(EMPTY_PREDICTION_ANCHOR) != 1:
+        raise ValueError("Expected one empty-prediction guard anchor")
     if "Instance_results_forEval_{}.ply" in source:
         raise ValueError("Aligned instance evaluation output is already enabled")
-    patched = source.replace(ANCHOR, INSERTION + ANCHOR)
+    patched = source.replace(EMPTY_PREDICTION_ANCHOR, EMPTY_PREDICTION_GUARD)
+    patched = patched.replace(ANCHOR, INSERTION + ANCHOR)
     compile(patched, "panoptic_tracker_pointgroup_treeins.py", "exec")
     return patched
 

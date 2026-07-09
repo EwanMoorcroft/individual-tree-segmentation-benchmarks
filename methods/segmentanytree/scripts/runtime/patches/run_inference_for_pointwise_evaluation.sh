@@ -34,7 +34,16 @@ if [[ -n "${SEGMENTANYTREE_CHECKPOINT_DATA_CACHE:-}" ]]; then
 fi
 
 cd "$SCRIPT_DIR"
+set +e
 python3 eval.py --config-name "$DEST_DIR/eval.yaml"
+eval_status=$?
+set -e
+if [[ "$eval_status" -ne 0 && "$eval_status" -ne 139 ]]; then
+  exit "$eval_status"
+fi
+if [[ "$eval_status" -eq 139 ]]; then
+  echo "Continuing after eval.py exit 139 to collect written prediction files" >&2
+fi
 
 python3 "$SCRIPT_DIR/nibio_inference/rename_result_files_instance.py" \
   "$DEST_DIR/eval.yaml" \

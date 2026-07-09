@@ -1,0 +1,27 @@
+{
+  "checkpoint": {
+    "path": "/path/to/model_weights_with_small_20241213.pth",
+    "sha256": null,
+    "training_mode": "published_pretrained"
+  },
+  "outputs": {
+    "adapted_prediction_las": "data/predictions/treelearn/for_instance_smoke/CULS_plot_1_annotated/CULS_plot_1_annotated_treelearn_smoke_predictions.las",
+    "adapted_prediction_npz": "data/predictions/treelearn/for_instance_smoke/CULS_plot_1_annotated/CULS_plot_1_annotated_treelearn_smoke_predictions.npz",
+    "metadata_json": "results/metadata/treelearn_for_instance/one_plot_smoke/CULS_plot_1_annotated_treelearn_smoke_metadata.json",
+    "raw_full_forest_laz": "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated/results/full_forest/CULS_plot_1_annotated.laz",
+    "raw_pointwise_npz": "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated/results/pointwise_results/pointwise_results.npz"
+  },
+  "plot": {
+    "expected_point_count": 1816672,
+    "expected_reference_tree_count": 6,
+    "relative_path": "CULS/plot_1_annotated.las",
+    "split": "dev"
+  },
+  "status": "example_only",
+  "validation": {
+    "positive_prediction_count": null,
+    "row_coordinate_tolerance_m": 0.005,
+    "row_count_match": null,
+    "row_order_preserved": null
+  }
+}

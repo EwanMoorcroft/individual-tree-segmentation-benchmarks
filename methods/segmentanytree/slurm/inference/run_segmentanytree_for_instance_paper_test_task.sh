@@ -104,6 +104,7 @@ APPTAINER_ARGS=(
   --env "PYTHONUSERBASE=/sat_pyuser"
   --env "PYTHONPATH=/sat_patch:/sat_pyuser/lib/python3.8/site-packages:/home/nibio/mutable-outside-world"
   --env "SEGMENTANYTREE_SERIAL_POOL=1"
+  --env "SEGMENTANYTREE_ALIGNED_OUTPUT_DIR=/sat_output"
   --env "OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-8}"
   "${CHECKPOINT_BIND[@]}"
   "$IMAGE"

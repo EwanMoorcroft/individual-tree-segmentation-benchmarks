@@ -1,6 +1,8 @@
 project:
   name: tree-seg-benchmark
   benchmark_name: for_instance_segmentanytree
+  dataset_slug: for-instance
+  method_slug: segmentanytree
   mode: labelled_accuracy_benchmark
   status: accepted_retrained_checkpoint_evaluated
   protocol_id: for_instance_pointwise_v1
@@ -16,6 +18,7 @@ environment:
   apptainer_module: "apptainer/1.3.6"
 
 dataset:
+  slug: for-instance
   name: FOR-instance
   source_url: "https://doi.org/10.5281/zenodo.8287792"
   root: "~/data/datasets/for_instance/FORinstance_dataset"
@@ -60,6 +63,7 @@ benchmark:
   validated_pointwise_evaluation_count: 0
 
 method:
+  slug: segmentanytree
   name: SegmentAnyTree
   repo_url: "https://github.com/SmartForest-no/SegmentAnyTree"
   repo_path: "external/SegmentAnyTree"
@@ -109,8 +113,10 @@ training:
     development_validation_mean_f1: 0.5371
     rejected_development_validation_mean_f1: 0.4505
     final_test_plot_count: 11
-    final_test_mean_f1: 0.4798
+    final_test_mean_f1: 0.4825
     final_test_status: completed
+    rejected_fine_tuned_run_id: segmentanytree_for-instance_fine_tuned_on_dev_20260708_215054_full
+    rejected_fine_tuned_status: rejected_zero_instance_predictions
 
 evaluation:
   protocol_id: for_instance_pointwise_v1

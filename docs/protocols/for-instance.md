@@ -60,6 +60,11 @@ Every run must declare one of these training modes:
 - `fine_tuned_on_dev`: start from a pretrained checkpoint and update weights
   using only FOR-instance development data.
 
+For deterministic or rule-based methods without fitted weights, record
+`external_training_only` to indicate that no FOR-instance development or test
+data were used for model fitting, and record the method-specific mode
+separately, for example `unsupervised_parameterised`.
+
 For every checkpoint, record:
 
 - file name and SHA-256 checksum;
@@ -116,6 +121,13 @@ label and one predicted instance label for every source point.
 - If an exporter duplicates or removes rows, evaluate the aligned internal
   prediction arrays instead.
 - Retain raw method outputs separately from harmonised prediction adapters.
+- Retain every full prediction artefact on Barkla under the method's
+  `data/predictions/<method>/for_instance...` root, or an explicitly recorded
+  run-specific prediction root, so later metrics and adapter checks can reuse
+  the same outputs.
+- Record the Barkla-relative prediction directory and any harmonised prediction
+  artefact paths in run metadata. Local copies under `local_outputs/` are
+  backups only and must not be the only retained prediction source.
 - Record every ignored or unassigned prediction label.
 
 Methods that naturally output one file per tree must map those predictions
@@ -174,6 +186,10 @@ overall micro F1.
 
 ## Reproduction Gates
 
+TreeLearn and later method adapters must complete the
+[`method-adapter acceptance checklist`](method-adapter-acceptance-checklist.md)
+before full FOR-instance evaluation is submitted.
+
 A method result is not accepted as comparable until all gates pass:
 
 1. dataset checksums and split labels are recorded;
@@ -181,11 +197,13 @@ A method result is not accepted as comparable until all gates pass:
 3. repository commit, container digest and checkpoint checksum are recorded;
 4. no test plot was used for tuning;
 5. prediction rows remain aligned with source/reference rows;
-6. all expected test plots have a result or a documented failure;
-7. the evaluator and threshold operator are recorded;
-8. one development plot is manually checked for label alignment;
-9. results are compared with the paper by collection; and
-10. an absolute F1 difference greater than 0.10 from a directly comparable
+6. raw and harmonised prediction artefacts are retained on Barkla under the
+   recorded prediction roots;
+7. all expected test plots have a result or a documented failure;
+8. the evaluator and threshold operator are recorded;
+9. one development plot is manually checked for label alignment;
+10. results are compared with the paper by collection; and
+11. an absolute F1 difference greater than 0.10 from a directly comparable
     published result triggers investigation before the result is described as
     a successful reproduction.
 

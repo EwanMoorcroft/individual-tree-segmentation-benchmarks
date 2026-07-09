@@ -1,5 +1,7 @@
 project:
   name: tree-seg-benchmark
+  dataset_slug: frdr-treeiso
+  method_slug: tls2trees
   barkla_root: "~/scratch/tree-seg-benchmark"
   mode: frdr_tls2trees_prediction_benchmark
 
@@ -13,6 +15,7 @@ environment:
   numpy_version_tested: "2.5.0"
 
 dataset:
+  slug: frdr-treeiso
   name: frdr_treeiso
   root: "~/data/datasets/frdr_treeiso"
   input_extension: ".laz"
@@ -64,6 +67,7 @@ conversion:
   warning: "Local minimum z normalisation is a feasibility approximation, not terrain normalisation."
 
 method:
+  slug: tls2trees
   name: tls2trees
   repo_url: "https://github.com/tls-tools-ucl/TLS2trees.git"
   repo_path: "external/TLS2trees"

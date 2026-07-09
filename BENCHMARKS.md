@@ -6,18 +6,35 @@ adapter, method runner, scheduler workflow, metadata outputs and focused tests.
 
 ## Benchmark Registry
 
-| Dataset | Method | Status | Configuration or note |
-| --- | --- | --- | --- |
-| FRDR treeiso TLS | TLS2trees | Prediction benchmark completed | [`frdr_benchmark.yml`](methods/tls2trees/configs/frdr_benchmark.yml) |
-| FOR-instance | SegmentAnyTree released checkpoint | Provisional inference-only run completed; export audit failed | [`for_instance_benchmark.yml`](methods/segmentanytree/configs/for_instance_benchmark.yml) |
-| FOR-instance | SegmentAnyTree retrained from development split | Completed; accepted checkpoint `sat_for_quicktune_to49_20260706_140730`, test mean F1 0.480 | [`training_progress_20260706.md`](methods/segmentanytree/docs/training_progress_20260706.md) |
-| FOR-instance | TreeX (`pointtree`) | Completed on exact-path local subset; strict test F1 0.402, labelled-mask test F1 0.522 | [`for_instance_benchmark.yml`](methods/treex/configs/for_instance_benchmark.yml) |
-| FOR-instance | TLS2trees | Candidate compatibility test | [`for_instance_accuracy.yml`](methods/tls2trees/configs/for_instance_accuracy.yml) |
-| FOR-instance | TreeLearn or another deep learning method | Candidate accuracy benchmark | Respect the supplied development/test split |
-| Wytham Woods | TLS2trees | Candidate TLS accuracy benchmark | [`benchmark.yml`](datasets/wytham-woods/benchmark.yml) |
-| Wytham Woods | SegmentAnyTree | Candidate accuracy benchmark | Plot-level input reconstruction required |
-| Wytham Woods | Traditional TLS method | Candidate baseline | Plot-level input reconstruction required |
-| NEWFOR | SegmentAnyTree | External comparison dataset; not implemented here | Add only through a separate documented dataset config |
+Registry rows describe dataset-method runs or explicit candidates. A completed
+or provisional row must include the dataset slug, method slug, run label,
+training mode declaration, evaluation mode, status and evidence file. Candidate
+rows may use `pending` for run-specific fields until a run is scheduled.
+
+| Dataset slug | Method slug | Run label | Training mode | Evaluation mode | Status | Evidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| frdr-treeiso | tls2trees | tls2trees_frdr_prediction_benchmark | external_training_only | operational_prediction | Prediction benchmark completed | [`frdr_benchmark.yml`](methods/tls2trees/configs/frdr_benchmark.yml); [`tls2trees_frdr_prediction_summary.csv`](methods/tls2trees/examples/tls2trees_frdr_prediction_summary.csv) |
+| for-instance | segmentanytree | released_checkpoint_coordinate_rematch | published_pretrained | provisional_coordinate_rematched | Provisional inference-only run completed; export audit failed | [`for_instance_benchmark.yml`](methods/segmentanytree/configs/for_instance_benchmark.yml); [`provisional_released_checkpoint_results.md`](methods/segmentanytree/docs/provisional_released_checkpoint_results.md) |
+| for-instance | segmentanytree | sat_for_quicktune_to49_20260706_140730 | retrained_from_dev | harmonised_pointwise_test | Completed accepted accuracy result; test mean F1 0.4825 | [`training_progress_20260706.md`](methods/segmentanytree/docs/training_progress_20260706.md); [`sat_treex_audit_sat_for_quicktune_to49_20260706_140730.csv`](methods/segmentanytree/examples/sat_treex_audit_sat_for_quicktune_to49_20260706_140730.csv) |
+| for-instance | segmentanytree | sat_for_quicktune_to55_20260707_214305 | retrained_from_dev | development_validation | Rejected validation regression | [`training_progress_20260706.md`](methods/segmentanytree/docs/training_progress_20260706.md) |
+| for-instance | segmentanytree | segmentanytree_for-instance_fine_tuned_on_dev_20260708_215054_full | fine_tuned_on_dev | diagnostic_held_out_subset | Rejected; produced semantic tree predictions but zero instance predictions | [`training_progress_20260706.md`](methods/segmentanytree/docs/training_progress_20260706.md) |
+| for-instance | treex | treex_for_instance_exact_path_subset | external_training_only | harmonised_pointwise_test | Completed deterministic baseline; strict test F1 0.402, labelled-mask test F1 0.522 | [`for_instance_benchmark.yml`](methods/treex/configs/for_instance_benchmark.yml); [`treex_combined_dev_test_summary.csv`](methods/treex/examples/treex_combined_dev_test_summary.csv) |
+| for-instance | tls2trees | tls2trees_for_instance_leaf_off_pilot | external_training_only | coordinate_fallback_leaf_off_pilot | Candidate compatibility test | [`for_instance_accuracy.yml`](methods/tls2trees/configs/for_instance_accuracy.yml); [`for_instance_pilot.md`](methods/tls2trees/docs/for_instance_pilot.md) |
+| for-instance | treelearn | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Respect the supplied development/test split and declare a training mode before running. |
+| for-instance | randlanet | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
+| for-instance | pointnetpp | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
+| for-instance | pointgroup | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
+| for-instance | softgroup | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
+| for-instance | hais | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
+| for-instance | mask3d | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
+| wytham-woods | tls2trees | pending | pending | coordinate_fallback_after_scene_reconstruction | Candidate TLS accuracy benchmark | [`benchmark.yml`](datasets/wytham-woods/benchmark.yml) |
+| wytham-woods | segmentanytree | pending | pending | harmonised_pointwise_after_scene_reconstruction | Candidate accuracy benchmark | Plot-level input reconstruction required. |
+| wytham-woods | treelearn | pending | pending | harmonised_pointwise_after_scene_reconstruction | Candidate accuracy benchmark | Plot-level input reconstruction required. |
+| newfor | segmentanytree | pending | pending | pending | External comparison dataset; not implemented here | Add only through a separate documented dataset config. |
+
+Dataset display names used in method documentation are FRDR treeiso TLS,
+FOR-instance and Wytham Woods. The registry uses stable lower-case slugs so new
+method rows can be sorted and compared mechanically.
 
 The FRDR LAZ files do not contain individual-tree reference instance labels.
 The TLS2trees workflow therefore preserves predictions and operational metadata
@@ -27,6 +44,13 @@ No candidate accuracy row indicates a completed method run or a reported
 accuracy result. Dataset readiness and remaining preprocessing are documented
 in [`docs/dataset_feasibility.md`](docs/dataset_feasibility.md).
 
+The permitted training mode values for completed or provisional runs are
+`published_pretrained`, `fine_tuned_on_dev`, `retrained_from_dev` and
+`external_training_only`. For deterministic or rule-based methods that do not
+fit weights, `external_training_only` records that no FOR-instance development
+or test data were used for training; the method-specific configuration should
+also record the non-learning method mode.
+
 The first SegmentAnyTree workflow completed inference for all 32 FOR-instance
 LAS files with the released checkpoint. Its coordinate-rematched metrics are
 provisional because they neither preserve point alignment nor represent a
@@ -35,7 +59,7 @@ experiment trains from scratch on FOR-instance development data, selects the
 checkpoint on an internal development validation split and evaluates the
 held-out test split once. The accepted checkpoint is
 `sat_for_quicktune_to49_20260706_140730`, with mean aligned F1 `0.537` on the
-five development validation plots and `0.480` on the 11 held-out test plots.
+five development validation plots and `0.4825` on the 11 held-out test plots.
 The later `to55` continuation is rejected because validation fell to `0.451`.
 See the
 [`shared protocol`](docs/protocols/for-instance.md),

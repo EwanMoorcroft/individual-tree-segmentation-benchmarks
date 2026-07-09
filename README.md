@@ -9,7 +9,7 @@ model files, predictions, logs and external repositories are not included.
 
 ## Current status
 
-Status last updated: 8 July 2026.
+Status last updated: 9 July 2026.
 
 - **TLS2trees on FRDR treeiso:** the 16-plot prediction and operational
   benchmark is complete. FRDR does not contain individual-tree reference
@@ -20,7 +20,7 @@ Status last updated: 8 July 2026.
   final exports failed point-correspondence checks.
 - **SegmentAnyTree retrained on FOR-instance:** the development-selected
   checkpoint `sat_for_quicktune_to49_20260706_140730` is the accepted SAT run.
-  It reports mean aligned F1 `0.537` on the five validation plots and `0.480`
+  It reports mean aligned F1 `0.537` on the five validation plots and `0.4825`
   on the 11 held-out test plots. The later `to55` continuation is rejected
   because validation fell to `0.451`.
 - **TreeX on FOR-instance:** the unsupervised `pointtree` TreeX benchmark is
@@ -30,9 +30,12 @@ Status last updated: 8 July 2026.
 - **Other combinations:** TLS2trees on FOR-instance and the Wytham Woods
   benchmarks remain candidates rather than completed studies.
 
-The [benchmark registry](BENCHMARKS.md) is the short status index. Detailed
-method information is under [`methods/`](methods/), dataset contracts are under
-[`datasets/`](datasets/), and cross-method rules are under [`docs/`](docs/).
+The [benchmark registry](BENCHMARKS.md) is the short status index. Each
+completed, provisional or candidate row records a dataset slug, method slug,
+run label, training mode declaration, evaluation mode, status and evidence
+file. Detailed method information is under [`methods/`](methods/), dataset
+contracts are under [`datasets/`](datasets/), and cross-method rules are under
+[`docs/`](docs/).
 
 ## Repository layout
 
@@ -86,6 +89,23 @@ The public repository is organised primarily by method:
 Generated output paths such as `data/`, `results/` and `logs/` remain at the
 repository root at runtime. They are ignored by Git and are not part of the
 source-code hierarchy.
+
+New method folders should keep the same public shape before any Barkla run is
+described as comparable:
+
+```text
+methods/<method_slug>/
+├── README.md
+├── configs/
+├── docs/
+├── examples/
+├── scripts/
+└── slurm/
+```
+
+Where an established method already uses more specific filenames, its README
+must name the current equivalents for preparation, inference, prediction
+adaptation, summarisation and evaluation.
 
 ## Accepted and provisional results
 

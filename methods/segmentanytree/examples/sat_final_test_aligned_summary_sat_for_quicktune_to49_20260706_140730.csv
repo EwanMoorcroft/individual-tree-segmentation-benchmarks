@@ -1,0 +1,2 @@
+run_id,final_id,checkpoint_sha256,split,n_plots,mean_f1,mean_precision,mean_recall,total_tp,total_fp,total_fn,status
+sat_for_quicktune_to49_20260706_140730,sat_for_quicktune_to49_20260706_140730_final_test_aligned_20260709_212341,9b871b15ac61589ea27c507e054ee66d3f543caa01fed9a5b790e4ce97bcecea,trained_test,11,0.4825,0.3807,0.6954,202,336,121,accepted_aligned_pointwise

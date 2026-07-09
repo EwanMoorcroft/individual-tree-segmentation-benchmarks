@@ -41,3 +41,7 @@ venv/
 !methods/treex/plots/*.png
 *.zip
 Thumbs.db
+~$*.docx
+~$*.pptx
+~$*.xls
+~$*.xlsx

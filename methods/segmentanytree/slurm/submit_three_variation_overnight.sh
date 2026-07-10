@@ -7,11 +7,6 @@ STAMP="${SEGMENTANYTREE_OVERNIGHT_STAMP:-$(date +%Y%m%d_%H%M%S)}"
 RELEASED_SHA256="0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a"
 RELEASED_DIR="$HOME/fastscratch/segmentanytree_pretrained/released"
 RELEASED_CHECKPOINT="$RELEASED_DIR/PointGroup-PAPER.pt"
-RETRAINED_RUN_ID="sat_for_quicktune_to49_20260706_140730"
-RETRAINED_EVALUATION_ID="sat_for_quicktune_to49_20260706_140730_final_test_aligned_20260709_212341"
-RETRAINED_CHECKPOINT="$HOME/fastscratch/segmentanytree_for_instance_checkpoints/$RETRAINED_RUN_ID/run/PointGroup-PAPER.pt"
-RETRAINED_SHA256="9b871b15ac61589ea27c507e054ee66d3f543caa01fed9a5b790e4ce97bcecea"
-RETRAINED_METRICS="$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/trained_test/$RETRAINED_EVALUATION_ID"
 PRETRAINED_ID="sat_published_pretrained_aligned_$STAMP"
 FINETUNE_ID="sat_fine_tuned_on_dev_e35_$STAMP"
 FINETUNE_SMOKE_ID="${FINETUNE_ID}_smoke"
@@ -23,7 +18,7 @@ PRETRAINED_METRICS="$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/v
 PRETRAINED_TABLES="$PROJECT_ROOT/results/tables/segmentanytree_for_instance/variants/$PRETRAINED_ID"
 FINETUNE_VALIDATION_METRICS="$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/trained_validation/$FINETUNE_ID"
 FINETUNE_TEST_METRICS="$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/trained_test/$FINETUNE_ID"
-SUMMARY="$PROJECT_ROOT/results/tables/segmentanytree_for_instance/three_variations/three_variations_$STAMP.csv"
+SUMMARY="$PROJECT_ROOT/results/tables/segmentanytree_for_instance/pretrained_finetune_comparison/pretrained_finetune_$STAMP.csv"
 STATE_FILE="$HOME/fastscratch/segmentanytree_three_variation_$STAMP.env"
 LATEST_STATE="$HOME/fastscratch/segmentanytree_three_variation_latest.env"
 FULL_MANIFEST="$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/training_splits/full_split_manifest.json"
@@ -60,10 +55,6 @@ test -f "$HOME/scratch/containers/segment-any-tree_latest.sif"
 test -d "$HOME/fastscratch/venvs/treebench"
 test -f "$FULL_MANIFEST"
 test -d "$FULL_DATA"
-test -f "$RETRAINED_CHECKPOINT"
-test -d "$RETRAINED_METRICS"
-test "$(find "$RETRAINED_METRICS" -type f -name '*.json' | wc -l)" -eq 11
-test "$(sha256sum "$RETRAINED_CHECKPOINT" | awk '{print $1}')" = "$RETRAINED_SHA256"
 test "$(git -C external/SegmentAnyTree rev-parse HEAD)" = "a3561ed8447bbb7938f059ba65a3e9c97d6e2ee9"
 if [[ ! "$MIN_FREE_BYTES" =~ ^[1-9][0-9]*$ ]]; then
   echo "SEGMENTANYTREE_OVERNIGHT_MIN_FREE_BYTES must be a positive integer." >&2
@@ -142,7 +133,7 @@ submitted_jobs+=("$pretrained_final_gate")
 
 finetune_smoke_job=$(sbatch --parsable \
   --partition="$TRAIN_PARTITION" --time=02:00:00 --cpus-per-task=16 --mem=64G \
-  --dependency="afterok:$checkpoint_job" \
+  --dependency="afterok:$pretrained_final_gate" \
   --export="ALL,SEGMENTANYTREE_EXECUTE=1,SEGMENTANYTREE_FULL_TRAIN_CONFIRMED=1,SEGMENTANYTREE_TRAIN_PROFILE=full,SEGMENTANYTREE_TRAINING_RUN_ID=$FINETUNE_SMOKE_ID,SEGMENTANYTREE_TRAIN_EPOCHS=1,SEGMENTANYTREE_TRAIN_BATCH_SIZE=8,SEGMENTANYTREE_TRAIN_BASE_LR=0.0001,SEGMENTANYTREE_MEANSHIFT_JOBS=1,SEGMENTANYTREE_OMP_NUM_THREADS=1,SEGMENTANYTREE_STALL_TIMEOUT_SECONDS=2400,SEGMENTANYTREE_PRETRAINED_CHECKPOINT=$RELEASED_CHECKPOINT,SEGMENTANYTREE_PRETRAINED_CHECKPOINT_SHA256=$RELEASED_SHA256,SEGMENTANYTREE_PRETRAINED_WEIGHT_NAME=latest" \
   methods/segmentanytree/slurm/training/train_segmentanytree_for_instance_full.sbatch)
 submitted_jobs+=("$finetune_smoke_job")
@@ -189,8 +180,8 @@ submitted_jobs+=("$finetune_final_gate")
 
 summary_job=$(sbatch --parsable \
   --dependency="afterok:$pretrained_final_gate:$finetune_final_gate" \
-  --export="ALL,SEGMENTANYTREE_PRETRAINED_METRICS_ROOT=$PRETRAINED_METRICS,SEGMENTANYTREE_RETRAINED_METRICS_ROOT=$RETRAINED_METRICS,SEGMENTANYTREE_FINETUNED_METRICS_ROOT=$FINETUNE_TEST_METRICS,SEGMENTANYTREE_THREE_VARIATION_SUMMARY=$SUMMARY" \
-  methods/segmentanytree/slurm/evaluation/summarise_segmentanytree_three_variations.sbatch)
+  --export="ALL,SEGMENTANYTREE_PRETRAINED_METRICS_ROOT=$PRETRAINED_METRICS,SEGMENTANYTREE_FINETUNED_METRICS_ROOT=$FINETUNE_TEST_METRICS,SEGMENTANYTREE_PRETRAINED_FINETUNE_SUMMARY=$SUMMARY" \
+  methods/segmentanytree/slurm/evaluation/summarise_segmentanytree_pretrained_finetune.sbatch)
 submitted_jobs+=("$summary_job")
 
 submitted_epoch=$(date +%s)
@@ -228,4 +219,4 @@ trap - ERR
 
 echo "submitted: pretrained=$PRETRAINED_ID fine_tuned=$FINETUNE_ID"
 echo "summary_job=$summary_job expected_finish=$(date -d "@$expected_finish_epoch" '+%F %T') plus queue delay"
-echo "monitor: bash methods/segmentanytree/slurm/monitor_three_variation_overnight.sh --follow"
+echo "monitor: bash methods/segmentanytree/slurm/monitor_pretrained_finetune_comparison.sh --follow"

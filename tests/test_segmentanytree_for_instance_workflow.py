@@ -101,9 +101,7 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     )
 
     assert config["project"]["benchmark_name"] == "for_instance_segmentanytree"
-    assert config["project"]["status"] == (
-        "accepted_retrained_checkpoint_evaluated"
-    )
+    assert config["project"]["status"] == "pretrained_finetune_comparison_pending"
     assert config["project"]["protocol_id"] == "for_instance_pointwise_v1"
     assert config["dataset"]["name"] == "FOR-instance"
     assert config["dataset"]["root"] == (
@@ -121,7 +119,7 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     assert config["benchmark"]["provisional_coordinate_evaluation_count"] == 32
     assert config["benchmark"]["validated_pointwise_evaluation_count"] == 11
     assert config["benchmark"]["validated_pointwise_evaluation_scope"] == (
-        "accepted_retrained_held_out_test"
+        "historical_retrained_held_out_test"
     )
     assert config["benchmark"]["development_validation_pointwise_evaluation_count"] == 5
     assert config["benchmark"]["primary_reporting_split"] == "test"
@@ -138,19 +136,21 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     assert config["method"]["checkpoint"]["sha256"] == (
         "0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a"
     )
-    assert config["training"]["current_mode"] == "retrained_from_dev"
-    assert config["training"]["local_weight_updates_performed"] is True
+    assert config["training"]["current_mode"] == (
+        "published_pretrained_then_fine_tuned_on_dev"
+    )
+    assert config["training"]["target_comparison"]["from_scratch_training_permitted"] is False
     assert (
-        config["training"]["corrected_experiment"]["latest_completed_run_id"]
+        config["training"]["historical_retrained_experiment"]["latest_completed_run_id"]
         == "sat_for_quicktune_to49_20260706_140730"
     )
     assert (
-        config["training"]["corrected_experiment"]["rejected_run_id"]
+        config["training"]["historical_retrained_experiment"]["rejected_run_id"]
         == "sat_for_quicktune_to55_20260707_214305"
     )
     assert (
-        config["training"]["corrected_experiment"]["final_test_status"]
-        == "completed"
+        config["training"]["historical_retrained_experiment"]["final_test_status"]
+        == "completed_retained_historical"
     )
     assert config["training"]["forbidden_training_split"] == ["test"]
     assert config["method"]["gpu_required"] is True
@@ -1267,7 +1267,8 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
             ROOT / "methods/segmentanytree/configs/for_instance_training.yml"
         ).read_text(encoding="utf-8")
     )
-    assert config["method"]["primary_training_mode"] == "retrained_from_dev"
+    assert config["method"]["primary_training_mode"] == "fine_tuned_on_dev"
+    assert config["method"]["comparison_baseline_mode"] == "published_pretrained"
     assert config["method"]["paper_scenario"] == "scenario_1_uls_only"
     assert config["dataset"]["internal_validation"]["seed"] == 42
     assert config["dataset"]["internal_validation"]["expected_training_plots"] == 16
@@ -1622,10 +1623,14 @@ def test_segmentanytree_training_shell_scripts_parse() -> None:
         "methods/segmentanytree/slurm/evaluation/sweep_segmentanytree_validation_postprocessing.sbatch",
         "methods/segmentanytree/slurm/evaluation/validate_segmentanytree_variant.sbatch",
         "methods/segmentanytree/slurm/evaluation/summarise_segmentanytree_three_variations.sbatch",
+        "methods/segmentanytree/slurm/evaluation/summarise_segmentanytree_pretrained_finetune.sbatch",
         "methods/segmentanytree/slurm/submit_full_training_chain.sh",
         "methods/segmentanytree/slurm/submit_three_variation_overnight.sh",
         "methods/segmentanytree/slurm/recover_three_variation_pretrained.sh",
         "methods/segmentanytree/slurm/monitor_three_variation_overnight.sh",
+        "methods/segmentanytree/slurm/submit_pretrained_finetune_comparison.sh",
+        "methods/segmentanytree/slurm/recover_pretrained_finetune_pretrained.sh",
+        "methods/segmentanytree/slurm/monitor_pretrained_finetune_comparison.sh",
     ]
     for relative_path in scripts:
         completed = subprocess.run(
@@ -1670,12 +1675,18 @@ def test_full_training_submission_wrapper_derives_validation_array() -> None:
     assert 'printf \'FULL_RESUME_CHECKPOINT=%q\\n\'' in wrapper
 
 
-def test_three_variation_overnight_workflow_is_guarded() -> None:
+def test_pretrained_finetune_workflow_is_guarded_and_non_destructive() -> None:
     submitter = (
         ROOT / "methods/segmentanytree/slurm/submit_three_variation_overnight.sh"
     ).read_text(encoding="utf-8")
     monitor = (
         ROOT / "methods/segmentanytree/slurm/monitor_three_variation_overnight.sh"
+    ).read_text(encoding="utf-8")
+    canonical = (
+        ROOT / "methods/segmentanytree/slurm/submit_pretrained_finetune_comparison.sh"
+    ).read_text(encoding="utf-8")
+    recovery = (
+        ROOT / "methods/segmentanytree/slurm/recover_three_variation_pretrained.sh"
     ).read_text(encoding="utf-8")
 
     assert "SEGMENTANYTREE_THREE_VARIATION_CONFIRMED" in submitter
@@ -1683,9 +1694,15 @@ def test_three_variation_overnight_workflow_is_guarded() -> None:
     assert "SEGMENTANYTREE_CHECKPOINT_DIR=$RELEASED_DIR" not in submitter
     assert "SEGMENTANYTREE_TRAIN_BASE_LR=0.0001" in submitter
     assert "SEGMENTANYTREE_TRAIN_EPOCHS=$FINETUNE_EPOCHS" in submitter
+    assert 'dependency="afterok:$pretrained_final_gate"' in submitter
     assert "afterok:$finetune_validation_gate" in submitter
     assert "SEGMENTANYTREE_FINAL_TEST_CONFIRMED=1" in submitter
-    assert "three_variations_$STAMP.csv" in submitter
+    assert "pretrained_finetune_$STAMP.csv" in submitter
+    assert "SEGMENTANYTREE_RETRAINED_METRICS_ROOT" not in submitter
+    assert "summarise_segmentanytree_pretrained_finetune.sbatch" in submitter
+    assert "SEGMENTANYTREE_PRETRAINED_FINETUNE_CONFIRMED" in canonical
+    assert "segmentanytree_recovery_archive" in recovery
+    assert "rm -rf" not in recovery
     assert "--follow" in monitor
     assert "tail -n 20" not in monitor
     assert "ETA:" in monitor
@@ -1745,7 +1762,9 @@ def test_segmentanytree_variant_summary_rejects_zero_predictions(
     payload["paper_compatible"]["f1"] = 0.4
     (metrics / "plot.json").write_text(json.dumps(payload), encoding="utf-8")
     row = summariser.summarise_variant("fine_tuned", metrics, 1, "test", True)
-    assert row["mean_f1"] == pytest.approx(0.4)
+    assert row["mean_plot_f1"] == pytest.approx(0.4)
+    assert row["micro_f1"] == pytest.approx(0.4)
+    assert row["matching_policy"] == "maximum_cardinality_one_to_one"
     assert row["predicted_instances"] == 3
 
 
@@ -1975,9 +1994,10 @@ def test_public_segmentanytree_pilot_record_matches_evaluation() -> None:
         ).read_text(encoding="utf-8")
     )
     assert status["status"] == "provisional_coordinate_evaluation"
-    assert status["accepted_accuracy_status"] == (
-        "pending_pointwise_revalidation"
+    assert status["historical_aligned_result_status"] == (
+        "completed_retained_historical"
     )
+    assert status["current_target_status"] == "pretrained_finetune_comparison_pending"
 
 
 def test_public_provisional_segmentanytree_diagnostics_are_sanitised() -> None:
@@ -2016,8 +2036,11 @@ def test_public_provisional_segmentanytree_diagnostics_are_sanitised() -> None:
     assert manifest["status"] == (
         "provisional_coordinate_evaluation_revalidation_required"
     )
-    assert manifest["accepted_accuracy_status"] == (
-        "pending_pointwise_revalidation"
+    assert manifest["historical_aligned_result_status"] == (
+        "completed_retained_historical"
+    )
+    assert manifest["current_target_status"] == (
+        "pretrained_finetune_comparison_pending"
     )
 
     published_text = "\n".join(

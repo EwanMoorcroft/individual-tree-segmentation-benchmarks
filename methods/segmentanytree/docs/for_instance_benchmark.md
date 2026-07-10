@@ -11,9 +11,9 @@ outputs, not final dissertation results.
 The provisional results and their limitations are documented in
 [`provisional_released_checkpoint_results.md`](provisional_released_checkpoint_results.md).
 They must not be used as final benchmark results. The corrected primary
-experiment will train a new SegmentAnyTree model from FOR-instance development
-data, select it with a fixed internal development validation split and then
-evaluate the frozen checkpoint on the held-out test split using aligned
+experiment is complete: it trained from FOR-instance development data,
+selected epoch 49 with a fixed internal development validation split and
+evaluated the frozen checkpoint once on the held-out test split using aligned
 point-wise outputs.
 
 ## Dataset And Evaluation Labels
@@ -37,6 +37,10 @@ SegmentAnyTree remains an external dependency:
 - Barkla checkout: `external/SegmentAnyTree`;
 - container source: `docker://maciekwielgosz/segment-any-tree:latest`;
 - Barkla image: `~/scratch/containers/segment-any-tree_latest.sif`.
+
+The retained metadata does not contain the resolved container digest or the
+exact workflow Git commit for the final evaluation. Those gaps are recorded in
+the historical result provenance manifest and are not silently inferred.
 
 The external checkout, approximately 7.4 GB SIF image, model checkpoint, raw
 data and prediction outputs are excluded from this repository.
@@ -71,12 +75,12 @@ For the current 21 development plots, this produces 16 training plots and 5
 validation plots. The 11 test records are retained in the ignored manifest but
 are never converted into the training data root.
 
-The primary corrected run is `retrained_from_dev`, corresponding to the
-paper's ULS-only scenario. Fine-tuning the released mixed-domain checkpoint is
-a different experiment and will only be considered after the from-scratch
-reproduction. The pinned checkpoint resume implementation restores its saved
-run configuration and optimizer state, so it is not treated as a generic
-fine-tuning interface without an explicit, tested compatibility change.
+The current target first evaluates the released checkpoint unchanged, then
+fine-tunes from those released weights with fresh optimizer and epoch history.
+The completed `retrained_from_dev` run is historical evidence. The attempted
+8 July follow-up is also historical and rejected because it produced no
+accepted instances; the replacement fine-tune uses the explicit tested
+weights-only interface.
 
 The relevant public configuration is
 [`for_instance_training.yml`](../configs/for_instance_training.yml).
@@ -88,10 +92,16 @@ training logs remain outside Git.
 The initial full run produced an epoch-30 checkpoint before its next MeanShift
 stage became impractically slow. The resumed epoch-45 checkpoint reached mean
 aligned F1 `0.4580` across the five fixed development validation plots. The
-accepted checkpoint is `sat_for_quicktune_to49_20260706_140730`, with mean
-validation F1 `0.5371` and held-out test mean F1 `0.4798`. The later
-`sat_for_quicktune_to55_20260707_214305` continuation is rejected because
-validation fell to `0.4505`.
+completed historical checkpoint is `sat_for_quicktune_to49_20260706_140730`, with mean
+validation F1 `0.5371`. A pre-final diagnostic snapshot reported held-out mean
+F1 `0.4798`. The later `sat_for_quicktune_to55_20260707_214305` continuation
+is rejected because validation fell to `0.4505`.
+
+The final historical test evaluation ID is
+`sat_for_quicktune_to49_20260706_140730_final_test_aligned_20260709_212341`.
+It reports mean plot F1 `0.4825` and micro F1 `0.4692` from TP=202, FP=336
+and FN=121. The earlier `0.4798` value belongs to a transferred pre-final
+failure-mode snapshot and is not the canonical aggregate.
 
 Current results, resource observations and the checkpoint decision are recorded
 in
@@ -107,7 +117,7 @@ validation range from the split manifest.
 The pinned trainer loops to, but not including, `training.epochs`; the wrapper
 therefore passes a stop value one greater than the requested epoch count and
 records both values. Test evaluation is guarded so future method-development
-experiments cannot overwrite the accepted unfiltered `to49` result.
+experiments cannot overwrite the historical unfiltered `to49` result.
 
 ## Working Barkla Setup
 
@@ -152,8 +162,8 @@ The canonical pilot file is `CULS/plot_1_annotated.las`. It contains 1,816,672
 input points and six positive reference trees. The corrected pilot chain
 completed with Slurm jobs 9548698, 9548699 and 9548700 for prediction,
 normalisation and the original coordinate-rematched evaluation respectively.
-The prediction is valid execution evidence. Its earlier accuracy values remain
-provisional until point correspondence is revalidated.
+The prediction is valid execution evidence. Its coordinate-rematched accuracy
+values remain provisional and are not part of an aligned target result.
 
 To repeat the pilot:
 
@@ -267,8 +277,8 @@ The primary published-comparison table must contain only the 11 test plots.
 Development plots may be used for diagnostics, but not to select settings after
 test results have been inspected.
 
-Before submitting more GPU inference, inspect the existing outputs and audit
-the final exports:
+For a future reproduction, inspect existing outputs and audit final exports
+before submitting more GPU inference:
 
 ```bash
 cd ~/scratch/tree-seg-benchmark
@@ -308,7 +318,7 @@ nine failed; the other two tasks were still running when the snapshot was
 recorded. Examples of output row inflation were 66 rows for CULS
 `plot_2_annotated`, 104,470 rows for NIBIO `plot_1_annotated`, 164,290 rows
 for NIBIO `plot_22_annotated`, and 2,056,634 rows for TUWIEN `test`. These
-failures are sufficient to reject the final-LAZ route for the accepted
+failures are sufficient to reject the final-LAZ route for the historical
 benchmark.
 
 The released tracker computes aligned full-resolution instance predictions and
@@ -319,8 +329,8 @@ uses a narrow runtime patch to write
 semantic evaluation PLY is retained unchanged. The dedicated evaluation route
 stops before final LAZ merging.
 
-Validate this route on the first CULS and NIBIO test plots before submitting
-all 11 test plots:
+The historical run validated this route before evaluating all 11 plots. For a
+new target run, repeat the first CULS and NIBIO tasks before expanding the array:
 
 ```bash
 PAPER_PILOT=$(sbatch --parsable \
@@ -334,12 +344,12 @@ PAPER_EVAL=$(sbatch --parsable \
   methods/segmentanytree/slurm/evaluation/evaluate_segmentanytree_paper_test_array.sbatch)
 ```
 
-Only expand this to array indices `0-10` after both pilot evaluations contain
-the expected aligned point counts, checkpoint hash and plausible metrics.
+Expand to array indices `0-10` only after both pilot evaluations contain the
+expected aligned point counts, checkpoint hash and plausible metrics.
 
 ## Acceptance Checks
 
-Accept a rerun only when:
+Accept any future rerun only when:
 
 1. the new checkpoint SHA-256, external commit, container route and package
    versions are recorded;
@@ -354,3 +364,8 @@ Accept a rerun only when:
 7. the IoU threshold and semantic masks are fixed before the final test job;
 8. NIBIO is inspected separately without tuning against its test scores; and
 9. the public workbook is rebuilt only from validated trained-model results.
+
+The final aggregate, checkpoint hash, split counts and metric arithmetic are
+publicly retained. The missing final per-plot transfer, container digest and
+workflow commit remain explicit provenance limitations in
+[`../examples/sat_final_test_aligned_provenance_sat_for_quicktune_to49_20260706_140730.json`](../examples/sat_final_test_aligned_provenance_sat_for_quicktune_to49_20260706_140730.json).

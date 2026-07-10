@@ -12,7 +12,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="$HOME/scratch/tree-seg-benchmark"
-RUN_ID="${SEGMENTANYTREE_TRAINING_RUN_ID:?Set SEGMENTANYTREE_TRAINING_RUN_ID to the accepted full training run.}"
+RUN_ID="${SEGMENTANYTREE_TRAINING_RUN_ID:?Set SEGMENTANYTREE_TRAINING_RUN_ID to the development-selected training run.}"
 EVALUATION_RUN_ID="${SEGMENTANYTREE_EVALUATION_RUN_ID:-$RUN_ID}"
 
 cd "$PROJECT_ROOT"

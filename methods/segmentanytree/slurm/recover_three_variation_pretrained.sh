@@ -20,8 +20,8 @@ pretrained_metric_count=0
 if [[ -d "$SAT_THREE_PRETRAINED_METRICS" ]]; then
   pretrained_metric_count=$(find "$SAT_THREE_PRETRAINED_METRICS" -type f -name '*.json' | wc -l)
 fi
-if [[ "$pretrained_metric_count" -ne 0 ]]; then
-  echo "Pretrained metrics already exist; refusing destructive recovery." >&2
+if [[ "$pretrained_metric_count" -eq 11 ]]; then
+  echo "Complete pretrained metrics already exist; recovery is unnecessary." >&2
   exit 2
 fi
 if sacct -X -n -j "$SAT_THREE_FINETUNE_SMOKE_JOB,$SAT_THREE_FINETUNE_TRAIN_JOB,$SAT_THREE_FINETUNE_VALIDATION_INFER,$SAT_THREE_FINETUNE_VALIDATION_EVAL,$SAT_THREE_FINETUNE_VALIDATION_GATE,$SAT_THREE_FINETUNE_TEST_INFER,$SAT_THREE_FINETUNE_TEST_EVAL,$SAT_THREE_FINETUNE_FINAL_GATE" -o State 2>/dev/null | grep -Eq 'FAILED|TIMEOUT|OUT_OF_MEMORY|NODE_FAIL'; then
@@ -33,7 +33,8 @@ cd "$PROJECT_ROOT"
 PRETRAINED_PREDICTIONS="$PROJECT_ROOT/data/predictions/segmentanytree/for_instance_variants/$SAT_THREE_PRETRAINED_ID"
 PRETRAINED_RUN_METADATA="$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/variant_runs/$SAT_THREE_PRETRAINED_ID"
 PRETRAINED_TABLES="$PROJECT_ROOT/results/tables/segmentanytree_for_instance/variants/$SAT_THREE_PRETRAINED_ID"
-RETRAINED_METRICS="$PROJECT_ROOT/results/metadata/segmentanytree_for_instance/trained_test/sat_for_quicktune_to49_20260706_140730_final_test_aligned_20260709_212341"
+RECOVERY_STAMP=$(date +%Y%m%d_%H%M%S)
+ARCHIVE_ROOT="$HOME/fastscratch/segmentanytree_recovery_archive/$SAT_THREE_PRETRAINED_ID/$RECOVERY_STAMP"
 
 scancel \
   "$SAT_THREE_PRETRAINED_PILOT_EVAL" \
@@ -43,11 +44,22 @@ scancel \
   "$SAT_THREE_PRETRAINED_FINAL_GATE" \
   "$SAT_THREE_SUMMARY_JOB" 2>/dev/null || true
 
-rm -rf -- \
+mkdir -p "$ARCHIVE_ROOT"
+for target in \
   "$PRETRAINED_PREDICTIONS" \
   "$PRETRAINED_RUN_METADATA" \
   "$SAT_THREE_PRETRAINED_METRICS" \
-  "$PRETRAINED_TABLES"
+  "$PRETRAINED_TABLES"; do
+  if [[ -e "$target" ]]; then
+    relative_target=${target#"$PROJECT_ROOT"/}
+    archive_target="$ARCHIVE_ROOT/$relative_target"
+    mkdir -p "$(dirname "$archive_target")"
+    mv "$target" "$archive_target"
+  fi
+done
+printf 'source_state=%s\nrun_id=%s\narchived_at=%s\n' \
+  "$STATE_FILE" "$SAT_THREE_PRETRAINED_ID" "$RECOVERY_STAMP" \
+  > "$ARCHIVE_ROOT/recovery_manifest.txt"
 
 unset SEGMENTANYTREE_CHECKPOINT_DIR
 new_jobs=()
@@ -96,8 +108,8 @@ final_gate=$(sbatch --parsable \
 new_jobs+=("$final_gate")
 summary_job=$(sbatch --parsable \
   --dependency="afterok:$final_gate:$SAT_THREE_FINETUNE_FINAL_GATE" \
-  --export="ALL,SEGMENTANYTREE_PRETRAINED_METRICS_ROOT=$SAT_THREE_PRETRAINED_METRICS,SEGMENTANYTREE_RETRAINED_METRICS_ROOT=$RETRAINED_METRICS,SEGMENTANYTREE_FINETUNED_METRICS_ROOT=$SAT_THREE_FINETUNE_TEST_METRICS,SEGMENTANYTREE_THREE_VARIATION_SUMMARY=$SAT_THREE_SUMMARY" \
-  methods/segmentanytree/slurm/evaluation/summarise_segmentanytree_three_variations.sbatch)
+  --export="ALL,SEGMENTANYTREE_PRETRAINED_METRICS_ROOT=$SAT_THREE_PRETRAINED_METRICS,SEGMENTANYTREE_FINETUNED_METRICS_ROOT=$SAT_THREE_FINETUNE_TEST_METRICS,SEGMENTANYTREE_PRETRAINED_FINETUNE_SUMMARY=$SAT_THREE_SUMMARY" \
+  methods/segmentanytree/slurm/evaluation/summarise_segmentanytree_pretrained_finetune.sbatch)
 new_jobs+=("$summary_job")
 
 {
@@ -111,5 +123,5 @@ new_jobs+=("$summary_job")
 } >> "$SAT_THREE_STATE_FILE"
 trap - ERR
 
-echo "pretrained branch replaced; fine-tune branch retained"
-echo "monitor: bash methods/segmentanytree/slurm/monitor_three_variation_overnight.sh --follow"
+echo "pretrained branch resubmitted; prior partial outputs archived at $ARCHIVE_ROOT"
+echo "monitor: bash methods/segmentanytree/slurm/monitor_pretrained_finetune_comparison.sh --follow"

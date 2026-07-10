@@ -51,7 +51,15 @@ def test_treex_config_records_exact_path_subset_and_unsupervised_mode() -> None:
     )
     assert "complete for current reporting" in config["method"]["package_version_note"]
     assert config["method"]["params"]["stem_search_min_cluster_intensity"] is None
-    assert config["evaluation"]["primary_reporting_protocol"] == "strict"
+    assert config["evaluation"]["matching"] == (
+        "maximum_cardinality_one_to_one"
+    )
+    assert config["evaluation"]["primary_reporting_protocol"] == (
+        "harmonized_union_mask"
+    )
+    assert config["evaluation"]["primary_evaluation_mask"] == (
+        "union_of_reference_tree_and_predicted_tree_points"
+    )
 
 
 def test_treex_required_files_are_present_and_tracked() -> None:
@@ -64,6 +72,7 @@ def test_treex_required_files_are_present_and_tracked() -> None:
         "methods/treex/scripts/make_treex_for_instance_exact_split_lists.py",
         "methods/treex/scripts/create_treex_split_summary.py",
         "methods/treex/scripts/create_treex_final_summaries.py",
+        "methods/treex/scripts/rebuild_treex_public_results.py",
         "methods/treex/scripts/rsync_treex_predictions_from_barkla.sh",
         "methods/treex/scripts/rsync_treex_public_results_from_barkla.sh",
         "methods/treex/slurm/run_treex_for_instance_dev_array.sbatch",
@@ -72,6 +81,7 @@ def test_treex_required_files_are_present_and_tracked() -> None:
         "methods/treex/slurm/evaluate_treex_for_instance_test_array.sbatch",
         "methods/treex/examples/README.md",
         "methods/treex/examples/treex_combined_dev_test_summary.csv",
+        "methods/treex/examples/treex_run_metadata.csv",
         "methods/treex/examples/treex_split_summary.csv",
         "methods/treex/examples/treex_site_summary.csv",
         "methods/treex/examples/treex_dev_full_summary.csv",
@@ -102,92 +112,84 @@ def test_treex_committed_result_summaries_match_recorded_aggregate_scores() -> N
         site_rows = list(csv.DictReader(handle))
 
     assert split_rows["dev"]["n_plots"] == "21"
-    assert split_rows["dev"]["mean_f1_strict"] == "0.3408525717572193"
+    assert split_rows["dev"]["mean_plot_f1_harmonized"] == (
+        "0.31432077180548623"
+    )
+    assert split_rows["dev"]["micro_f1_harmonized"] == (
+        "0.28917826672653796"
+    )
     assert split_rows["test"]["n_plots"] == "11"
-    assert split_rows["test"]["mean_f1_strict"] == "0.4021745538352326"
-    assert split_rows["test"]["mean_f1_labelled"] == "0.5221866540710387"
+    assert split_rows["test"]["mean_plot_f1_harmonized"] == (
+        "0.38310765715157086"
+    )
+    assert split_rows["test"]["micro_f1_harmonized"] == (
+        "0.36270491803278687"
+    )
+    assert split_rows["test"]["mean_plot_f1_labelled_mask"] == (
+        "0.5221866540710387"
+    )
     assert len(combined_rows) == 32
     assert len({row["plot_id"] for row in combined_rows}) == 32
     assert sum(row["split"] == "dev" for row in combined_rows) == 21
     assert sum(row["split"] == "test" for row in combined_rows) == 11
     for row in combined_rows:
-        true_positives = int(row["true_positives"])
-        false_negatives = int(row["false_negatives"])
-        false_positives_labelled = int(
-            row["false_positives_labelled_mask"]
-        )
-        false_positives_strict = int(row["false_positives_strict"])
-        assert true_positives + false_negatives == int(
-            row["reference_trees"]
-        )
-        assert true_positives + false_positives_labelled == int(
-            row["predicted_trees_on_labelled_mask"]
-        )
-        assert true_positives + false_positives_strict == int(
-            row["predicted_trees_all"]
-        )
-        expected_precision_labelled = (
-            true_positives
-            / (true_positives + false_positives_labelled)
-            if true_positives + false_positives_labelled
-            else 0.0
-        )
-        expected_recall = (
-            true_positives / (true_positives + false_negatives)
-            if true_positives + false_negatives
-            else 0.0
-        )
-        expected_f1_labelled = (
-            2
-            * expected_precision_labelled
-            * expected_recall
-            / (expected_precision_labelled + expected_recall)
-            if expected_precision_labelled + expected_recall
-            else 0.0
-        )
-        expected_precision_strict = (
-            true_positives
-            / (true_positives + false_positives_strict)
-            if true_positives + false_positives_strict
-            else 0.0
-        )
-        expected_f1_strict = (
-            2
-            * expected_precision_strict
-            * expected_recall
-            / (expected_precision_strict + expected_recall)
-            if expected_precision_strict + expected_recall
-            else 0.0
-        )
-        assert math.isclose(
-            float(row["precision_labelled_mask"]),
-            expected_precision_labelled,
-        )
-        assert math.isclose(float(row["recall_labelled_mask"]), expected_recall)
-        assert math.isclose(float(row["f1_labelled_mask"]), expected_f1_labelled)
-        assert math.isclose(
-            float(row["precision_strict"]),
-            expected_precision_strict,
-        )
-        assert math.isclose(float(row["recall_strict"]), expected_recall)
-        assert math.isclose(float(row["f1_strict"]), expected_f1_strict)
+        for suffix, prediction_field in (
+            ("labelled_mask", "predicted_trees_on_reference_labelled_mask"),
+            ("harmonized", "predicted_trees_harmonized_union_mask"),
+        ):
+            true_positives = int(row[f"true_positives_{suffix}"])
+            false_positives = int(row[f"false_positives_{suffix}"])
+            false_negatives = int(row[f"false_negatives_{suffix}"])
+            assert true_positives + false_negatives == int(
+                row["reference_trees"]
+            )
+            assert true_positives + false_positives == int(
+                row[prediction_field]
+            )
+            expected_precision = (
+                true_positives / (true_positives + false_positives)
+                if true_positives + false_positives
+                else 0.0
+            )
+            expected_recall = (
+                true_positives / (true_positives + false_negatives)
+                if true_positives + false_negatives
+                else 0.0
+            )
+            denominator = (
+                (2 * true_positives) + false_positives + false_negatives
+            )
+            expected_f1 = 2 * true_positives / denominator if denominator else 0.0
+            assert math.isclose(
+                float(row[f"precision_{suffix}"]), expected_precision
+            )
+            assert math.isclose(float(row[f"recall_{suffix}"]), expected_recall)
+            assert math.isclose(float(row[f"f1_{suffix}"]), expected_f1)
     for split, aggregate in split_rows.items():
         rows = [row for row in combined_rows if row["split"] == split]
         assert int(aggregate["n_plots"]) == len(rows)
         assert int(aggregate["total_reference_trees"]) == sum(
             int(row["reference_trees"]) for row in rows
         )
-        assert int(aggregate["total_predicted_trees_all"]) == sum(
-            int(row["predicted_trees_all"]) for row in rows
+        assert int(aggregate["total_predicted_trees_harmonized"]) == sum(
+            int(row["predicted_trees_harmonized_union_mask"])
+            for row in rows
         )
         assert math.isclose(
-            float(aggregate["mean_f1_strict"]),
-            sum(float(row["f1_strict"]) for row in rows) / len(rows),
+            float(aggregate["mean_plot_f1_harmonized"]),
+            sum(float(row["f1_harmonized"]) for row in rows) / len(rows),
+        )
+        tp = sum(int(row["true_positives_harmonized"]) for row in rows)
+        fp = sum(int(row["false_positives_harmonized"]) for row in rows)
+        fn = sum(int(row["false_negatives_harmonized"]) for row in rows)
+        assert math.isclose(
+            float(aggregate["micro_f1_harmonized"]),
+            2 * tp / ((2 * tp) + fp + fn),
         )
     assert any(
         row["split"] == "test"
         and row["site"] == "SCION"
-        and row["mean_f1_strict"] == "0.5645889792231256"
+        and row["micro_f1_harmonized"] == "0.5473684210526316"
         for row in site_rows
     )
 
@@ -201,6 +203,7 @@ def test_treex_scripts_show_help() -> None:
         "methods/treex/scripts/make_treex_test_eval_list.py",
         "methods/treex/scripts/create_treex_split_summary.py",
         "methods/treex/scripts/create_treex_final_summaries.py",
+        "methods/treex/scripts/rebuild_treex_public_results.py",
     ):
         completed = subprocess.run(
             [sys.executable, str(ROOT / relative_path), "--help"],
@@ -326,9 +329,9 @@ def test_treex_evaluator_reproduces_labelled_and_strict_protocols(
     prediction = tmp_path / "prediction.npz"
     np.savez(
         prediction,
-        pred_tree_id=np.array([-1, 10, 10, 20, 20, 30]),
-        target_tree_id=np.array([0, 1, 1, 2, 2, 0]),
-        classification=np.array([1, 4, 4, 5, 5, 1]),
+        pred_tree_id=np.array([10, 10, 10, 10, 10, 20, 20, 30]),
+        target_tree_id=np.array([0, 0, 0, 1, 1, 2, 2, 0]),
+        classification=np.array([1, 1, 1, 4, 4, 5, 5, 1]),
     )
     metrics_json = tmp_path / "metrics.json"
     metrics_csv = tmp_path / "metrics.csv"
@@ -360,11 +363,15 @@ def test_treex_evaluator_reproduces_labelled_and_strict_protocols(
     assert evaluator.main() == 0
     metrics = json.loads(metrics_json.read_text(encoding="utf-8"))
     assert metrics["reference_trees"] == 2
-    assert metrics["predicted_trees_on_labelled_mask"] == 2
-    assert metrics["predicted_trees_all"] == 3
-    assert metrics["true_positives"] == 2
+    assert metrics["predicted_trees_on_reference_labelled_mask"] == 2
+    assert metrics["predicted_trees_harmonized_union_mask"] == 3
+    assert metrics["true_positives_labelled_mask"] == 2
+    assert metrics["true_positives_harmonized"] == 1
     assert metrics["f1_labelled_mask"] == 1.0
-    assert metrics["f1_strict"] == 0.8
+    assert metrics["f1_harmonized"] == 0.4
+    assert metrics["primary_evaluation_mask"] == (
+        "union_of_reference_tree_and_predicted_tree_points"
+    )
 
 
 def test_treex_split_summary_combines_validated_per_plot_outputs(
@@ -389,19 +396,24 @@ def test_treex_split_summary_combines_validated_per_plot_outputs(
     metrics = {
         "plot_id": "CULS/plot_1",
         "reference_trees": 2,
-        "predicted_trees_all": 3,
-        "predicted_trees_on_labelled_mask": 2,
-        "true_positives": 2,
+        "predicted_trees_harmonized_union_mask": 3,
+        "predicted_trees_on_reference_labelled_mask": 2,
+        "true_positives_labelled_mask": 2,
         "false_positives_labelled_mask": 0,
-        "false_positives_strict": 1,
-        "false_negatives": 0,
+        "false_negatives_labelled_mask": 0,
         "precision_labelled_mask": 1.0,
         "recall_labelled_mask": 1.0,
         "f1_labelled_mask": 1.0,
-        "precision_strict": 2 / 3,
-        "recall_strict": 1.0,
-        "f1_strict": 0.8,
-        "mean_matched_iou": 0.75,
+        "mean_matched_iou_labelled_mask": 0.75,
+        "median_matched_iou_labelled_mask": 0.75,
+        "true_positives_harmonized": 2,
+        "false_positives_harmonized": 1,
+        "false_negatives_harmonized": 0,
+        "precision_harmonized": 2 / 3,
+        "recall_harmonized": 1.0,
+        "f1_harmonized": 0.8,
+        "mean_matched_iou_harmonized": 0.7,
+        "median_matched_iou_harmonized": 0.7,
     }
     (results_root / "CULS_plot_1_treex_summary.json").write_text(
         json.dumps(summary),
@@ -437,7 +449,7 @@ def test_treex_split_summary_combines_validated_per_plot_outputs(
     assert len(rows) == 1
     assert rows[0]["plot_id"] == "CULS/plot_1"
     assert rows[0]["reference_trees"] == "2"
-    assert rows[0]["f1_strict"] == "0.8"
+    assert rows[0]["f1_harmonized"] == "0.8"
 
 
 def test_treex_public_examples_exclude_machine_paths_and_intermediates() -> None:

@@ -62,9 +62,11 @@ for all 32 plots, but all 11 test exports failed point-correspondence checks.
 That run also did not train a model under the local development/test protocol.
 The corrected retrained experiment used 16 development plots for training, 5
 for internal validation and the 11 supplied test plots only after the
-checkpoint was frozen. The accepted checkpoint is
+checkpoint was frozen. The completed historical checkpoint is
 `sat_for_quicktune_to49_20260706_140730`; the `to55` continuation is rejected
-because development-validation performance regressed. The protocol is in
+because development-validation performance regressed. The current plan keeps
+that evidence and instead compares the released pretrained checkpoint with a
+new model fine-tuned from those released weights. The protocol is in
 [`for-instance.md`](protocols/for-instance.md)
 and the provisional values are documented in
 [`provisional_released_checkpoint_results.md`](../methods/segmentanytree/docs/provisional_released_checkpoint_results.md).

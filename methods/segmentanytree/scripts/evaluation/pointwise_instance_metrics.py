@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +21,11 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[4]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from benchmark.instance_metrics import maximum_cardinality_threshold_matching
 
 
 @dataclass(frozen=True)
@@ -252,42 +258,7 @@ def contingency_iou(
     return matrix
 
 
-def maximum_threshold_matching(
-    matrix: np.ndarray,
-    threshold: float,
-) -> list[tuple[int, int]]:
-    candidates = [
-        [
-            int(index)
-            for index in np.argsort(matrix[row])[::-1]
-            if matrix[row, index] >= threshold
-        ]
-        for row in range(matrix.shape[0])
-    ]
-    reference_owner: dict[int, int] = {}
-
-    def assign(prediction: int, seen: set[int]) -> bool:
-        for reference in candidates[prediction]:
-            if reference in seen:
-                continue
-            seen.add(reference)
-            owner = reference_owner.get(reference)
-            if owner is None or assign(owner, seen):
-                reference_owner[reference] = prediction
-                return True
-        return False
-
-    order = sorted(
-        range(matrix.shape[0]),
-        key=lambda row: float(np.max(matrix[row])) if matrix.shape[1] else 0.0,
-        reverse=True,
-    )
-    for prediction in order:
-        assign(prediction, set())
-    return sorted(
-        (prediction, reference)
-        for reference, prediction in reference_owner.items()
-    )
+maximum_threshold_matching = maximum_cardinality_threshold_matching
 
 
 def metric_values(
@@ -459,7 +430,7 @@ def evaluate_pointwise(
     )
     one_to_one_metrics.update(
         {
-            "matching_policy": "one_to_one",
+            "matching_policy": "maximum_cardinality_one_to_one",
             "mean_matched_iou": (
                 float(np.mean([row["iou"] for row in one_to_one_matches]))
                 if one_to_one_matches

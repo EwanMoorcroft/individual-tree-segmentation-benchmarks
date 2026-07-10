@@ -1,9 +1,9 @@
 project:
   name: tree-seg-benchmark
-  experiment: for_instance_segmentanytree_retrained_from_dev
+  experiment: for_instance_segmentanytree_pretrained_finetune_comparison
   dataset_slug: for-instance
   method_slug: segmentanytree
-  status: completed
+  status: pending_guarded_execution
   protocol_id: for_instance_pointwise_v1
   barkla_specific: true
 
@@ -51,12 +51,14 @@ method:
   model_config: panoptic/area4_ablation_3heads_5
   model_name: PointGroup-PAPER
   upstream_training_config: treeins
-  primary_training_mode: retrained_from_dev
+  primary_training_mode: fine_tuned_on_dev
+  comparison_baseline_mode: published_pretrained
   paper_scenario: "scenario_1_uls_only"
-  optional_follow_up_mode: fine_tuned_on_dev
-  optional_follow_up_status: rejected_zero_instance_predictions
-  optional_follow_up_run_id: segmentanytree_for-instance_fine_tuned_on_dev_20260708_215054_full
+  historical_retrained_mode: retrained_from_dev
   apptainer_image: "~/scratch/containers/segment-any-tree_latest.sif"
+  container_source: "docker://maciekwielgosz/segment-any-tree:latest"
+  container_digest: null
+  container_digest_status: not_captured_in_retained_metadata
   apptainer_module: "apptainer/1.3.6"
   python_userbase: "~/fastscratch/segmentanytree_pyuser_v1"
   gpu_partition: gpu-l40s-low
@@ -97,8 +99,9 @@ training:
   checkpoint_input: null
   checkpoint_output_root: "~/fastscratch/segmentanytree_for_instance_checkpoints"
   test_evaluation_during_training: false
-  progress_as_of: "2026-07-08"
-  leading_checkpoint_candidate:
+  progress_as_of: "2026-07-10"
+  historical_retrained_result:
+    status: completed_retained_historical
     run_id: sat_for_quicktune_to49_20260706_140730
     epoch: 49
     development_validation_plots: 5
@@ -109,6 +112,11 @@ training:
     held_out_test_mean_aligned_f1: 0.4825
     held_out_test_mean_precision: 0.3807
     held_out_test_mean_recall: 0.6954
+    held_out_test_total_tp: 202
+    held_out_test_total_fp: 336
+    held_out_test_total_fn: 121
+    held_out_test_micro_f1: 0.4692218350754936
+    held_out_test_evaluation_id: sat_for_quicktune_to49_20260706_140730_final_test_aligned_20260709_212341
     checkpoint_sha256: "9b871b15ac61589ea27c507e054ee66d3f543caa01fed9a5b790e4ce97bcecea"
   rejected_continuation:
     run_id: sat_for_quicktune_to55_20260707_214305
@@ -130,7 +138,7 @@ training:
     accepted_instance_predictions: 0
     note: "The follow-up produced semantic tree predictions but all aligned instance predictions were background on the audited held-out plots."
   replacement_fine_tuned_protocol:
-    status: ready_for_guarded_execution
+    status: current_target_pending_execution
     initialisation: released_checkpoint_weights_only
     optimizer_state: fresh
     epoch_history: fresh
@@ -140,7 +148,19 @@ training:
     minimum_compatible_weight_fraction: 0.95
     smoke_required: true
     development_validation_gate_required: true
-  held_out_test_status: completed_once_for_selected_checkpoint
+    held_out_test_gate_required: true
+    from_scratch_training_permitted: false
+  published_pretrained_protocol:
+    status: current_target_pending_execution
+    checkpoint_sha256: "0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a"
+    weight_updates: false
+    held_out_test_plots: 11
+  result_retention:
+    preserve_existing_predictions_and_results: true
+    recovery_archive_root: "~/fastscratch/segmentanytree_recovery_archive"
+    historical_retrained_result_status: completed_retained_historical
+    rejected_runs_status: retained_diagnostics
+  held_out_test_status: historical_retrained_complete_target_comparison_pending
 
 paths:
   split_manifest_root: "results/metadata/segmentanytree_for_instance/training_splits"
@@ -150,6 +170,8 @@ paths:
   final_test_predictions_root: "data/predictions/segmentanytree/for_instance_trained_test"
   final_test_metrics_root: "results/metadata/segmentanytree_for_instance/trained_test"
   final_test_tables_root: "results/tables/segmentanytree_for_instance/trained_test"
+  variant_predictions_root: "data/predictions/segmentanytree/for_instance_variants"
+  comparison_tables_root: "results/tables/segmentanytree_for_instance/pretrained_finetune_comparison"
   logs_root: "logs/segmentanytree_for_instance"
 
 evaluation:
@@ -158,4 +180,5 @@ evaluation:
   require_aligned_pointwise_outputs: true
   iou_threshold: 0.5
   paper_matching_policy: paper_per_prediction_best_iou
-  harmonised_matching_policy: one_to_one
+  harmonised_matching_policy: maximum_cardinality_one_to_one
+  primary_evaluation_mask: union_of_reference_tree_and_predicted_tree_points

@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import csv
+import json
+import math
+import re
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -113,3 +118,100 @@ def test_dataset_feasibility_no_longer_reports_stale_sat_training_status() -> No
     assert STALE_STATUS_TEXT not in text
     assert "sat_for_quicktune_to49_20260706_140730" in text
     assert "TreeX deterministic baseline" in text
+
+
+def test_accepted_sat_summary_and_provenance_reconcile() -> None:
+    examples = ROOT / "methods/segmentanytree/examples"
+    summary_path = examples / (
+        "sat_final_test_aligned_summary_"
+        "sat_for_quicktune_to49_20260706_140730.csv"
+    )
+    provenance_path = examples / (
+        "sat_final_test_aligned_provenance_"
+        "sat_for_quicktune_to49_20260706_140730.json"
+    )
+    with summary_path.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 1
+    row = rows[0]
+    tp, fp, fn = (int(row[field]) for field in ("total_tp", "total_fp", "total_fn"))
+    assert math.isclose(
+        float(row["micro_precision"]), tp / (tp + fp)
+    )
+    assert math.isclose(float(row["micro_recall"]), tp / (tp + fn))
+    assert math.isclose(
+        float(row["micro_f1"]), 2 * tp / ((2 * tp) + fp + fn)
+    )
+
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    assert provenance["run_id"] == row["run_id"]
+    assert provenance["final_evaluation_id"] == row["final_id"]
+    assert provenance["checkpoint"]["sha256"] == row["checkpoint_sha256"]
+    assert provenance["evaluation"]["micro_f1"] == float(row["micro_f1"])
+    assert provenance["diagnostic_snapshot"]["status"] == (
+        "pre_final_evaluation_id_not_canonical"
+    )
+    assert provenance["public_evidence"]["final_per_plot_tables"].startswith(
+        "not_available_in_local_checkout"
+    )
+
+
+def test_repository_publication_metadata_is_present() -> None:
+    citation = yaml.safe_load((ROOT / "CITATION.cff").read_text(encoding="utf-8"))
+    assert citation["cff-version"] == "1.2.0"
+    assert citation["title"] == "Individual Tree Segmentation Benchmarks"
+    assert citation["repository-code"].endswith(
+        "/individual-tree-segmentation-benchmarks"
+    )
+    assert (ROOT / "docs/README.md").is_file()
+    assert (ROOT / "outputs/README.md").is_file()
+
+
+def test_tracked_repository_excludes_private_or_large_runtime_artifacts() -> None:
+    completed = subprocess.run(
+        ["git", "ls-files"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    tracked = [path for path in completed.stdout.splitlines() if path]
+    forbidden_suffixes = (
+        ".las",
+        ".laz",
+        ".ply",
+        ".npy",
+        ".npz",
+        ".pt",
+        ".pth",
+        ".ckpt",
+        ".sif",
+        ".zip",
+        ".tar",
+        ".tar.gz",
+        ".log",
+        ".err",
+        ".out",
+    )
+    assert not [path for path in tracked if path.lower().endswith(forbidden_suffixes)]
+    assert not [path for path in tracked if Path(path).name.startswith("~$")]
+
+    text_suffixes = {
+        ".cff",
+        ".csv",
+        ".json",
+        ".md",
+        ".py",
+        ".sbatch",
+        ".sh",
+        ".txt",
+        ".yaml",
+        ".yml",
+    }
+    public_text = "\n".join(
+        (ROOT / path).read_text(encoding="utf-8", errors="strict")
+        for path in tracked
+        if (ROOT / path).suffix in text_suffixes
+    )
+    assert re.search(r"/Users/[A-Za-z0-9._-]+/", public_text) is None
+    assert "pending_pointwise_" + "revalidation" not in public_text

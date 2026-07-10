@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "dataset_slug": "for-instance",
+  "method_slug": "segmentanytree",
+  "run_id": "sat_for_quicktune_to49_20260706_140730",
+  "final_evaluation_id": "sat_for_quicktune_to49_20260706_140730_final_test_aligned_20260709_212341",
+  "status": "completed_retained_historical",
+  "dataset_split": "test",
+  "plot_count": 11,
+  "checkpoint": {
+    "sha256": "9b871b15ac61589ea27c507e054ee66d3f543caa01fed9a5b790e4ce97bcecea",
+    "selection": "best mean F1 on five fixed development validation plots",
+    "test_data_used_for_selection": false
+  },
+  "evaluation": {
+    "iou_threshold": 0.5,
+    "matching_policy": "maximum_cardinality_one_to_one",
+    "evaluation_mask": "union_of_reference_tree_and_predicted_tree_points",
+    "mean_plot_f1": 0.4825,
+    "total_true_positives": 202,
+    "total_false_positives": 336,
+    "total_false_negatives": 121,
+    "micro_precision": 0.3754646840148699,
+    "micro_recall": 0.6253869969040248,
+    "micro_f1": 0.4692218350754936
+  },
+  "public_evidence": {
+    "aggregate_csv": "methods/segmentanytree/examples/sat_final_test_aligned_summary_sat_for_quicktune_to49_20260706_140730.csv",
+    "final_per_plot_tables": "not_available_in_local_checkout_as_of_2026-07-10",
+    "barkla_relative_metrics_root": "results/metadata/segmentanytree_for_instance/trained_test/sat_for_quicktune_to49_20260706_140730_final_test_aligned_20260709_212341",
+    "transfer_note": "The Barkla host was unreachable during the 2026-07-10 repository audit; no final per-plot values were fabricated from older diagnostics."
+  },
+  "diagnostic_snapshot": {
+    "status": "pre_final_evaluation_id_not_canonical",
+    "mean_plot_f1": 0.4798,
+    "files": [
+      "sat_plot_failure_modes_sat_for_quicktune_to49_20260706_140730.csv",
+      "sat_site_failure_modes_sat_for_quicktune_to49_20260706_140730.csv",
+      "sat_unmatched_prediction_audit_sat_for_quicktune_to49_20260706_140730.csv",
+      "sat_unmatched_reference_audit_sat_for_quicktune_to49_20260706_140730.csv"
+    ]
+  },
+  "software_provenance": {
+    "segmentanytree_external_commit": "a3561ed8447bbb7938f059ba65a3e9c97d6e2ee9",
+    "workflow_git_commit": null,
+    "workflow_git_commit_status": "not_captured_for_final_evaluation",
+    "container_source": "docker://maciekwielgosz/segment-any-tree:latest",
+    "container_digest": null,
+    "container_digest_status": "not_captured_in_retained_metadata"
+  }
+}

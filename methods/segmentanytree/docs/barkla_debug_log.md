@@ -99,7 +99,7 @@ runtime, retains the existing semantic evaluation PLY and stops before the
 coordinate-based final merge. No model weights or inference parameters are
 changed.
 
-## Remaining Risks And Required Checks
+## Residual Reproducibility Limitations
 
 - The repaired Python stack must remain ahead of the container site-packages
   on `PYTHONPATH`.
@@ -110,8 +110,8 @@ changed.
   its precise upstream training scenario still requires confirmation.
 - Final exports failed point-count and coordinate-multiplicity audits and must
   not be used for accuracy.
-- The new aligned instance output requires a two-plot validation before the
-  remaining test plots are submitted.
+- The aligned instance route was validated before the accepted held-out run;
+  any future rerun must repeat that two-plot gate.
 - Only the supplied FOR-instance test split may be compared with the paper.
 - The paper-compatible matching policy and strict one-to-one policy must remain
   separate in summaries.
@@ -123,15 +123,15 @@ worked, but it used the released checkpoint and did not update model weights
 with FOR-instance development data. It is retained as a diagnostic
 inference-only run.
 
-The corrected workflow now mirrors the pinned upstream training preparation:
+The corrected workflow mirrored the pinned upstream training preparation:
 seed 42, a 25% internal validation sample from development plots, binary
 tree/non-tree labels and no test files in the training data root. The small
 training pilot established training and checkpoint creation. The 16-plot full
-training job began on 4 July 2026, with five-plot development validation queued
-after it.
+training and five-plot development validation later completed; epoch 49 was
+selected and evaluated on the held-out test split.
 
 The released checkpoint is not used to initialise the primary corrected run.
 Its resume path restores the saved training configuration and optimizer state,
 which would define a separate fine-tuning experiment and requires its own
-compatibility validation. Final test inference remains guarded until the full
-development-trained checkpoint is selected and frozen.
+compatibility validation. The accepted development-trained checkpoint is now
+selected and frozen; no further held-out inference is active.

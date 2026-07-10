@@ -8,15 +8,15 @@ the committed development and test summary CSVs:
 - `treex_runtime_vs_strict_f1.png`
 - `treex_strict_f1_by_plot.png`
 
+The two established `strict` filenames are retained for stable links. Their
+metric is the harmonised union-mask result with strict one-to-one matching.
+
 Do not place raw predictions, point clouds, logs or private-path screenshots in
 this directory.
 
-Regenerate the plots and derived CSVs with:
+Regenerate all source tables, derived CSVs and plots from retained predictions
+with:
 
 ```bash
-python methods/treex/scripts/create_treex_final_summaries.py \
-  --dev-csv methods/treex/examples/treex_dev_full_summary.csv \
-  --test-csv methods/treex/examples/treex_test_full_summary.csv \
-  --output-dir methods/treex/examples \
-  --plot-dir methods/treex/plots
+python methods/treex/scripts/rebuild_treex_public_results.py
 ```

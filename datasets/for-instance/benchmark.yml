@@ -2,8 +2,8 @@
 project:
   name: tree-seg-benchmark
   dataset_slug: for-instance
-  mode: labelled_accuracy_candidate
-  status: inspected_active_dataset
+  mode: labelled_accuracy_benchmark
+  status: benchmark_ready_with_completed_methods
   barkla_root: "~/scratch/tree-seg-benchmark"
 
 dataset:
@@ -68,7 +68,7 @@ candidate_method_categories:
   - deterministic_or_traditional_baseline
 
 evaluation:
-  enabled: false
+  enabled: true
   enable_after_prediction_adapter_validation: true
   metrics:
     - precision
@@ -78,6 +78,9 @@ evaluation:
   iou_threshold: 0.5
   coordinate_tolerance: 0.01
   require_one_to_one_matching: true
+  matching_policy: maximum_cardinality_one_to_one
+  primary_evaluation_mask: union_of_reference_tree_and_predicted_tree_points
+  split_aggregation: sum_counts_then_compute_micro_metrics
   require_split_compliance: true
 
 outputs:

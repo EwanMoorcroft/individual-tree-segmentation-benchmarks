@@ -1631,6 +1631,8 @@ def test_segmentanytree_training_shell_scripts_parse() -> None:
         "methods/segmentanytree/slurm/submit_published_pretrained_dev_smoke.sh",
         "methods/segmentanytree/slurm/submit_published_pretrained_test.sh",
         "methods/segmentanytree/slurm/monitor_published_pretrained_test.sh",
+        "methods/segmentanytree/slurm/submit_finetuned_dev_validation.sh",
+        "methods/segmentanytree/slurm/monitor_finetuned_dev_validation.sh",
         "methods/segmentanytree/slurm/submit_three_variation_overnight.sh",
         "methods/segmentanytree/slurm/recover_three_variation_pretrained.sh",
         "methods/segmentanytree/slurm/monitor_three_variation_overnight.sh",
@@ -1876,6 +1878,117 @@ def test_published_pretrained_test_freeze_and_submission_are_guarded(
     assert "%.9L" in monitor
     assert "%.19e" in monitor
     assert "tail " not in monitor
+
+
+def test_finetuned_dev_freeze_and_submission_are_development_only(
+    tmp_path: Path,
+) -> None:
+    freezer = load_script(
+        (
+            "methods/segmentanytree/scripts/evaluation/"
+            "prepare_finetuned_dev_training_freeze.py"
+        ),
+        "segmentanytree_finetuned_dev_freezer",
+    )
+    bundle = tmp_path / "released_model_bundle"
+    (bundle / ".hydra").mkdir(parents=True)
+    checkpoint = bundle / "PointGroup-PAPER.pt"
+    checkpoint.write_bytes(b"released weights")
+    (bundle / ".hydra" / "overrides.yaml").write_text(
+        "- job_name=mls_data_run\n", encoding="utf-8"
+    )
+    freezer.EXPECTED_CHECKPOINT_SHA256 = freezer.sha256(checkpoint)
+
+    split_manifest = tmp_path / "full_split_manifest.json"
+    split_manifest.write_text(
+        json.dumps(
+            {
+                "selected_role_counts": {
+                    "train": 16,
+                    "val": 5,
+                    "held_out_test": 0,
+                },
+                "test_data_converted": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    stage1_run_id = "segmentanytree_for-instance_published_pretrained_20260710_231601"
+    stage1_freeze = tmp_path / f"{stage1_run_id}.json"
+    stage1_freeze.write_text(
+        json.dumps(
+            {
+                "status": "frozen_for_one_time_held_out_evaluation",
+                "run_id": stage1_run_id,
+                "training_mode": "published_pretrained",
+                "checkpoint_sha256": freezer.EXPECTED_CHECKPOINT_SHA256,
+                "expected_test_plots": 11,
+                "repeat_test_for_setting_selection_permitted": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    stage1_summary = tmp_path / "final_summary.csv"
+    stage1_summary.write_text(
+        "variant,result_status,dataset_split,plots,metrics_root\n"
+        "published_pretrained,completed_aligned_pointwise_test,test,11,"
+        f"/results/{stage1_run_id}/held_out_test\n",
+        encoding="utf-8",
+    )
+    run_id = "segmentanytree_for-instance_fine_tuned_on_dev_20260711_010203"
+
+    payload = freezer.freeze_finetuned_dev_training(
+        split_manifest,
+        bundle,
+        stage1_freeze,
+        stage1_summary,
+        run_id,
+    )
+    assert payload["status"] == "frozen_for_development_only_fine_tuning"
+    assert payload["training_mode"] == "fine_tuned_on_dev"
+    assert payload["initialisation"] == "released_checkpoint_weights_only"
+    assert payload["optimizer_state"] == "fresh"
+    assert payload["smoke_epochs"] == 1
+    assert payload["training_epochs"] == 35
+    assert payload["held_out_test_plots"] == 0
+    assert payload["held_out_test_jobs_permitted"] is False
+    assert payload["stage1_test_run_id"] == stage1_run_id
+
+    contaminated_manifest = json.loads(split_manifest.read_text(encoding="utf-8"))
+    contaminated_manifest["selected_role_counts"]["held_out_test"] = 1
+    split_manifest.write_text(json.dumps(contaminated_manifest), encoding="utf-8")
+    with pytest.raises(ValueError, match="Unexpected development split counts"):
+        freezer.freeze_finetuned_dev_training(
+            split_manifest,
+            bundle,
+            stage1_freeze,
+            stage1_summary,
+            run_id,
+        )
+
+    submitter = (
+        ROOT / "methods/segmentanytree/slurm/submit_finetuned_dev_validation.sh"
+    ).read_text(encoding="utf-8")
+    monitor = (
+        ROOT / "methods/segmentanytree/slurm/monitor_finetuned_dev_validation.sh"
+    ).read_text(encoding="utf-8")
+    assert "SEGMENTANYTREE_FINETUNE_DEV_CONFIRMED" in submitter
+    assert "SEGMENTANYTREE_PRETRAINED_CHECKPOINT=$RELEASED_CHECKPOINT" in submitter
+    assert "SEGMENTANYTREE_TRAIN_EPOCHS=1" in submitter
+    assert "SEGMENTANYTREE_TRAIN_EPOCHS=35" in submitter
+    assert "SEGMENTANYTREE_TRAIN_BASE_LR=0.0001" in submitter
+    assert "--array=0-4%2" in submitter
+    assert "--array=0-4%4" in submitter
+    assert "SEGMENTANYTREE_VARIANT_EXPECTED_PLOTS=5" in submitter
+    assert "SEGMENTANYTREE_VARIANT_EXPECTED_SPLIT=dev" in submitter
+    assert "SEGMENTANYTREE_VARIANT_REQUIRE_PREDICTIONS=1" in submitter
+    assert "SEGMENTANYTREE_FINAL_TEST_CONFIRMED" not in submitter
+    assert "test_from_checkpoint" not in submitter
+    assert "SEGMENTANYTREE_VARIANT_EXPECTED_SPLIT=test" not in submitter
+    assert "%.9L" in monitor
+    assert "%.19e" in monitor
+    assert "tail " not in monitor
+    assert "held_out_test_jobs=0" in monitor
 
 
 def test_full_training_submission_wrapper_derives_validation_array() -> None:

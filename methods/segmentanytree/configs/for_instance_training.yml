@@ -138,7 +138,7 @@ training:
     accepted_instance_predictions: 0
     note: "The follow-up produced semantic tree predictions but all aligned instance predictions were background on the audited held-out plots."
   replacement_fine_tuned_protocol:
-    status: current_target_pending_execution
+    status: isolated_development_route_ready
     initialisation: released_checkpoint_weights_only
     optimizer_state: fresh
     epoch_history: fresh
@@ -149,6 +149,9 @@ training:
     smoke_required: true
     development_validation_gate_required: true
     held_out_test_gate_required: true
+    held_out_test_auto_submission: false
+    development_submission_script: methods/segmentanytree/slurm/submit_finetuned_dev_validation.sh
+    development_monitor_script: methods/segmentanytree/slurm/monitor_finetuned_dev_validation.sh
     from_scratch_training_permitted: false
   published_pretrained_protocol:
     status: current_target_pending_execution

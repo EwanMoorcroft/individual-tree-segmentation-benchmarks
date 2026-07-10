@@ -157,6 +157,39 @@ bash methods/segmentanytree/slurm/monitor_published_pretrained_test.sh \
 
 ## Pretrained and fine-tuned comparison
 
+The current fine-tuning route is isolated to the development split. It freezes
+the reviewed released checkpoint, the 16/5/0 development split manifest and
+the completed Stage 1 evidence before submitting any work:
+
+```bash
+RUN_ID=segmentanytree_for-instance_published_pretrained_20260710_231601
+STAGE1_ROOT="$HOME/scratch/tree-seg-benchmark/results"
+
+SEGMENTANYTREE_FINETUNE_DEV_CONFIRMED=1 \
+SEGMENTANYTREE_STAGE1_TEST_FREEZE="$STAGE1_ROOT/metadata/segmentanytree_for_instance/test_freezes/$RUN_ID.json" \
+SEGMENTANYTREE_STAGE1_FINAL_SUMMARY="$STAGE1_ROOT/tables/segmentanytree_for_instance/variants/$RUN_ID/held_out_test/final_summary.csv" \
+  bash methods/segmentanytree/slurm/submit_finetuned_dev_validation.sh
+```
+
+The chain contains a one-epoch training smoke, a separate 35-epoch training
+run initialised from the same released weights, five development inference
+tasks, five aligned evaluations and a non-zero-instance gate. Training uses a
+fresh optimiser and epoch history, batch size 8 and base learning rate
+0.0001. It does not submit held-out inference or evaluation.
+
+Use the printed state file to monitor scheduler state, elapsed time, remaining
+time, estimated end time, checkpoint presence and the development metric count
+without displaying logs:
+
+```bash
+bash methods/segmentanytree/slurm/monitor_finetuned_dev_validation.sh \
+  <state_file>
+```
+
+Only a successful five-plot development gate permits a later manual decision
+about one held-out evaluation. That evaluation is deliberately absent from
+this submission route.
+
 The later target comparison has two variants:
 
 1. `published_pretrained`: extract the released checkpoint from the pinned

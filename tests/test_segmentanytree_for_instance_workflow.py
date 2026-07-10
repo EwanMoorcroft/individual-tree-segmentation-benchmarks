@@ -1309,7 +1309,8 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
     assert 'TRAINING_MODE="fine_tuned_on_dev"' in training_task
     assert "SEGMENTANYTREE_REQUIRE_PRETRAINED_LOAD=1" in training_task
     assert "SEGMENTANYTREE_PRETRAINED_PATH=/sat_pretrained/PointGroup-PAPER.pt" in training_task
-    assert 'TRAIN_COMMAND+=("+training.optim.base_lr=$BASE_LR")' in training_task
+    assert 'TRAIN_COMMAND+=("optim.base_lr=$BASE_LR")' in training_task
+    assert 'TRAIN_COMMAND+=("+training.optim.base_lr=$BASE_LR")' not in training_task
     assert 'TRAIN_COMMAND+=("training.optim.base_lr=$BASE_LR")' not in training_task
     assert "checkpoint_dir=/sat_resume" in training_task
     assert "weight_name=latest" in training_task

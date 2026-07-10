@@ -272,9 +272,9 @@ print(
   fi
 fi
 if [[ -n "$BASE_LR" ]]; then
-  # The pinned Hydra configuration is structured and does not declare this
-  # nested override path, so it must be added explicitly.
-  TRAIN_COMMAND+=("+training.optim.base_lr=$BASE_LR")
+  # training/treeins.yaml has no package directive in the pinned Hydra stack,
+  # so its optimiser settings are composed into the global config.
+  TRAIN_COMMAND+=("optim.base_lr=$BASE_LR")
 fi
 
 {

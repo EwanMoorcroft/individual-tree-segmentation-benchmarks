@@ -117,6 +117,17 @@ training:
     from_scratch_training_permitted: false
     preserve_existing_predictions_and_results: true
     submitter: "methods/segmentanytree/slurm/submit_pretrained_finetune_comparison.sh"
+    stage1_development_smoke:
+      status: scaffolded_not_run
+      training_mode: published_pretrained
+      relative_path: "CULS/plot_1_annotated.las"
+      split: dev
+      submitter: "methods/segmentanytree/slurm/submit_published_pretrained_dev_smoke.sh"
+      requires_nonzero_instances: true
+      requires_internal_aligned_predictions: true
+      submits_held_out_test: false
+      submits_fine_tuning: false
+      next_gate: manual_review_before_held_out_test_submission
   historical_retrained_experiment:
     config: "methods/segmentanytree/configs/for_instance_training.yml"
     mode: retrained_from_dev

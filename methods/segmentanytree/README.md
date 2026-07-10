@@ -114,7 +114,11 @@ held-out plots. The current status is recorded in
 [`../../BENCHMARKS.md`](../../BENCHMARKS.md).
 
 The released-pretrained and replacement fine-tuned target results are pending.
-The guarded workflow in [`slurm/README.md`](slurm/README.md) writes each run to
-a unique output root and archives partial pretrained outputs before recovery.
+The first guarded route in [`slurm/README.md`](slurm/README.md) is now an
+isolated released-pretrained smoke on one development plot. It writes each run
+to a unique output root, validates the complete released model bundle and
+aligned non-zero instance output, and submits neither held-out test inference
+nor fine-tuning. Repeated run identifiers archive partial outputs before
+retrying.
 The rejected 8 July run remains historical evidence and is never used as an
 initial checkpoint or target result.

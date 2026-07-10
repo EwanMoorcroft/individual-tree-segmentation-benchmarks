@@ -1629,6 +1629,8 @@ def test_segmentanytree_training_shell_scripts_parse() -> None:
         "methods/segmentanytree/slurm/evaluation/validate_published_pretrained_dev_smoke.sbatch",
         "methods/segmentanytree/slurm/submit_full_training_chain.sh",
         "methods/segmentanytree/slurm/submit_published_pretrained_dev_smoke.sh",
+        "methods/segmentanytree/slurm/submit_published_pretrained_test.sh",
+        "methods/segmentanytree/slurm/monitor_published_pretrained_test.sh",
         "methods/segmentanytree/slurm/submit_three_variation_overnight.sh",
         "methods/segmentanytree/slurm/recover_three_variation_pretrained.sh",
         "methods/segmentanytree/slurm/monitor_three_variation_overnight.sh",
@@ -1785,6 +1787,95 @@ def test_published_pretrained_development_smoke_gate(tmp_path: Path) -> None:
             checkpoint_sha256,
             validator.EXPECTED_EXTERNAL_COMMIT,
         )
+
+
+def test_published_pretrained_test_freeze_and_submission_are_guarded(
+    tmp_path: Path,
+) -> None:
+    freezer = load_script(
+        (
+            "methods/segmentanytree/scripts/evaluation/"
+            "prepare_published_pretrained_test_freeze.py"
+        ),
+        "segmentanytree_pretrained_test_freezer",
+    )
+    bundle = tmp_path / "released_model_bundle"
+    (bundle / ".hydra").mkdir(parents=True)
+    checkpoint = bundle / "PointGroup-PAPER.pt"
+    checkpoint.write_bytes(b"released weights")
+    overrides = bundle / ".hydra" / "overrides.yaml"
+    overrides.write_text(
+        "\n".join(
+            [
+                "- task=panoptic",
+                "- data=panoptic/treeins_rad8",
+                "- models=panoptic/area4_ablation_3heads_5",
+                "- model_name=PointGroup-PAPER",
+                "- training=treeins",
+                "- job_name=mls_data_run",
+                "- batch_size=6",
+                "- epochs=100",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    checkpoint_sha256 = freezer.sha256(checkpoint)
+    freezer.EXPECTED_CHECKPOINT_SHA256 = checkpoint_sha256
+    smoke_path = tmp_path / (
+        "segmentanytree_for-instance-published-pretrained-placeholder.json"
+    )
+    smoke_path.write_text(
+        json.dumps(
+            {
+                "status": "smoke-tested",
+                "training_mode": "published_pretrained",
+                "dataset_split": "dev",
+                "held_out_test_accessed": False,
+                "next_gate": "manual_review_before_held_out_test_submission",
+                "prediction_instance_count": 20,
+                "reference_instance_count": 6,
+                "external_commit": freezer.EXPECTED_EXTERNAL_COMMIT,
+                "checkpoint_sha256": checkpoint_sha256,
+                "released_weight_test_overlap_status": (
+                    "unresolved_do_not_claim_leakage_free"
+                ),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Explicit acceptance"):
+        freezer.freeze_test_evaluation(
+            smoke_path, bundle, "run", False
+        )
+    payload = freezer.freeze_test_evaluation(smoke_path, bundle, "run", True)
+    assert payload["status"] == "frozen_for_one_time_held_out_evaluation"
+    assert payload["released_checkpoint_job_name"] == "mls_data_run"
+    assert payload["expected_test_plots"] == 11
+    assert payload["weight_updates"] is False
+    assert payload["repeat_test_for_setting_selection_permitted"] is False
+
+    submitter = (
+        ROOT / "methods/segmentanytree/slurm/submit_published_pretrained_test.sh"
+    ).read_text(encoding="utf-8")
+    monitor = (
+        ROOT / "methods/segmentanytree/slurm/monitor_published_pretrained_test.sh"
+    ).read_text(encoding="utf-8")
+    assert "SEGMENTANYTREE_PUBLISHED_PRETRAINED_TEST_CONFIRMED" in submitter
+    assert "SEGMENTANYTREE_ACCEPT_UNRESOLVED_TRAINING_MANIFEST" in submitter
+    assert "SEGMENTANYTREE_DEV_SMOKE_EVIDENCE" in submitter
+    assert "SEGMENTANYTREE_CHECKPOINT_DIR=$CHECKPOINT_BUNDLE" in submitter
+    assert "SEGMENTANYTREE_RUN_TYPE=published_pretrained" in submitter
+    assert "--array=0-10%2" in submitter
+    assert "--array=0-10%4" in submitter
+    assert "SEGMENTANYTREE_VARIANT_EXPECTED_PLOTS=11" in submitter
+    assert "train_segmentanytree" not in submitter
+    assert "fine_tuned_on_dev" not in submitter
+    assert "time remaining" not in monitor.lower()
+    assert "%.9L" in monitor
+    assert "%.19e" in monitor
+    assert "tail " not in monitor
 
 
 def test_full_training_submission_wrapper_derives_validation_array() -> None:

@@ -128,6 +128,16 @@ training:
       submits_held_out_test: false
       submits_fine_tuning: false
       next_gate: manual_review_before_held_out_test_submission
+    stage1_held_out_test:
+      status: manual_approval_recorded_route_scaffolded_not_run
+      training_mode: published_pretrained
+      expected_plots: 11
+      submitter: "methods/segmentanytree/slurm/submit_published_pretrained_test.sh"
+      requires_development_smoke_evidence: true
+      requires_unresolved_manifest_acceptance: true
+      permits_weight_updates: false
+      permits_postprocessing_updates: false
+      permits_repeat_test_selection: false
   historical_retrained_experiment:
     config: "methods/segmentanytree/configs/for_instance_training.yml"
     mode: retrained_from_dev

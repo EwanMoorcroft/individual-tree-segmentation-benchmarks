@@ -123,6 +123,38 @@ plot, row-length disagreement or zero predicted instances stops the chain.
 
 Review the evidence JSON before adding any held-out test submission route.
 
+## Frozen released-pretrained held-out evaluation
+
+After manual review of a successful development smoke, the released MLS
+checkpoint may be evaluated once on the 11 held-out plots. The exact training
+plot manifest is not bundled with the released checkpoint, so the submission
+requires explicit acceptance of that provenance limitation and the result must
+not be described as confirmed leakage-free.
+
+```bash
+SMOKE_EVIDENCE="$HOME/scratch/tree-seg-benchmark/results/metadata/segmentanytree_for_instance/stage1_smokes/<run_id>.json"
+
+SEGMENTANYTREE_PUBLISHED_PRETRAINED_TEST_CONFIRMED=1 \
+SEGMENTANYTREE_ACCEPT_UNRESOLVED_TRAINING_MANIFEST=1 \
+SEGMENTANYTREE_DEV_SMOKE_EVIDENCE="$SMOKE_EVIDENCE" \
+  bash methods/segmentanytree/slurm/submit_published_pretrained_test.sh
+```
+
+The wrapper freezes the checkpoint hash, Hydra overrides, upstream commit,
+matching policy and IoU threshold before submission. It refuses an existing
+test output root or freeze manifest rather than silently repeating evaluation.
+It submits an 11-task GPU inference array, an 11-task CPU evaluation array and
+one final completeness gate. No training or fine-tuning job is submitted.
+
+Use the state file printed by the submitter for a quiet monitor with scheduler
+state, elapsed time, time remaining, estimated end time and aligned metric
+count, but no log output:
+
+```bash
+bash methods/segmentanytree/slurm/monitor_published_pretrained_test.sh \
+  <state_file>
+```
+
 ## Pretrained and fine-tuned comparison
 
 The later target comparison has two variants:

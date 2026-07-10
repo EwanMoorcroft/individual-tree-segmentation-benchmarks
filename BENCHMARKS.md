@@ -15,10 +15,12 @@ rows may use `pending` for run-specific fields until a run is scheduled.
 | --- | --- | --- | --- | --- | --- | --- |
 | frdr-treeiso | tls2trees | tls2trees_frdr_prediction_benchmark | external_training_only | operational_prediction | Prediction benchmark completed | [`frdr_benchmark.yml`](methods/tls2trees/configs/frdr_benchmark.yml); [`tls2trees_frdr_prediction_summary.csv`](methods/tls2trees/examples/tls2trees_frdr_prediction_summary.csv) |
 | for-instance | segmentanytree | released_checkpoint_coordinate_rematch | published_pretrained | provisional_coordinate_rematched | Provisional inference-only run completed; export audit failed | [`for_instance_benchmark.yml`](methods/segmentanytree/configs/for_instance_benchmark.yml); [`provisional_released_checkpoint_results.md`](methods/segmentanytree/docs/provisional_released_checkpoint_results.md) |
-| for-instance | segmentanytree | sat_for_quicktune_to49_20260706_140730 | retrained_from_dev | harmonised_pointwise_test | Completed accepted accuracy result; test mean F1 0.4825 | [`training_progress_20260706.md`](methods/segmentanytree/docs/training_progress_20260706.md); [`sat_treex_audit_sat_for_quicktune_to49_20260706_140730.csv`](methods/segmentanytree/examples/sat_treex_audit_sat_for_quicktune_to49_20260706_140730.csv) |
+| for-instance | segmentanytree | pending_published_pretrained_aligned | published_pretrained | harmonised_pointwise_test | Current target; pending guarded execution | [`for_instance_training.yml`](methods/segmentanytree/configs/for_instance_training.yml); [`result registry`](methods/segmentanytree/examples/for_instance_result_registry.csv) |
+| for-instance | segmentanytree | pending_fine_tuned_on_dev | fine_tuned_on_dev | harmonised_pointwise_test | Current target; pending released-weight fine-tuning and development validation | [`for_instance_training.yml`](methods/segmentanytree/configs/for_instance_training.yml); [`result registry`](methods/segmentanytree/examples/for_instance_result_registry.csv) |
+| for-instance | segmentanytree | sat_for_quicktune_to49_20260706_140730 | retrained_from_dev | harmonised_pointwise_test | Completed historical result retained; test mean plot F1 0.4825, micro F1 0.4692 | [`sat_final_test_aligned_summary_sat_for_quicktune_to49_20260706_140730.csv`](methods/segmentanytree/examples/sat_final_test_aligned_summary_sat_for_quicktune_to49_20260706_140730.csv); [`provenance manifest`](methods/segmentanytree/examples/sat_final_test_aligned_provenance_sat_for_quicktune_to49_20260706_140730.json) |
 | for-instance | segmentanytree | sat_for_quicktune_to55_20260707_214305 | retrained_from_dev | development_validation | Rejected validation regression | [`training_progress_20260706.md`](methods/segmentanytree/docs/training_progress_20260706.md) |
 | for-instance | segmentanytree | segmentanytree_for-instance_fine_tuned_on_dev_20260708_215054_full | fine_tuned_on_dev | diagnostic_held_out_subset | Rejected; produced semantic tree predictions but zero instance predictions | [`training_progress_20260706.md`](methods/segmentanytree/docs/training_progress_20260706.md) |
-| for-instance | treex | treex_for_instance_exact_path_subset | external_training_only | harmonised_pointwise_test | Completed deterministic baseline; strict test F1 0.402, labelled-mask test F1 0.522 | [`for_instance_benchmark.yml`](methods/treex/configs/for_instance_benchmark.yml); [`treex_combined_dev_test_summary.csv`](methods/treex/examples/treex_combined_dev_test_summary.csv) |
+| for-instance | treex | treex_for_instance_exact_path_subset | external_training_only | harmonised_pointwise_test | Completed deterministic baseline; test mean plot F1 0.3831, micro F1 0.3627 | [`for_instance_benchmark.yml`](methods/treex/configs/for_instance_benchmark.yml); [`treex_split_summary.csv`](methods/treex/examples/treex_split_summary.csv) |
 | for-instance | tls2trees | tls2trees_for_instance_leaf_off_pilot | external_training_only | coordinate_fallback_leaf_off_pilot | Candidate compatibility test | [`for_instance_accuracy.yml`](methods/tls2trees/configs/for_instance_accuracy.yml); [`for_instance_pilot.md`](methods/tls2trees/docs/for_instance_pilot.md) |
 | for-instance | treelearn | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Respect the supplied development/test split and declare a training mode before running. |
 | for-instance | randlanet | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
@@ -54,12 +56,16 @@ also record the non-learning method mode.
 The first SegmentAnyTree workflow completed inference for all 32 FOR-instance
 LAS files with the released checkpoint. Its coordinate-rematched metrics are
 provisional because they neither preserve point alignment nor represent a
-model trained under the local development/test protocol. The corrected primary
-experiment trains from scratch on FOR-instance development data, selects the
-checkpoint on an internal development validation split and evaluates the
-held-out test split once. The accepted checkpoint is
+model trained under the local development/test protocol. The current comparison
+first evaluates the released checkpoint with aligned point-wise outputs, then
+fine-tunes those same released weights on FOR-instance development data and
+evaluates the selected checkpoint. No new from-scratch training is part of the
+plan. Both target results are pending and use separate output directories. The
+earlier from-scratch checkpoint is retained as historical evidence. It is
 `sat_for_quicktune_to49_20260706_140730`, with mean aligned F1 `0.537` on the
-five development validation plots and `0.4825` on the 11 held-out test plots.
+five development validation plots. On the 11 held-out test plots, mean plot F1
+is `0.4825` and count-aggregated micro F1 is `0.4692`; these values must not be
+attributed to either pending target variant.
 The later `to55` continuation is rejected because validation fell to `0.451`.
 See the
 [`shared protocol`](docs/protocols/for-instance.md),

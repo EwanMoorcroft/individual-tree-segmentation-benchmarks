@@ -49,7 +49,9 @@ validation plots:
 The selected checkpoint has validation mean F1 `0.5371`, minimum F1 `0.1674`
 and maximum F1 `0.8571`. Held-out test evaluation was then run for the
 selected checkpoint using aligned instance and semantic outputs, giving
-11-plot mean F1 `0.4825`, mean precision `0.3807` and mean recall `0.6954`.
+11-plot mean plot F1 `0.4825`, mean plot precision `0.3807` and mean plot
+recall `0.6954`. Aggregating counts first gives micro F1 `0.4692` from TP=202,
+FP=336 and FN=121.
 The evaluated checkpoint SHA-256 is
 `9b871b15ac61589ea27c507e054ee66d3f543caa01fed9a5b790e4ce97bcecea`.
 

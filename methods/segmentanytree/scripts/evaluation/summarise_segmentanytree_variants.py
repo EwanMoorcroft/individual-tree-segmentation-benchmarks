@@ -80,20 +80,50 @@ def summarise_variant(
 
     harmonized = [item["harmonized"] for item in payloads]
     paper = [item["paper_compatible"] for item in payloads]
+    true_positives = sum(int(item["true_positives"]) for item in harmonized)
+    false_positives = sum(int(item["false_positives"]) for item in harmonized)
+    false_negatives = sum(int(item["false_negatives"]) for item in harmonized)
+    micro_precision = (
+        true_positives / (true_positives + false_positives)
+        if true_positives + false_positives
+        else 0.0
+    )
+    micro_recall = (
+        true_positives / (true_positives + false_negatives)
+        if true_positives + false_negatives
+        else 0.0
+    )
+    micro_f1 = (
+        2 * true_positives / (2 * true_positives + false_positives + false_negatives)
+        if 2 * true_positives + false_positives + false_negatives
+        else 0.0
+    )
     return {
         "variant": label,
+        "result_status": "completed_aligned_pointwise_test",
+        "dataset_split": expected_split or "mixed",
+        "evaluation_protocol": "for_instance_pointwise_v1",
+        "matching_policy": "maximum_cardinality_one_to_one",
+        "evaluation_mask": "union_of_reference_tree_and_predicted_tree_points",
         "metrics_root": str(root),
         "plots": len(payloads),
         "predicted_instances": predicted_instances,
         "reference_instances": sum(
             int(item["reference_instance_count"]) for item in payloads
         ),
-        "true_positives": sum(int(item["true_positives"]) for item in harmonized),
-        "false_positives": sum(int(item["false_positives"]) for item in harmonized),
-        "false_negatives": sum(int(item["false_negatives"]) for item in harmonized),
-        "mean_f1": statistics.fmean(float(item["f1"]) for item in harmonized),
-        "mean_precision": statistics.fmean(float(item["precision"]) for item in harmonized),
-        "mean_recall": statistics.fmean(float(item["recall"]) for item in harmonized),
+        "true_positives": true_positives,
+        "false_positives": false_positives,
+        "false_negatives": false_negatives,
+        "mean_plot_f1": statistics.fmean(float(item["f1"]) for item in harmonized),
+        "mean_plot_precision": statistics.fmean(
+            float(item["precision"]) for item in harmonized
+        ),
+        "mean_plot_recall": statistics.fmean(
+            float(item["recall"]) for item in harmonized
+        ),
+        "micro_precision": micro_precision,
+        "micro_recall": micro_recall,
+        "micro_f1": micro_f1,
         "mean_matched_iou": statistics.fmean(
             float(item["mean_matched_iou"]) for item in harmonized
         ),
@@ -144,8 +174,8 @@ def main() -> int:
     for row in rows:
         print(
             f"{row['variant']}: plots={row['plots']} "
-            f"f1={row['mean_f1']:.4f} precision={row['mean_precision']:.4f} "
-            f"recall={row['mean_recall']:.4f}"
+            f"mean_plot_f1={row['mean_plot_f1']:.4f} "
+            f"micro_f1={row['micro_f1']:.4f}"
         )
     print(f"summary={output}")
     return 0

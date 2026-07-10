@@ -229,12 +229,13 @@ For paper-aligned evaluation:
 The earlier coordinate-rematched result set is retained only as a provisional
 workflow diagnostic. It is not the accepted SegmentAnyTree reproduction.
 
-The corrected primary SegmentAnyTree experiment is a separate
-`retrained_from_dev` run. It follows the paper's ULS-only training scenario:
-FOR-instance development plots supply training and internal validation data,
-and the supplied test split remains absent from the training data root.
-Starting from the released mixed-domain checkpoint would instead be recorded
-as `fine_tuned_on_dev` and reported as a separate experiment.
+The current SegmentAnyTree comparison evaluates the released checkpoint as
+`published_pretrained`, then starts a separate `fine_tuned_on_dev` run from
+those released weights. FOR-instance development plots supply training and
+internal validation data, and the supplied test split remains absent from the
+training data root. The earlier `retrained_from_dev` run remains a completed
+historical result; it is not a current target and its metrics must not be
+attributed to either comparison variant.
 
 ## Required Public Documentation
 

@@ -9,7 +9,7 @@ model files, predictions, logs and external repositories are not included.
 
 ## Current status
 
-Status last updated: 9 July 2026.
+Status last updated: 10 July 2026.
 
 - **TLS2trees on FRDR treeiso:** the 16-plot prediction and operational
   benchmark is complete. FRDR does not contain individual-tree reference
@@ -18,15 +18,22 @@ Status last updated: 9 July 2026.
 - **SegmentAnyTree on FOR-instance:** the earlier 32-plot released-checkpoint
   run is retained only as a provisional engineering diagnostic because its
   final exports failed point-correspondence checks.
-- **SegmentAnyTree retrained on FOR-instance:** the development-selected
-  checkpoint `sat_for_quicktune_to49_20260706_140730` is the accepted SAT run.
-  It reports mean aligned F1 `0.537` on the five validation plots and `0.4825`
-  on the 11 held-out test plots. The later `to55` continuation is rejected
-  because validation fell to `0.451`.
+- **SegmentAnyTree target comparison:** aligned evaluation of the released
+  pretrained checkpoint is pending. After it passes, the same released weights
+  will be fine-tuned on development data, selected on development validation
+  and evaluated on the held-out test split. No new from-scratch training is
+  planned.
+- **SegmentAnyTree historical result:** the development-selected checkpoint
+  `sat_for_quicktune_to49_20260706_140730` is retained. It reports mean plot F1
+  `0.537` on the five validation plots. On the 11
+  held-out test plots, mean plot F1 is `0.4825` and micro F1 is `0.4692`
+  (TP=202, FP=336, FN=121). The later `to55` continuation is rejected because
+  validation fell to `0.451`.
 - **TreeX on FOR-instance:** the unsupervised `pointtree` TreeX benchmark is
   complete on the exact-path local subset of 21 development and 11 test plots.
-  The cautious headline test result is strict F1 `0.402`; labelled-mask test
-  F1 is `0.522`.
+  The harmonised held-out result has mean plot F1 `0.3831` and micro F1
+  `0.3627`. Reference-labelled-mask mean plot F1 `0.5222` is retained only as
+  a diagnostic.
 - **TreeLearn on FOR-instance:** a guarded one-plot development smoke route is
   scaffolded but has not been run. It is not an accuracy benchmark.
 - **Other combinations:** TLS2trees on FOR-instance, full TreeLearn evaluation
@@ -76,6 +83,7 @@ The public repository is organised primarily by method:
 │   └── wytham-woods/
 ├── shared/evaluation/
 ├── src/benchmark/
+├── outputs/
 ├── docs/
 │   ├── plans/
 │   └── protocols/
@@ -96,6 +104,8 @@ The public repository is organised primarily by method:
   cross-method FOR-instance protocol.
 - [`docs/evaluation_metrics.md`](docs/evaluation_metrics.md): operational and
   instance-accuracy definitions.
+- [`docs/README.md`](docs/README.md): documentation index.
+- [`CITATION.cff`](CITATION.cff): repository citation metadata.
 
 Generated output paths such as `data/`, `results/` and `logs/` remain at the
 repository root at runtime. They are ignored by Git and are not part of the
@@ -118,7 +128,7 @@ Where an established method already uses more specific filenames, its README
 must name the current equivalents for preparation, inference, prediction
 adaptation, summarisation and evaluation.
 
-## Accepted and provisional results
+## Completed, pending and provisional results
 
 The completed FRDR/TLS2trees per-plot operational summary is
 [`methods/tls2trees/examples/tls2trees_frdr_prediction_summary.csv`](methods/tls2trees/examples/tls2trees_frdr_prediction_summary.csv).
@@ -130,12 +140,20 @@ Files beginning with `provisional_released_checkpoint_` under
 the rejected coordinate-rematching route. They are not final SegmentAnyTree
 accuracy results and must not be compared directly with the paper.
 
-The accepted SegmentAnyTree result is the aligned point-wise evaluation of
-`sat_for_quicktune_to49_20260706_140730`. Failure-mode audits show that the
-main limitation is over-segmentation and background-confusion false positives,
-with TUWIEN and RMIT as the weakest domain-transfer cases. A validation-only
-post-processing sweep is retained as a diagnostic ablation; it does not replace
-the unfiltered held-out test score.
+The completed historical SegmentAnyTree result is the aligned point-wise evaluation of
+`sat_for_quicktune_to49_20260706_140730`. The canonical public evidence is the
+[`final aggregate`](methods/segmentanytree/examples/sat_final_test_aligned_summary_sat_for_quicktune_to49_20260706_140730.csv)
+and its
+[`provenance manifest`](methods/segmentanytree/examples/sat_final_test_aligned_provenance_sat_for_quicktune_to49_20260706_140730.json).
+The transferred failure-mode tables predate the final evaluation ID and are
+clearly retained as diagnostic snapshots, not as alternate final metrics.
+They indicate over-segmentation and background-confusion false positives, with
+TUWIEN and RMIT as the weakest domain-transfer cases.
+
+The consolidated public workbook is
+[`outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx`](outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx).
+Its source tables and metric definitions are the CSVs and protocol documents
+linked above; raw predictions are not embedded in the workbook.
 
 ## Barkla environment
 
@@ -166,6 +184,10 @@ python -m pytest
 
 The tests do not require Barkla, GPUs, Apptainer, external repositories or real
 point-cloud data.
+
+GitHub Actions runs the same synthetic suite, Python compilation and shell
+syntax checks. Dependabot checks pinned Python packages and GitHub Actions
+monthly; dependency changes remain reviewable pull requests.
 
 ## Safety boundary
 

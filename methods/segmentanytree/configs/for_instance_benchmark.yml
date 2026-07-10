@@ -4,7 +4,7 @@ project:
   dataset_slug: for-instance
   method_slug: segmentanytree
   mode: labelled_accuracy_benchmark
-  status: accepted_retrained_checkpoint_evaluated
+  status: pretrained_finetune_comparison_pending
   protocol_id: for_instance_pointwise_v1
   barkla_root: "~/scratch/tree-seg-benchmark"
   barkla_specific: true
@@ -61,7 +61,7 @@ benchmark:
   completed_normalisation_count: 32
   provisional_coordinate_evaluation_count: 32
   validated_pointwise_evaluation_count: 11
-  validated_pointwise_evaluation_scope: accepted_retrained_held_out_test
+  validated_pointwise_evaluation_scope: historical_retrained_held_out_test
   development_validation_pointwise_evaluation_count: 5
 
 method:
@@ -73,6 +73,8 @@ method:
   execution_mode: apptainer_slurm
   apptainer_image: "~/scratch/containers/segment-any-tree_latest.sif"
   container_source: "docker://maciekwielgosz/segment-any-tree:latest"
+  container_digest: null
+  container_digest_status: not_captured_in_retained_metadata
   container_working_directory: "/home/nibio/mutable-outside-world"
   container_interface: "bash run_inference.sh <input_dir> <output_dir> <clean_output_dir>"
   python_userbase: "~/fastscratch/segmentanytree_pyuser_v1"
@@ -89,6 +91,7 @@ method:
     - 0
   gpu_required: true
   checkpoint:
+    role: released_checkpoint_provisional_route
     filename: PointGroup-PAPER.pt
     sha256: "0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a"
     provenance_status: "container_checkpoint_hash_verified_repository_overrides_record_mixed_training_but_exact_scenario_unconfirmed"
@@ -96,17 +99,28 @@ method:
     execution_entrypoint: eval.py
 
 training:
-  current_mode: retrained_from_dev
-  local_weight_updates_performed: true
+  current_mode: published_pretrained_then_fine_tuned_on_dev
+  local_weight_updates_performed: historical_and_planned
   permitted_for_instance_training_split:
     - dev
   forbidden_training_split:
     - test
-  note: "The accepted current result was retrained from FOR-instance development data. The retained released-checkpoint route was inference-only and remains provisional."
-  corrected_experiment:
+  note: "The current target evaluates the released checkpoint, then fine-tunes those weights on development data and evaluates the resulting checkpoint. The earlier from-scratch run remains historical evidence."
+  target_comparison:
+    status: pending_execution
+    baseline_mode: published_pretrained
+    adapted_mode: fine_tuned_on_dev
+    source_checkpoint_sha256: "0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a"
+    training_split: dev
+    checkpoint_selection_split: dev
+    final_reporting_split: test
+    from_scratch_training_permitted: false
+    preserve_existing_predictions_and_results: true
+    submitter: "methods/segmentanytree/slurm/submit_pretrained_finetune_comparison.sh"
+  historical_retrained_experiment:
     config: "methods/segmentanytree/configs/for_instance_training.yml"
-    primary_mode: retrained_from_dev
-    status: completed
+    mode: retrained_from_dev
+    status: completed_retained_historical
     latest_completed_run_id: sat_for_quicktune_to49_20260706_140730
     rejected_run_id: sat_for_quicktune_to55_20260707_214305
     latest_completed_epoch: 49
@@ -115,14 +129,22 @@ training:
     development_validation_mean_f1: 0.5371
     rejected_development_validation_mean_f1: 0.4505
     final_test_plot_count: 11
-    final_test_mean_f1: 0.4825
-    final_test_status: completed
+    final_test_evaluation_id: sat_for_quicktune_to49_20260706_140730_final_test_aligned_20260709_212341
+    final_test_mean_plot_f1: 0.4825
+    final_test_total_tp: 202
+    final_test_total_fp: 336
+    final_test_total_fn: 121
+    final_test_micro_f1: 0.4692218350754936
+    final_test_checkpoint_sha256: "9b871b15ac61589ea27c507e054ee66d3f543caa01fed9a5b790e4ce97bcecea"
+    final_test_public_summary: "methods/segmentanytree/examples/sat_final_test_aligned_summary_sat_for_quicktune_to49_20260706_140730.csv"
+    final_test_public_provenance: "methods/segmentanytree/examples/sat_final_test_aligned_provenance_sat_for_quicktune_to49_20260706_140730.json"
+    final_test_status: completed_retained_historical
     rejected_fine_tuned_run_id: segmentanytree_for-instance_fine_tuned_on_dev_20260708_215054_full
     rejected_fine_tuned_status: rejected_zero_instance_predictions
 
 evaluation:
   protocol_id: for_instance_pointwise_v1
-  status: completed
+  status: target_comparison_pending_historical_result_retained
   primary_input: aligned_internal_prediction_arrays
   primary_reporting_split: test
   reference_instance_field: treeID
@@ -143,7 +165,8 @@ evaluation:
   iou_threshold: 0.5
   threshold_operator: greater_than_or_equal
   published_reproduction_matching_policy: paper_per_prediction_best_iou
-  harmonised_matching_policy: one_to_one
+  harmonised_matching_policy: maximum_cardinality_one_to_one
+  primary_evaluation_mask: union_of_reference_tree_and_predicted_tree_points
   point_correspondence: source_row_or_stable_point_identifier
   coordinate_rematching:
     status: provisional_only
@@ -207,7 +230,8 @@ paths:
   split_summary_csv: "results/tables/segmentanytree_for_instance_summary_by_split.csv"
   benchmark_summary_json: "results/metadata/segmentanytree_for_instance/benchmark_summary.json"
   public_results_root: "methods/segmentanytree/examples"
-  public_workbook: "methods/segmentanytree/examples/provisional_released_checkpoint_results.xlsx"
+  public_workbook: "outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx"
+  provisional_released_checkpoint_workbook: "methods/segmentanytree/examples/provisional_released_checkpoint_results.xlsx"
   logs_root: "logs/segmentanytree_for_instance"
 
 runtime:

@@ -34,6 +34,9 @@ dataset:
 method:
   slug: treex
   package: pointtree
+  repo_url: https://github.com/ai4trees/pointtree
+  package_index_url: https://pypi.org/project/pointtree/
+  citation_doi: https://doi.org/10.48550/arXiv.2509.03633
   package_version: null
   package_version_status: not_captured_in_completed_exact_path_run
   package_version_note: "The TreeX FOR-instance exact-path subset result is complete for current reporting, but the Barkla package version was not captured in retained metadata."
@@ -51,11 +54,12 @@ method:
 
 evaluation:
   iou_threshold: 0.5
-  matching: greedy_one_to_one
-  primary_reporting_protocol: strict
+  matching: maximum_cardinality_one_to_one
+  primary_reporting_protocol: harmonized_union_mask
+  primary_evaluation_mask: union_of_reference_tree_and_predicted_tree_points
   report_protocols:
-    - labelled_mask
-    - strict
+    - harmonized_union_mask
+    - reference_labelled_mask_diagnostic
 
 paths:
   barkla_results_root: results/treex_for_instance

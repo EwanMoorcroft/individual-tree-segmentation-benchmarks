@@ -1,6 +1,5 @@
-max_f1,mean_f1,mean_matched_iou,mean_precision,mean_recall,median_f1,method,min_f1,n_plots,run_id,split,total_fn,total_fp,total_tp
-0.8,0.521829,0.812524,0.431353,0.679323,0.568182,SegmentAnyTree,0.166667,5,sat_for_quicktune_to49_20260706_140730,trained_validation,123,204,100
-0.698413,0.482488,0.839284,0.380686,0.695416,0.52,SegmentAnyTree,0.222222,11,sat_for_quicktune_to49_20260706_140730,trained_test,121,336,202
-0.724138,0.340853,,,,0.342342,TreeX,0.0,21,treex_fixed_workflow,dev,,,
-0.592593,0.402175,,,,0.412371,TreeX,0.158416,11,treex_fixed_workflow,test,,,
-0.724138,0.361932,,,,0.366002,TreeX,0.0,32,treex_fixed_workflow,combined,,,
+method,run_id,split,result_status,n_plots,mean_plot_f1,micro_f1,median_plot_f1,min_plot_f1,max_plot_f1,total_tp,total_fp,total_fn,mean_plot_matched_iou
+SegmentAnyTree,sat_for_quicktune_to49_20260706_140730,trained_test,completed_retained_historical,11,0.4825,0.4692218350754936,,,,202,336,121,
+TreeX,treex_for_instance_exact_path_subset,dev,harmonized_union_mask,21,0.31432077180548623,0.28917826672653796,0.3018867924528302,0.0,0.7241379310344828,322,1098,485,0.7309337712141375
+TreeX,treex_for_instance_exact_path_subset,test,harmonized_union_mask,11,0.38310765715157086,0.36270491803278687,0.3846153846153846,0.1584158415841584,0.5925925925925926,177,476,146,0.8037642651576797
+TreeX,treex_for_instance_exact_path_subset,combined,harmonized_union_mask,32,0.3379662636432028,0.3115828910396503,0.34358496427461943,0.0,0.7241379310344828,499,1574,631,0.7559692535072302

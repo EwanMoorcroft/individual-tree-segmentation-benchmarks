@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use these benchmark workflows or result summaries, please cite this repository."
+title: "Individual Tree Segmentation Benchmarks"
+type: software
+authors:
+  - given-names: Ewan
+    family-names: Moorcroft
+repository-code: "https://github.com/EwanMoorcroft/individual-tree-segmentation-benchmarks"
+url: "https://github.com/EwanMoorcroft/individual-tree-segmentation-benchmarks"
+license: NOASSERTION
+keywords:
+  - LiDAR
+  - point clouds
+  - individual tree segmentation
+  - benchmarking

@@ -8,7 +8,7 @@ The canonical workflow is grouped by stage:
   inference;
 - `evaluation/`: export audits, aligned point-wise metrics and summaries.
 
-The accepted training sequence is:
+The historical from-scratch training sequence was:
 
 1. prepare the `full` split;
 2. verify the manifest contains 16 training, five validation and zero selected
@@ -84,18 +84,19 @@ Historical released-checkpoint and export-audit scripts remain available for
 traceability, but the trained validation route is the current canonical
 workflow.
 
-## Three-variation overnight run
+## Pretrained and fine-tuned comparison
 
-`submit_three_variation_overnight.sh` produces the two missing aligned test
-results while retaining the accepted development-retrained result:
+The current target comparison has two variants:
 
-1. `published_pretrained`: the released checkpoint is extracted from the
-   pinned container, hash-checked and evaluated without weight updates;
-2. `retrained_from_dev`: the existing accepted epoch-49 result is verified by
-   checkpoint hash and reused; and
-3. `fine_tuned_on_dev`: the released weights initialise a fresh FOR-instance
-   model and optimiser, then train for a fixed 35 epochs on the 16 development
+1. `published_pretrained`: extract the released checkpoint from the pinned
+   container, verify its hash and evaluate it without weight updates; and
+2. `fine_tuned_on_dev`: initialise from those released weights with a fresh
+   optimiser and epoch history, then train for 35 epochs on the 16 development
    training plots.
+
+The earlier `retrained_from_dev` result is retained as historical evidence. It
+is not required by this submission chain and is not included in the target
+comparison CSV.
 
 The fine-tune path is weight-only initialisation, not checkpoint resume. It
 requires at least 95 percent of the current model state by tensor size to be
@@ -108,10 +109,10 @@ From a clean Barkla checkout at the current `origin/main`:
 ```bash
 cd ~/scratch/tree-seg-benchmark
 
-SEGMENTANYTREE_THREE_VARIATION_CONFIRMED=1 \
-  bash methods/segmentanytree/slurm/submit_three_variation_overnight.sh
+SEGMENTANYTREE_PRETRAINED_FINETUNE_CONFIRMED=1 \
+  bash methods/segmentanytree/slurm/submit_pretrained_finetune_comparison.sh
 
-bash methods/segmentanytree/slurm/monitor_three_variation_overnight.sh --follow
+bash methods/segmentanytree/slurm/monitor_pretrained_finetune_comparison.sh --follow
 ```
 
 The monitor clears and redraws five compact status lines once per minute. It
@@ -120,6 +121,18 @@ hours after GPU allocation. The monitor recalculates the ETA from observed
 epoch progress once full training is running.
 
 The final CSV is written under
-`results/tables/segmentanytree_for_instance/three_variations/` and contains
-one row for each variant. A failed smoke, hash, compatibility, split,
-alignment or zero-prediction gate prevents its dependent jobs from starting.
+`results/tables/segmentanytree_for_instance/pretrained_finetune_comparison/`
+and contains one row for each target variant. It reports mean plot and micro
+metrics under the aligned point-wise protocol. A failed smoke, hash,
+compatibility, split, alignment or zero-prediction gate prevents its dependent
+jobs from starting.
+
+All run IDs and output roots are timestamped. Recovery moves partial pretrained
+predictions, metadata, metrics and tables to
+`~/fastscratch/segmentanytree_recovery_archive/` before resubmitting; it never
+deletes them. Use `recover_pretrained_finetune_pretrained.sh` only after
+reviewing the state file and confirming the fine-tune branch is healthy.
+
+The `three_variation` script names remain as compatibility implementation
+details for state files created before this plan changed. New work should use
+the canonical commands above.

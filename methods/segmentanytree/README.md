@@ -2,9 +2,10 @@
 
 ## Method Summary
 
-SegmentAnyTree is the completed trained labelled-accuracy run for
-FOR-instance. The method uses a PointGroup-style instance segmentation model
-through the released SegmentAnyTree code and container interface.
+SegmentAnyTree is evaluated on FOR-instance with the released pretrained model
+and, separately, after fine-tuning those released weights on development data.
+The method uses a PointGroup-style instance segmentation model through the
+released SegmentAnyTree code and container interface.
 
 ## Upstream Repository And Citation
 
@@ -15,17 +16,16 @@ and [`configs/for_instance_benchmark.yml`](configs/for_instance_benchmark.yml).
 
 ## Training Mode Support
 
-The primary experiment trains from scratch on the supplied FOR-instance
-development split. A fixed seed-42 partition assigns 16 plots to training and
-five to internal validation. The 11 test plots were held out until checkpoint
-selection and aligned-output checks were complete.
+The current comparison has two target variants: `published_pretrained`, which
+does not update weights, and `fine_tuned_on_dev`, which starts from the same
+released checkpoint and updates weights using 16 development training plots.
+Five development plots gate checkpoint selection before the 11 held-out test
+plots are evaluated. Training from scratch is not part of the current plan.
 
-The accepted run is declared as `retrained_from_dev`. The released-checkpoint
-route is retained separately as `published_pretrained` and provisional only.
-Starting from the released mixed-domain checkpoint and updating weights on the
-development split is recorded as `fine_tuned_on_dev`; the attempted follow-up
-run is rejected because it produced semantic tree predictions but no accepted
-instance predictions in the aligned held-out smoke check.
+The completed `retrained_from_dev` run and the rejected 8 July fine-tune remain
+historical evidence. Their predictions and results are retained, but neither
+is a current target or initial checkpoint. The result roles are recorded in
+[`examples/for_instance_result_registry.csv`](examples/for_instance_result_registry.csv).
 
 ## Input Requirements
 
@@ -43,7 +43,7 @@ for accuracy.
 
 ## FOR-instance Compatibility
 
-The accepted experiment follows `for_instance_pointwise_v1`. It preserves the
+The comparison follows `for_instance_pointwise_v1`. It preserves the
 supplied development/test boundary and uses development validation only for
 checkpoint selection.
 
@@ -67,7 +67,7 @@ Start with:
 - [`configs/for_instance_training.yml`](configs/for_instance_training.yml) for
   the fixed training protocol; and
 - [`examples/README.md`](examples/README.md) for the distinction between
-  provisional diagnostics and accepted results.
+  provisional diagnostics, historical results and current targets.
 
 Current canonical equivalents are:
 
@@ -81,9 +81,19 @@ Current canonical equivalents are:
 
 ## Evaluation Route
 
-The accepted result uses aligned internal prediction arrays and the shared
+Both target results must use aligned internal prediction arrays and the shared
 one-to-one point-wise evaluator. The provisional coordinate-rematched
-released-checkpoint tables remain diagnostic evidence only.
+released-checkpoint tables remain diagnostic evidence only and cannot stand in
+for the pending aligned pretrained result.
+
+On the 11 held-out plots, the retained historical from-scratch checkpoint has
+mean plot F1 `0.4825`
+and micro F1 `0.4692` (TP=202, FP=336, FN=121). The
+[`final aggregate`](examples/sat_final_test_aligned_summary_sat_for_quicktune_to49_20260706_140730.csv)
+and [`provenance manifest`](examples/sat_final_test_aligned_provenance_sat_for_quicktune_to49_20260706_140730.json)
+are authoritative for that historical run. The `0.4798` failure-mode tables
+are an older diagnostic snapshot for the same checkpoint, not an alternate
+result. No metric is reported yet for either current target.
 
 ## Known Limitations
 
@@ -91,11 +101,11 @@ Failure-mode diagnostics show that the low held-out score is mainly caused by
 over-segmentation and background-confusion false positives. TUWIEN and RMIT
 are the weakest site-transfer cases; NIBIO has relatively high recall but low
 precision. A validation-only post-processing sweep is retained as a diagnostic
-ablation and does not replace the accepted unfiltered test result.
+ablation and does not replace the historical unfiltered test result.
 
 ## Current Benchmark Status
 
-The accepted checkpoint is `sat_for_quicktune_to49_20260706_140730`. The
+The retained historical checkpoint is `sat_for_quicktune_to49_20260706_140730`. The
 continuation `sat_for_quicktune_to55_20260707_214305` is rejected because
 validation fell to `0.451`. The `fine_tuned_on_dev` follow-up
 `segmentanytree_for-instance_fine_tuned_on_dev_20260708_215054_full` is also
@@ -103,9 +113,8 @@ rejected because its instance output was all background on the audited
 held-out plots. The current status is recorded in
 [`../../BENCHMARKS.md`](../../BENCHMARKS.md).
 
-The canonical replacement experiment is the guarded three-variation workflow
-in [`slurm/README.md`](slurm/README.md). It evaluates the released checkpoint
-with the same aligned route as the accepted result and implements true
-`fine_tuned_on_dev` training as weight-only initialisation with a fresh
-FOR-instance optimiser and epoch history. The rejected 8 July run remains
-historical evidence and is never used as an initial checkpoint or result.
+The released-pretrained and replacement fine-tuned target results are pending.
+The guarded workflow in [`slurm/README.md`](slurm/README.md) writes each run to
+a unique output root and archives partial pretrained outputs before recovery.
+The rejected 8 July run remains historical evidence and is never used as an
+initial checkpoint or target result.

@@ -4,7 +4,9 @@
   "dataset": "FOR-instance",
   "evaluation_completed": true,
   "evaluation_input": "coordinate_rematched_final_export",
-  "accepted_accuracy_status": "pending_pointwise_revalidation",
+  "historical_aligned_result_status": "completed_retained_historical",
+  "historical_aligned_run_id": "sat_for_quicktune_to49_20260706_140730",
+  "current_target_status": "pretrained_finetune_comparison_pending",
   "final_prediction_format": "labelled LAZ",
   "ignored_reference_classes": [
     0,

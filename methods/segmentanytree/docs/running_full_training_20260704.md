@@ -29,8 +29,8 @@ arrays were cancelled. Resume and validation outcomes are recorded in
 | Five-plot aligned validation evaluation | `9628972` | Queued after inference |
 
 The training job used the Barkla working tree based on Git commit `3bd73b2`
-with local workflow changes. That working tree must not be replaced while the
-chain is active.
+with local workflow changes. That historical working tree was preserved while
+the chain was active.
 
 ## Recorded Barkla source hashes
 
@@ -61,5 +61,6 @@ First verify:
 4. the selected checkpoint and evaluation settings are frozen; and
 5. the test submission guard is explicitly reviewed.
 
-The next documentation checkpoint is after training and all five validation
-evaluations finish.
+Those gates were later completed; the selected checkpoint and held-out result
+are recorded in
+[`training_progress_20260706.md`](training_progress_20260706.md).

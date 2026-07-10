@@ -13,7 +13,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="$HOME/scratch/tree-seg-benchmark"
-RUN_ID="${SEGMENTANYTREE_TRAINING_RUN_ID:?Set SEGMENTANYTREE_TRAINING_RUN_ID to the accepted full training run.}"
+RUN_ID="${SEGMENTANYTREE_TRAINING_RUN_ID:?Set SEGMENTANYTREE_TRAINING_RUN_ID to the development-selected training run.}"
 CHECKPOINT_DIR="${SEGMENTANYTREE_CHECKPOINT_DIR:-$HOME/fastscratch/segmentanytree_for_instance_checkpoints/$RUN_ID/run}"
 
 if [[ "${SEGMENTANYTREE_FINAL_TEST_CONFIRMED:-0}" != "1" ]]; then

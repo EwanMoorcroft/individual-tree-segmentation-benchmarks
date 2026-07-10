@@ -8,8 +8,12 @@ trained or fine-tuned neural model.
 
 ## Upstream Repository And Citation
 
-TreeX / `pointtree` is an external dependency and is not vendored here. The
-package provenance that still needs to be captured from Barkla is recorded in
+TreeX is provided by the external
+[`ai4trees/pointtree`](https://github.com/ai4trees/pointtree) package and is not
+vendored here. Cite the
+[`treeX` paper](https://doi.org/10.48550/arXiv.2509.03633) when using the
+algorithm. The completed Barkla run did not retain the exact installed package
+version; that provenance gap is recorded in
 [`configs/for_instance_benchmark.yml`](configs/for_instance_benchmark.yml).
 
 ## Training Mode Support
@@ -42,7 +46,7 @@ subset that exists locally on Barkla:
 - 21 development plots;
 - 11 held-out test plots; and
 - 32 exact-path local plots retained from the Barkla mirror;
-- strict and labelled-mask instance metrics.
+- harmonised union-mask metrics and a reference-labelled-mask diagnostic.
 
 ## Barkla Environment
 
@@ -66,21 +70,26 @@ Current canonical equivalents are:
 - preparation: [`scripts/make_treex_for_instance_exact_split_lists.py`](scripts/make_treex_for_instance_exact_split_lists.py);
 - inference: [`scripts/run_treex_for_instance_plot.py`](scripts/run_treex_for_instance_plot.py);
 - prediction adaptation and evaluation: [`scripts/evaluate_treex_for_instance_plot.py`](scripts/evaluate_treex_for_instance_plot.py);
-- summarisation: [`scripts/create_treex_split_summary.py`](scripts/create_treex_split_summary.py) and [`scripts/create_treex_final_summaries.py`](scripts/create_treex_final_summaries.py);
+- local public-result rebuild: [`scripts/rebuild_treex_public_results.py`](scripts/rebuild_treex_public_results.py);
+- Barkla summarisation: [`scripts/create_treex_split_summary.py`](scripts/create_treex_split_summary.py) and [`scripts/create_treex_final_summaries.py`](scripts/create_treex_final_summaries.py);
 - inference Slurm entrypoints: [`slurm/run_treex_for_instance_dev_array.sbatch`](slurm/run_treex_for_instance_dev_array.sbatch) and [`slurm/run_treex_for_instance_test_array.sbatch`](slurm/run_treex_for_instance_test_array.sbatch); and
 - evaluation Slurm entrypoints: [`slurm/evaluate_treex_for_instance_array.sbatch`](slurm/evaluate_treex_for_instance_array.sbatch) and [`slurm/evaluate_treex_for_instance_test_array.sbatch`](slurm/evaluate_treex_for_instance_test_array.sbatch).
 
 ## Evaluation Route
 
-The headline held-out test result is strict F1 `0.402`; labelled-mask test F1
-is `0.522`. The strict result is the cautious headline because it counts all
-predicted trees, including predictions outside the labelled mask.
+The primary harmonised result uses the union of reference-tree and
+predicted-tree points with maximum-cardinality one-to-one matching at IoU
+`>= 0.5`. Held-out test mean plot F1 is `0.3831`; count-aggregated micro F1 is
+`0.3627` from TP=177, FP=476 and FN=146. Reference-labelled-mask mean plot F1
+`0.5222` is a secondary diagnostic and is not cross-method comparable.
 
 ## Known Limitations
 
 The benchmark is limited to the exact-path local subset available on Barkla.
 The full upstream split metadata lists more development and test paths than
-were locally available for this run.
+were locally available for this run. The exact `pointtree` package version was
+not captured in retained Barkla metadata; the config records this provenance
+gap directly.
 
 ## Current Benchmark Status
 

@@ -43,7 +43,7 @@ Inference produces internal aligned prediction arrays and a final labelled LAZ
 with `PredInstance`. The final export must pass row-preservation checks before
 it can be used for point-wise accuracy. The internal aligned arrays are the
 preferred reproduction source. Every completed audit in the first test-split
-snapshot failed row-preservation checks, so the accepted evaluation must use
+snapshot failed row-preservation checks, so comparable evaluation must use
 aligned arrays written before final export merging.
 
 ## Instance Accuracy Readiness
@@ -54,17 +54,21 @@ aligned arrays written before final export merging.
 | FOR-instance | Positive `treeID` values in annotated LAS files | F1 and matched IoU feasible |
 | Wytham Woods | One segmented reference tree per PLY filename | F1 and matched IoU feasible after scene reconstruction |
 
-The first SegmentAnyTree metrics are stored outside Git under
+The provisional coordinate-rematched SegmentAnyTree metrics are stored outside Git under
 `results/tables/segmentanytree_for_instance/per_plot/`, with evaluation
 metadata under `results/metadata/segmentanytree_for_instance/`. Public-safe
-per-plot, collection, split, matched-pair and inventory tables are retained in
+per-plot, collection, split, matched-pair and inventory diagnostics are retained in
 [`SegmentAnyTree examples`](../methods/segmentanytree/examples/), and the interpretation is documented in
 [`provisional_released_checkpoint_results.md`](../methods/segmentanytree/docs/provisional_released_checkpoint_results.md).
-These coordinate-rematched values are provisional and are not the accepted
-paper reproduction or trained-model result. The corrected
-`retrained_from_dev` experiment writes separate training metadata,
-development-validation metrics and held-out test metrics so results from the
-released checkpoint cannot be mixed with results from the new checkpoint.
+These coordinate-rematched values are provisional and are not an aligned
+paper reproduction. The current `published_pretrained` and
+`fine_tuned_on_dev` targets write separate predictions, metadata and held-out
+test metrics so their identities cannot be mixed. The historical
+`retrained_from_dev` result is represented publicly by its
+[`final aggregate`](../methods/segmentanytree/examples/sat_final_test_aligned_summary_sat_for_quicktune_to49_20260706_140730.csv)
+and [`provenance manifest`](../methods/segmentanytree/examples/sat_final_test_aligned_provenance_sat_for_quicktune_to49_20260706_140730.json).
+The final per-plot table has not been transferred into the local checkout, so
+older diagnostic rows must not be used to reconstruct it.
 
 Summary tables distinguish two IoU aggregations:
 
@@ -96,7 +100,8 @@ reports:
 
 - the released SegmentAnyTree per-prediction-best-IoU policy for paper
   reproduction;
-- a strict one-to-one assignment for cross-method comparison;
+- a maximum-cardinality strict one-to-one assignment for cross-method
+  comparison;
 - mean unweighted and point-weighted coverage; and
 - accepted match identifiers and IoUs.
 
@@ -148,6 +153,7 @@ Every labelled accuracy run must record:
 - predicted tree count;
 - true positives, false positives and false negatives;
 - precision, recall and F1;
+- explicitly named mean plot and count-aggregated micro metrics;
 - mean and median matched IoU;
 - IoU threshold, comparison operator and point-correspondence mode;
 - coordinate tolerance when coordinate matching is used;

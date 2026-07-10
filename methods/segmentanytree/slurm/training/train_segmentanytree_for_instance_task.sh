@@ -272,7 +272,9 @@ print(
   fi
 fi
 if [[ -n "$BASE_LR" ]]; then
-  TRAIN_COMMAND+=("training.optim.base_lr=$BASE_LR")
+  # The pinned Hydra configuration is structured and does not declare this
+  # nested override path, so it must be added explicitly.
+  TRAIN_COMMAND+=("+training.optim.base_lr=$BASE_LR")
 fi
 
 {

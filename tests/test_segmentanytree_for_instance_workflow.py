@@ -1624,7 +1624,13 @@ def test_segmentanytree_training_shell_scripts_parse() -> None:
         "methods/segmentanytree/slurm/evaluation/validate_segmentanytree_variant.sbatch",
         "methods/segmentanytree/slurm/evaluation/summarise_segmentanytree_three_variations.sbatch",
         "methods/segmentanytree/slurm/evaluation/summarise_segmentanytree_pretrained_finetune.sbatch",
+        "methods/segmentanytree/slurm/inference/run_published_pretrained_dev_smoke.sbatch",
+        "methods/segmentanytree/slurm/evaluation/evaluate_published_pretrained_dev_smoke.sbatch",
+        "methods/segmentanytree/slurm/evaluation/validate_published_pretrained_dev_smoke.sbatch",
         "methods/segmentanytree/slurm/submit_full_training_chain.sh",
+        "methods/segmentanytree/slurm/submit_published_pretrained_dev_smoke.sh",
+        "methods/segmentanytree/slurm/submit_published_pretrained_test.sh",
+        "methods/segmentanytree/slurm/monitor_published_pretrained_test.sh",
         "methods/segmentanytree/slurm/submit_three_variation_overnight.sh",
         "methods/segmentanytree/slurm/recover_three_variation_pretrained.sh",
         "methods/segmentanytree/slurm/monitor_three_variation_overnight.sh",
@@ -1650,6 +1656,226 @@ def test_segmentanytree_training_shell_scripts_parse() -> None:
         "train_segmentanytree_for_instance_full.sbatch"
     ).read_text(encoding="utf-8")
     assert "#SBATCH --time=23:59:00" in full_training
+
+
+def test_published_pretrained_development_smoke_is_isolated() -> None:
+    submitter = (
+        ROOT
+        / "methods/segmentanytree/slurm/submit_published_pretrained_dev_smoke.sh"
+    ).read_text(encoding="utf-8")
+    inference = (
+        ROOT
+        / "methods/segmentanytree/slurm/inference/"
+        "run_published_pretrained_dev_smoke.sbatch"
+    ).read_text(encoding="utf-8")
+    evaluation = (
+        ROOT
+        / "methods/segmentanytree/slurm/evaluation/"
+        "evaluate_published_pretrained_dev_smoke.sbatch"
+    ).read_text(encoding="utf-8")
+    preparation = (
+        ROOT
+        / "methods/segmentanytree/slurm/training/"
+        "prepare_segmentanytree_released_checkpoint.sbatch"
+    ).read_text(encoding="utf-8")
+
+    assert "SEGMENTANYTREE_PRETRAINED_DEV_SMOKE_CONFIRMED" in submitter
+    assert "segmentanytree_for-instance_published_pretrained_${STAMP}" in submitter
+    assert "CULS/plot_1_annotated.las" in submitter
+    assert "--split dev" in submitter
+    assert "afterok:$checkpoint_job" in submitter
+    assert "afterok:$inference_job" in submitter
+    assert "afterok:$evaluation_job" in submitter
+    assert "No held-out test or fine-tuning job was submitted" in submitter
+    assert "fine_tuned_on_dev" not in submitter
+    assert "--split test" not in submitter
+    assert "test_from_checkpoint" not in submitter
+    assert "SEGMENTANYTREE_REQUIRED_SPLIT=dev" in inference
+    assert "SEGMENTANYTREE_RUN_TYPE=published_pretrained" in inference
+    assert "--split dev" in evaluation
+    assert "SOURCE_DIR=" in preparation
+    assert 'test -s "$partial/.hydra/overrides.yaml"' in preparation
+    assert 'cp -a "$SOURCE_DIR/." /sat_export/' in preparation
+
+
+def test_published_pretrained_development_smoke_gate(tmp_path: Path) -> None:
+    validator = load_script(
+        (
+            "methods/segmentanytree/scripts/evaluation/"
+            "validate_published_pretrained_dev_smoke.py"
+        ),
+        "segmentanytree_pretrained_dev_smoke_validator",
+    )
+    bundle = tmp_path / "released_model_bundle"
+    (bundle / ".hydra").mkdir(parents=True)
+    checkpoint = bundle / "PointGroup-PAPER.pt"
+    checkpoint.write_bytes(b"released weights")
+    (bundle / ".hydra" / "overrides.yaml").write_text(
+        "model_name: PointGroup-PAPER\n", encoding="utf-8"
+    )
+    checkpoint_sha256 = validator.sha256(checkpoint)
+    input_file = tmp_path / "plot_1_annotated.las"
+    input_file.write_bytes(b"synthetic input")
+    aligned_instance = tmp_path / "Instance_results_forEval_0.ply"
+    aligned_semantic = tmp_path / "semantic_segmentation_0.ply"
+    aligned_instance.write_bytes(b"aligned instance")
+    aligned_semantic.write_bytes(b"aligned semantic")
+    run_metadata = tmp_path / "run.json"
+    run_metadata.write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "return_code": 0,
+                "run_type": "published_pretrained",
+                "split": "dev",
+                "relative_path": "CULS/plot_1_annotated.las",
+                "external_commit": validator.EXPECTED_EXTERNAL_COMMIT,
+                "checkpoint_sha256": checkpoint_sha256,
+                "input_file": str(input_file),
+                "input_sha256": validator.sha256(input_file),
+                "aligned_instance_evaluation_exists": True,
+                "aligned_semantic_evaluation_exists": True,
+                "aligned_instance_evaluation": str(aligned_instance),
+                "aligned_instance_evaluation_sha256": validator.sha256(
+                    aligned_instance
+                ),
+                "aligned_semantic_evaluation": str(aligned_semantic),
+                "aligned_semantic_evaluation_sha256": validator.sha256(
+                    aligned_semantic
+                ),
+            }
+        ),
+        encoding="utf-8",
+    )
+    metrics = tmp_path / "metrics.json"
+    metrics_payload = {
+        "evaluator": "pointwise_instance_metrics",
+        "input_mode": "internal_aligned_ply",
+        "split": "dev",
+        "relative_path": "CULS/plot_1_annotated.las",
+        "point_count": 100,
+        "reference_instance_count": 2,
+        "prediction_instance_count": 3,
+    }
+    metrics.write_text(json.dumps(metrics_payload), encoding="utf-8")
+
+    payload = validator.validate_smoke(
+        run_metadata,
+        metrics,
+        bundle,
+        "CULS/plot_1_annotated.las",
+        checkpoint_sha256,
+        validator.EXPECTED_EXTERNAL_COMMIT,
+    )
+    assert payload["status"] == "smoke-tested"
+    assert payload["training_mode"] == "published_pretrained"
+    assert payload["held_out_test_accessed"] is False
+    assert payload["accuracy_benchmark_completed"] is False
+    assert payload["prediction_instance_count"] == 3
+    assert payload["released_weight_test_overlap_status"] == (
+        "unresolved_do_not_claim_leakage_free"
+    )
+
+    metrics_payload["prediction_instance_count"] = 0
+    metrics.write_text(json.dumps(metrics_payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="zero predicted instances"):
+        validator.validate_smoke(
+            run_metadata,
+            metrics,
+            bundle,
+            "CULS/plot_1_annotated.las",
+            checkpoint_sha256,
+            validator.EXPECTED_EXTERNAL_COMMIT,
+        )
+
+
+def test_published_pretrained_test_freeze_and_submission_are_guarded(
+    tmp_path: Path,
+) -> None:
+    freezer = load_script(
+        (
+            "methods/segmentanytree/scripts/evaluation/"
+            "prepare_published_pretrained_test_freeze.py"
+        ),
+        "segmentanytree_pretrained_test_freezer",
+    )
+    bundle = tmp_path / "released_model_bundle"
+    (bundle / ".hydra").mkdir(parents=True)
+    checkpoint = bundle / "PointGroup-PAPER.pt"
+    checkpoint.write_bytes(b"released weights")
+    overrides = bundle / ".hydra" / "overrides.yaml"
+    overrides.write_text(
+        "\n".join(
+            [
+                "- task=panoptic",
+                "- data=panoptic/treeins_rad8",
+                "- models=panoptic/area4_ablation_3heads_5",
+                "- model_name=PointGroup-PAPER",
+                "- training=treeins",
+                "- job_name=mls_data_run",
+                "- batch_size=6",
+                "- epochs=100",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    checkpoint_sha256 = freezer.sha256(checkpoint)
+    freezer.EXPECTED_CHECKPOINT_SHA256 = checkpoint_sha256
+    smoke_path = tmp_path / (
+        "segmentanytree_for-instance-published-pretrained-placeholder.json"
+    )
+    smoke_path.write_text(
+        json.dumps(
+            {
+                "status": "smoke-tested",
+                "training_mode": "published_pretrained",
+                "dataset_split": "dev",
+                "held_out_test_accessed": False,
+                "next_gate": "manual_review_before_held_out_test_submission",
+                "prediction_instance_count": 20,
+                "reference_instance_count": 6,
+                "external_commit": freezer.EXPECTED_EXTERNAL_COMMIT,
+                "checkpoint_sha256": checkpoint_sha256,
+                "released_weight_test_overlap_status": (
+                    "unresolved_do_not_claim_leakage_free"
+                ),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Explicit acceptance"):
+        freezer.freeze_test_evaluation(
+            smoke_path, bundle, "run", False
+        )
+    payload = freezer.freeze_test_evaluation(smoke_path, bundle, "run", True)
+    assert payload["status"] == "frozen_for_one_time_held_out_evaluation"
+    assert payload["released_checkpoint_job_name"] == "mls_data_run"
+    assert payload["expected_test_plots"] == 11
+    assert payload["weight_updates"] is False
+    assert payload["repeat_test_for_setting_selection_permitted"] is False
+
+    submitter = (
+        ROOT / "methods/segmentanytree/slurm/submit_published_pretrained_test.sh"
+    ).read_text(encoding="utf-8")
+    monitor = (
+        ROOT / "methods/segmentanytree/slurm/monitor_published_pretrained_test.sh"
+    ).read_text(encoding="utf-8")
+    assert "SEGMENTANYTREE_PUBLISHED_PRETRAINED_TEST_CONFIRMED" in submitter
+    assert "SEGMENTANYTREE_ACCEPT_UNRESOLVED_TRAINING_MANIFEST" in submitter
+    assert "SEGMENTANYTREE_DEV_SMOKE_EVIDENCE" in submitter
+    assert "SEGMENTANYTREE_CHECKPOINT_DIR=$CHECKPOINT_BUNDLE" in submitter
+    assert "SEGMENTANYTREE_RUN_TYPE=published_pretrained" in submitter
+    assert "--array=0-10%2" in submitter
+    assert "--array=0-10%4" in submitter
+    assert "SEGMENTANYTREE_VARIANT_EXPECTED_PLOTS=11" in submitter
+    assert "train_segmentanytree" not in submitter
+    assert "fine_tuned_on_dev" not in submitter
+    assert "time remaining" not in monitor.lower()
+    assert "%.9L" in monitor
+    assert "%.19e" in monitor
+    assert "tail " not in monitor
 
 
 def test_full_training_submission_wrapper_derives_validation_array() -> None:

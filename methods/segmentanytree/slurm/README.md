@@ -84,9 +84,80 @@ Historical released-checkpoint and export-audit scripts remain available for
 traceability, but the trained validation route is the current canonical
 workflow.
 
+## Released-pretrained development smoke
+
+The first current target is an isolated `published_pretrained` smoke on
+`CULS/plot_1_annotated.las`, which is in the supplied development split. It
+extracts the complete released model bundle, including Hydra overrides,
+verifies the checkpoint SHA-256, runs aligned inference, evaluates the aligned
+internal semantic and instance predictions, and rejects zero-instance output.
+
+The route submits no held-out test or fine-tuning job:
+
+```bash
+cd ~/scratch/tree-seg-benchmark
+
+SEGMENTANYTREE_PRETRAINED_DEV_SMOKE_CONFIRMED=1 \
+  bash methods/segmentanytree/slurm/submit_published_pretrained_dev_smoke.sh
+```
+
+Expected resources and runtime:
+
+- checkpoint extraction: `nodes`, one CPU, 2 GB, under 15 minutes;
+- development inference: `gpu-l40s-low`, one GPU, eight CPUs, 48 GB, normally
+  under one hour;
+- aligned evaluation: `nodes`, two CPUs, 32 GB, normally under 30 minutes; and
+- final gate: `nodes`, one CPU, 4 GB, normally under ten minutes.
+
+The state file is written under
+`~/fastscratch/segmentanytree_published_pretrained_dev_smoke_<timestamp>.env`.
+The evidence JSON records the development split, checkpoint hash, upstream
+commit, aligned point count, reference and prediction counts, and the manual
+review gate. Existing outputs for a repeated timestamp are moved under
+`~/fastscratch/segmentanytree_recovery_archive/`; they are not deleted.
+
+Success requires a complete released model bundle, aligned semantic and
+instance output, at least one reference instance and at least one predicted
+instance. Missing Hydra metadata, a checkpoint mismatch, a non-development
+plot, row-length disagreement or zero predicted instances stops the chain.
+
+Review the evidence JSON before adding any held-out test submission route.
+
+## Frozen released-pretrained held-out evaluation
+
+After manual review of a successful development smoke, the released MLS
+checkpoint may be evaluated once on the 11 held-out plots. The exact training
+plot manifest is not bundled with the released checkpoint, so the submission
+requires explicit acceptance of that provenance limitation and the result must
+not be described as confirmed leakage-free.
+
+```bash
+SMOKE_EVIDENCE="$HOME/scratch/tree-seg-benchmark/results/metadata/segmentanytree_for_instance/stage1_smokes/<run_id>.json"
+
+SEGMENTANYTREE_PUBLISHED_PRETRAINED_TEST_CONFIRMED=1 \
+SEGMENTANYTREE_ACCEPT_UNRESOLVED_TRAINING_MANIFEST=1 \
+SEGMENTANYTREE_DEV_SMOKE_EVIDENCE="$SMOKE_EVIDENCE" \
+  bash methods/segmentanytree/slurm/submit_published_pretrained_test.sh
+```
+
+The wrapper freezes the checkpoint hash, Hydra overrides, upstream commit,
+matching policy and IoU threshold before submission. It refuses an existing
+test output root or freeze manifest rather than silently repeating evaluation.
+It submits an 11-task GPU inference array, an 11-task CPU evaluation array and
+one final completeness gate. No training or fine-tuning job is submitted.
+
+Use the state file printed by the submitter for a quiet monitor with scheduler
+state, elapsed time, time remaining, estimated end time and aligned metric
+count, but no log output:
+
+```bash
+bash methods/segmentanytree/slurm/monitor_published_pretrained_test.sh \
+  <state_file>
+```
+
 ## Pretrained and fine-tuned comparison
 
-The current target comparison has two variants:
+The later target comparison has two variants:
 
 1. `published_pretrained`: extract the released checkpoint from the pinned
    container, verify its hash and evaluate it without weight updates; and
@@ -104,21 +175,18 @@ shape-compatible. A one-epoch full-data smoke job must complete before the
 35-epoch job starts. The held-out test array remains locked until five aligned
 development-validation metrics exist and contain predicted instances.
 
-From a clean Barkla checkout at the current `origin/main`:
+The combined wrapper remains historical implementation evidence. Do not run
+it until the isolated released-pretrained development smoke has passed and a
+separate held-out-test freeze boundary has been reviewed:
 
 ```bash
 cd ~/scratch/tree-seg-benchmark
 
 SEGMENTANYTREE_PRETRAINED_FINETUNE_CONFIRMED=1 \
   bash methods/segmentanytree/slurm/submit_pretrained_finetune_comparison.sh
-
-bash methods/segmentanytree/slurm/monitor_pretrained_finetune_comparison.sh --follow
 ```
 
-The monitor clears and redraws five compact status lines once per minute. It
-does not print scheduler logs. Historical timings imply roughly six to eight
-hours after GPU allocation. The monitor recalculates the ETA from observed
-epoch progress once full training is running.
+This command is intentionally not part of the development-smoke route.
 
 The final CSV is written under
 `results/tables/segmentanytree_for_instance/pretrained_finetune_comparison/`

@@ -80,6 +80,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     output_path = Path(args.output).expanduser().resolve()
+    input_file = Path(args.input_file).expanduser().resolve()
     repo_path = Path(args.external_repo).expanduser().resolve()
     prediction_directory = Path(args.prediction_directory).expanduser().resolve()
     final_prediction = (
@@ -115,7 +116,8 @@ def main() -> int:
         "run_type": args.run_type,
         "training_run_id": args.training_run_id,
         "execution_mode": "apptainer_slurm",
-        "input_file": str(Path(args.input_file).expanduser().resolve()),
+        "input_file": str(input_file),
+        "input_sha256": sha256(input_file),
         "relative_path": args.relative_path,
         "collection": args.collection,
         "plot_name": args.plot_name,
@@ -140,6 +142,9 @@ def main() -> int:
             aligned_instance_evaluation
             and aligned_instance_evaluation.is_file()
         ),
+        "aligned_instance_evaluation_sha256": sha256(
+            aligned_instance_evaluation
+        ),
         "aligned_semantic_evaluation": (
             str(aligned_semantic_evaluation)
             if aligned_semantic_evaluation
@@ -148,6 +153,9 @@ def main() -> int:
         "aligned_semantic_evaluation_exists": bool(
             aligned_semantic_evaluation
             and aligned_semantic_evaluation.is_file()
+        ),
+        "aligned_semantic_evaluation_sha256": sha256(
+            aligned_semantic_evaluation
         ),
         "python_userbase": str(Path(args.python_userbase).expanduser().resolve()),
         "package_versions": read_json(

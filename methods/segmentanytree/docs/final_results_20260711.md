@@ -83,3 +83,21 @@ The target test evaluations are final and must not be repeated for setting
 selection. Further metrics should be derived from the retained aligned PLY
 files and existing predictions, without rerunning inference or changing the
 frozen labels.
+
+Site-level differences are generated from the retained per-plot metric JSONs,
+without rerunning inference:
+
+```bash
+PRETRAINED=segmentanytree_for-instance_published_pretrained_20260710_231601
+FINETUNED=segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931
+python methods/segmentanytree/scripts/evaluation/summarise_completed_sat_sites.py \
+  --variant "published_pretrained=results/metadata/segmentanytree_for_instance/variants/${PRETRAINED}/held_out_test" \
+  --variant "fine_tuned_on_dev=results/metadata/segmentanytree_for_instance/trained_test/${FINETUNED}" \
+  --expected-plots 11 \
+  --expected-split test \
+  --output results/tables/segmentanytree_for_instance/completed_target_site_summary.csv
+```
+
+The output contains separate CULS, NIBIO, RMIT, SCION and TUWIEN rows for both
+target variants. Transfer that small CSV into the public examples and workbook;
+do not infer site values from the overall aggregates.

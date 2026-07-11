@@ -2590,6 +2590,59 @@ def test_segmentanytree_retention_verifier_requires_aligned_outputs(
         )
 
 
+def test_completed_segmentanytree_site_summary_groups_all_five_sites(
+    tmp_path: Path,
+) -> None:
+    summariser = load_script(
+        (
+            "methods/segmentanytree/scripts/evaluation/"
+            "summarise_completed_sat_sites.py"
+        ),
+        "segmentanytree_completed_site_summariser",
+    )
+    metrics = tmp_path / "metrics"
+    metrics.mkdir()
+    for index, site in enumerate(summariser.EXPECTED_SITES, start=1):
+        payload = {
+            "evaluator": "pointwise_instance_metrics",
+            "collection": site,
+            "plot_name": f"plot_{index}",
+            "relative_path": f"{site}/plot_{index}.las",
+            "split": "test",
+            "prediction_instance_count": index + 2,
+            "reference_instance_count": index + 1,
+            "mean_unweighted_coverage": 0.6 + index / 100,
+            "mean_weighted_coverage": 0.7 + index / 100,
+            "harmonized": {
+                "true_positives": index,
+                "false_positives": 2,
+                "false_negatives": 1,
+                "precision": index / (index + 2),
+                "recall": index / (index + 1),
+                "f1": 2 * index / (2 * index + 3),
+                "mean_matched_iou": 0.8 + index / 100,
+            },
+            "paper_compatible": {"f1": 2 * index / (2 * index + 3)},
+        }
+        (metrics / f"{site}.json").write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
+
+    rows = summariser.summarise_sites("fine_tuned_on_dev", metrics, 5, "test")
+    assert [row["site"] for row in rows] == list(summariser.EXPECTED_SITES)
+    assert sum(int(row["plots"]) for row in rows) == 5
+    assert sum(int(row["true_positives"]) for row in rows) == 15
+    assert rows[0]["micro_f1"] == pytest.approx(2 / 5)
+    assert rows[-1]["micro_f1"] == pytest.approx(10 / 13)
+    assert {row["result_status"] for row in rows} == {
+        "completed_aligned_pointwise_site_summary"
+    }
+
+    (metrics / "TUWIEN.json").unlink()
+    with pytest.raises(ValueError, match="expected 5 metrics"):
+        summariser.summarise_sites("fine_tuned_on_dev", metrics, 5, "test")
+
+
 def test_completed_segmentanytree_workbook_has_final_target_values() -> None:
     workbook = (
         ROOT

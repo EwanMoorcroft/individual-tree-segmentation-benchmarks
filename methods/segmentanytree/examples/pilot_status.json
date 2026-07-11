@@ -6,7 +6,9 @@
   "evaluation_input": "coordinate_rematched_final_export",
   "historical_aligned_result_status": "completed_retained_historical",
   "historical_aligned_run_id": "sat_for_quicktune_to49_20260706_140730",
-  "current_target_status": "pretrained_finetune_comparison_pending",
+  "current_target_status": "completed_target_comparison",
+  "primary_run_id": "segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931",
+  "primary_test_mean_plot_f1": 0.5446789009405125,
   "final_prediction_format": "labelled LAZ",
   "ignored_reference_classes": [
     0,

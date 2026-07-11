@@ -123,7 +123,8 @@ test split only.
 
 These files exclude coordinates, point clouds, predictions, checkpoints,
 absolute machine paths and scheduler logs. They are retained to document the
-failed coordinate-rematching route and will be replaced after revalidation.
+failed coordinate-rematching route. The completed aligned target results in
+[`final_results_20260711.md`](final_results_20260711.md) supersede them.
 The ignored working results remain under `results/`, `data/` and `logs/` on
 Barkla.
 
@@ -131,11 +132,11 @@ The CSV publication step is reproducible with
 [`build_segmentanytree_public_results.py`](../scripts/reporting/build_segmentanytree_public_results.py),
 using a transferred copy of the ignored full result tables as its input.
 
-## Interpretation And Remaining Validation
+## Interpretation And Completed Validation
 
 The run establishes that full inference is operational and identifies the
 failure in the final export. It does not establish trained-model accuracy.
-Acceptance of the corrected experiment requires:
+The corrected experiment subsequently completed these requirements:
 
 1. selecting and freezing a checkpoint using only the five fixed development
    validation plots;
@@ -143,7 +144,8 @@ Acceptance of the corrected experiment requires:
    provenance;
 3. running the frozen checkpoint once on the 11 held-out test plots;
 4. evaluating aligned point labels with both matching policies; and
-5. replacing these provisional tables only after all reproduction gates pass.
+5. retaining these provisional tables as diagnostics while reporting the
+   completed aligned tables separately.
 
 No FRDR accuracy values are combined with these results because the FRDR inputs
 do not contain individual-tree reference IDs.

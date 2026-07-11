@@ -10,11 +10,12 @@ outputs, not final dissertation results.
 
 The provisional results and their limitations are documented in
 [`provisional_released_checkpoint_results.md`](provisional_released_checkpoint_results.md).
-They must not be used as final benchmark results. The corrected primary
-experiment is complete: it trained from FOR-instance development data,
-selected epoch 49 with a fixed internal development validation split and
-evaluated the frozen checkpoint once on the held-out test split using aligned
-point-wise outputs.
+They must not be used as final benchmark results. The historical from-scratch
+experiment trained from FOR-instance development data, selected epoch 49 with
+a fixed internal development validation split and evaluated the frozen
+checkpoint once on the held-out test split using aligned point-wise outputs.
+The final released-pretrained and fine-tuned target comparison is also complete;
+see [`final_results_20260711.md`](final_results_20260711.md).
 
 ## Dataset And Evaluation Labels
 
@@ -75,8 +76,9 @@ For the current 21 development plots, this produces 16 training plots and 5
 validation plots. The 11 test records are retained in the ignored manifest but
 are never converted into the training data root.
 
-The current target first evaluates the released checkpoint unchanged, then
-fine-tunes from those released weights with fresh optimizer and epoch history.
+The completed target comparison first evaluates the released checkpoint
+unchanged, then fine-tunes from those released weights with fresh optimizer and
+epoch history.
 The completed `retrained_from_dev` run is historical evidence. The attempted
 8 July follow-up is also historical and rejected because it produced no
 accepted instances; the replacement fine-tune uses the explicit tested
@@ -110,9 +112,11 @@ The original July 4 source hashes and job chain remain in
 [`running_full_training_20260704.md`](running_full_training_20260704.md) as
 historical provenance.
 
-Future submissions should use the guarded workflow documented in
-[`../slurm/README.md`](../slurm/README.md), which derives the five-task
-validation range from the split manifest.
+The completed guarded workflow is documented in
+[`../slurm/README.md`](../slurm/README.md). The target test routes are frozen
+and must not be resubmitted for setting selection. Future metrics should use
+the retained aligned predictions verified by
+`verify_completed_sat_retention.py`.
 
 The pinned trainer loops to, but not including, `training.epochs`; the wrapper
 therefore passes a stop value one greater than the requested epoch count and
@@ -329,8 +333,9 @@ uses a narrow runtime patch to write
 semantic evaluation PLY is retained unchanged. The dedicated evaluation route
 stops before final LAZ merging.
 
-The historical run validated this route before evaluating all 11 plots. For a
-new target run, repeat the first CULS and NIBIO tasks before expanding the array:
+The historical and completed target runs validated this route before evaluating
+all 11 plots. The following pilot pattern is retained as provenance only; do not
+use it to repeat either completed target test:
 
 ```bash
 PAPER_PILOT=$(sbatch --parsable \
@@ -347,9 +352,9 @@ PAPER_EVAL=$(sbatch --parsable \
 Expand to array indices `0-10` only after both pilot evaluations contain the
 expected aligned point counts, checkpoint hash and plausible metrics.
 
-## Acceptance Checks
+## Completed Acceptance Checks
 
-Accept any future rerun only when:
+The completed target runs satisfy these recorded checks:
 
 1. the new checkpoint SHA-256, external commit, container route and package
    versions are recorded;

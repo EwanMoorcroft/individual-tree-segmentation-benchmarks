@@ -1,5 +1,14 @@
 # SegmentAnyTree Slurm workflows
 
+The target benchmark completed on 11 July 2026. The primary fine-tuned test
+result is `segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931`; the
+released baseline is
+`segmentanytree_for-instance_published_pretrained_20260710_231601`. Their test
+submission guards now serve as provenance and repeat-prevention controls. Do
+not resubmit either held-out route for setting selection. Use
+`verify_completed_sat_retention.py` to confirm the retained predictions needed
+for future metrics.
+
 The canonical workflow is grouped by stage:
 
 - `environment/`: one-off container and Python-stack checks;
@@ -86,7 +95,7 @@ workflow.
 
 ## Released-pretrained development smoke
 
-The first current target is an isolated `published_pretrained` smoke on
+The completed first target began with an isolated `published_pretrained` smoke on
 `CULS/plot_1_annotated.las`, which is in the supplied development split. It
 extracts the complete released model bundle, including Hydra overrides,
 verifies the checkpoint SHA-256, runs aligned inference, evaluates the aligned
@@ -157,7 +166,59 @@ bash methods/segmentanytree/slurm/monitor_published_pretrained_test.sh \
 
 ## Pretrained and fine-tuned comparison
 
-The later target comparison has two variants:
+The completed fine-tuning route is isolated to the development split. It freezes
+the reviewed released checkpoint, the 16/5/0 development split manifest and
+the completed Stage 1 evidence before submitting any work:
+
+```bash
+RUN_ID=segmentanytree_for-instance_published_pretrained_20260710_231601
+STAGE1_ROOT="$HOME/scratch/tree-seg-benchmark/results"
+
+SEGMENTANYTREE_FINETUNE_DEV_CONFIRMED=1 \
+SEGMENTANYTREE_STAGE1_TEST_FREEZE="$STAGE1_ROOT/metadata/segmentanytree_for_instance/test_freezes/$RUN_ID.json" \
+SEGMENTANYTREE_STAGE1_FINAL_SUMMARY="$STAGE1_ROOT/tables/segmentanytree_for_instance/variants/$RUN_ID/held_out_test/final_summary.csv" \
+  bash methods/segmentanytree/slurm/submit_finetuned_dev_validation.sh
+```
+
+The chain contains a one-epoch training smoke, a separate 35-epoch training
+run initialised from the same released weights, five development inference
+tasks, five aligned evaluations and a non-zero-instance gate. Training uses a
+fresh optimiser and epoch history, batch size 8 and base learning rate
+0.0001. It does not submit held-out inference or evaluation.
+
+Use the printed state file to monitor scheduler state, elapsed time, remaining
+time, estimated end time, checkpoint presence and the development metric count
+without displaying logs:
+
+```bash
+bash methods/segmentanytree/slurm/monitor_finetuned_dev_validation.sh \
+  <state_file>
+```
+
+Only a successful five-plot development gate permits a later manual decision
+about one held-out evaluation. That evaluation is deliberately absent from
+this submission route.
+
+After that manual decision, freeze and submit exactly one held-out evaluation
+of the accepted development run:
+
+```bash
+export SEGMENTANYTREE_FINETUNED_TEST_CONFIRMED=1
+export SEGMENTANYTREE_TRAINING_RUN_ID=<accepted_fine_tuned_run_id>
+bash methods/segmentanytree/slurm/submit_finetuned_test.sh
+```
+
+The wrapper verifies the development freeze, five-plot summary, training
+metadata, released-weight compatibility and fine-tuned checkpoint hash. It
+refuses any existing prediction, metric, table or freeze target. It submits no
+training job and records that the test must not be repeated for setting
+selection. Monitor the printed state file without logs using:
+
+```bash
+bash methods/segmentanytree/slurm/monitor_finetuned_test.sh <state_file>
+```
+
+The completed target comparison has two variants:
 
 1. `published_pretrained`: extract the released checkpoint from the pinned
    container, verify its hash and evaluate it without weight updates; and
@@ -202,5 +263,5 @@ deletes them. Use `recover_pretrained_finetune_pretrained.sh` only after
 reviewing the state file and confirming the fine-tune branch is healthy.
 
 The `three_variation` script names remain as compatibility implementation
-details for state files created before this plan changed. New work should use
-the canonical commands above.
+details for state files created before this plan changed. They are retained for
+provenance, not as a reason to repeat the completed target tests.

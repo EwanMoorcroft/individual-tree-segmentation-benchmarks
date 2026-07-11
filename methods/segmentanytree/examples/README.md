@@ -41,4 +41,8 @@ filter improved validation slightly but did not replace that historical result.
 
 `for_instance_result_registry.csv` is the status authority for current and
 historical result roles. The aligned pretrained and replacement fine-tuned
-target rows remain `pending` until their complete metrics are transferred.
+target rows are complete. Their authoritative public aggregates are in
+`sat_completed_target_results_20260711.csv`; the matching provenance record is
+`sat_completed_target_provenance_20260711.json`. The exact CULS, NIBIO, RMIT,
+SCION and TUWIEN breakdown for both targets is in
+`sat_completed_target_site_results_20260711.csv`.

@@ -101,7 +101,7 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     )
 
     assert config["project"]["benchmark_name"] == "for_instance_segmentanytree"
-    assert config["project"]["status"] == "pretrained_finetune_comparison_pending"
+    assert config["project"]["status"] == "completed"
     assert config["project"]["protocol_id"] == "for_instance_pointwise_v1"
     assert config["dataset"]["name"] == "FOR-instance"
     assert config["dataset"]["root"] == (
@@ -117,9 +117,9 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     )
     assert config["benchmark"]["array_size"] == 32
     assert config["benchmark"]["provisional_coordinate_evaluation_count"] == 32
-    assert config["benchmark"]["validated_pointwise_evaluation_count"] == 11
+    assert config["benchmark"]["validated_pointwise_evaluation_count"] == 33
     assert config["benchmark"]["validated_pointwise_evaluation_scope"] == (
-        "historical_retrained_held_out_test"
+        "published_pretrained_fine_tuned_and_historical_retrained_held_out_test"
     )
     assert config["benchmark"]["development_validation_pointwise_evaluation_count"] == 5
     assert config["benchmark"]["primary_reporting_split"] == "test"
@@ -140,6 +140,19 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
         "published_pretrained_then_fine_tuned_on_dev"
     )
     assert config["training"]["target_comparison"]["from_scratch_training_permitted"] is False
+    assert config["training"]["target_comparison"]["status"] == "completed"
+    assert config["training"]["target_comparison"]["public_site_results"] == (
+        "methods/segmentanytree/examples/"
+        "sat_completed_target_site_results_20260711.csv"
+    )
+    fine_tuned = config["training"]["target_comparison"]["fine_tuned_result"]
+    assert fine_tuned["run_id"] == (
+        "segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931"
+    )
+    assert fine_tuned["final_test_mean_plot_f1"] == pytest.approx(
+        0.5446789009405125
+    )
+    assert fine_tuned["final_test_micro_f1"] == pytest.approx(0.531986531986532)
     assert (
         config["training"]["historical_retrained_experiment"]["latest_completed_run_id"]
         == "sat_for_quicktune_to49_20260706_140730"
@@ -1275,6 +1288,22 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
     assert config["dataset"]["internal_validation"]["expected_validation_plots"] == 5
     assert config["preparation"]["convert_test_for_training"] is False
     assert config["evaluation"]["use_test_for_model_selection"] is False
+    assert config["project"]["status"] == "completed"
+    primary = config["training"]["replacement_fine_tuned_protocol"]
+    baseline = config["training"]["published_pretrained_protocol"]
+    assert primary["status"] == "completed_primary_result"
+    assert primary["held_out_test"]["mean_plot_f1"] == pytest.approx(
+        0.5446789009405125
+    )
+    assert baseline["status"] == "completed_target_baseline"
+    assert baseline["mean_plot_f1"] == pytest.approx(0.45340897930934665)
+    assert config["training"]["held_out_test_status"] == (
+        "completed_no_repeat_for_setting_selection"
+    )
+    assert config["training"]["result_retention"]["public_site_results"] == (
+        "methods/segmentanytree/examples/"
+        "sat_completed_target_site_results_20260711.csv"
+    )
 
     training_task = (
         ROOT / "methods/segmentanytree/slurm/training/train_segmentanytree_for_instance_task.sh"
@@ -1309,7 +1338,9 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
     assert 'TRAINING_MODE="fine_tuned_on_dev"' in training_task
     assert "SEGMENTANYTREE_REQUIRE_PRETRAINED_LOAD=1" in training_task
     assert "SEGMENTANYTREE_PRETRAINED_PATH=/sat_pretrained/PointGroup-PAPER.pt" in training_task
-    assert "training.optim.base_lr=$BASE_LR" in training_task
+    assert 'TRAIN_COMMAND+=("optim.base_lr=$BASE_LR")' in training_task
+    assert 'TRAIN_COMMAND+=("+training.optim.base_lr=$BASE_LR")' not in training_task
+    assert 'TRAIN_COMMAND+=("training.optim.base_lr=$BASE_LR")' not in training_task
     assert "checkpoint_dir=/sat_resume" in training_task
     assert "weight_name=latest" in training_task
     assert "SEGMENTANYTREE_STALL_TIMEOUT_SECONDS" in training_task
@@ -1631,6 +1662,10 @@ def test_segmentanytree_training_shell_scripts_parse() -> None:
         "methods/segmentanytree/slurm/submit_published_pretrained_dev_smoke.sh",
         "methods/segmentanytree/slurm/submit_published_pretrained_test.sh",
         "methods/segmentanytree/slurm/monitor_published_pretrained_test.sh",
+        "methods/segmentanytree/slurm/submit_finetuned_dev_validation.sh",
+        "methods/segmentanytree/slurm/monitor_finetuned_dev_validation.sh",
+        "methods/segmentanytree/slurm/submit_finetuned_test.sh",
+        "methods/segmentanytree/slurm/monitor_finetuned_test.sh",
         "methods/segmentanytree/slurm/submit_three_variation_overnight.sh",
         "methods/segmentanytree/slurm/recover_three_variation_pretrained.sh",
         "methods/segmentanytree/slurm/monitor_three_variation_overnight.sh",
@@ -1873,6 +1908,219 @@ def test_published_pretrained_test_freeze_and_submission_are_guarded(
     assert "train_segmentanytree" not in submitter
     assert "fine_tuned_on_dev" not in submitter
     assert "time remaining" not in monitor.lower()
+    assert "%.9L" in monitor
+    assert "%.19e" in monitor
+    assert "tail " not in monitor
+
+
+def test_finetuned_dev_freeze_and_submission_are_development_only(
+    tmp_path: Path,
+) -> None:
+    freezer = load_script(
+        (
+            "methods/segmentanytree/scripts/evaluation/"
+            "prepare_finetuned_dev_training_freeze.py"
+        ),
+        "segmentanytree_finetuned_dev_freezer",
+    )
+    bundle = tmp_path / "released_model_bundle"
+    (bundle / ".hydra").mkdir(parents=True)
+    checkpoint = bundle / "PointGroup-PAPER.pt"
+    checkpoint.write_bytes(b"released weights")
+    (bundle / ".hydra" / "overrides.yaml").write_text(
+        "- job_name=mls_data_run\n", encoding="utf-8"
+    )
+    freezer.EXPECTED_CHECKPOINT_SHA256 = freezer.sha256(checkpoint)
+
+    split_manifest = tmp_path / "full_split_manifest.json"
+    split_manifest.write_text(
+        json.dumps(
+            {
+                "selected_role_counts": {
+                    "train": 16,
+                    "val": 5,
+                    "held_out_test": 0,
+                },
+                "test_data_converted": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    stage1_run_id = "segmentanytree_for-instance_published_pretrained_20260710_231601"
+    stage1_freeze = tmp_path / f"{stage1_run_id}.json"
+    stage1_freeze.write_text(
+        json.dumps(
+            {
+                "status": "frozen_for_one_time_held_out_evaluation",
+                "run_id": stage1_run_id,
+                "training_mode": "published_pretrained",
+                "checkpoint_sha256": freezer.EXPECTED_CHECKPOINT_SHA256,
+                "expected_test_plots": 11,
+                "repeat_test_for_setting_selection_permitted": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    stage1_summary = tmp_path / "final_summary.csv"
+    stage1_summary.write_text(
+        "variant,result_status,dataset_split,plots,metrics_root\n"
+        "published_pretrained,completed_aligned_pointwise_test,test,11,"
+        f"/results/{stage1_run_id}/held_out_test\n",
+        encoding="utf-8",
+    )
+    run_id = "segmentanytree_for-instance_fine_tuned_on_dev_20260711_010203"
+
+    payload = freezer.freeze_finetuned_dev_training(
+        split_manifest,
+        bundle,
+        stage1_freeze,
+        stage1_summary,
+        run_id,
+    )
+    assert payload["status"] == "frozen_for_development_only_fine_tuning"
+    assert payload["training_mode"] == "fine_tuned_on_dev"
+    assert payload["initialisation"] == "released_checkpoint_weights_only"
+    assert payload["optimizer_state"] == "fresh"
+    assert payload["smoke_epochs"] == 1
+    assert payload["training_epochs"] == 35
+    assert payload["held_out_test_plots"] == 0
+    assert payload["held_out_test_jobs_permitted"] is False
+    assert payload["stage1_test_run_id"] == stage1_run_id
+
+    contaminated_manifest = json.loads(split_manifest.read_text(encoding="utf-8"))
+    contaminated_manifest["selected_role_counts"]["held_out_test"] = 1
+    split_manifest.write_text(json.dumps(contaminated_manifest), encoding="utf-8")
+    with pytest.raises(ValueError, match="Unexpected development split counts"):
+        freezer.freeze_finetuned_dev_training(
+            split_manifest,
+            bundle,
+            stage1_freeze,
+            stage1_summary,
+            run_id,
+        )
+
+    submitter = (
+        ROOT / "methods/segmentanytree/slurm/submit_finetuned_dev_validation.sh"
+    ).read_text(encoding="utf-8")
+    monitor = (
+        ROOT / "methods/segmentanytree/slurm/monitor_finetuned_dev_validation.sh"
+    ).read_text(encoding="utf-8")
+    assert "SEGMENTANYTREE_FINETUNE_DEV_CONFIRMED" in submitter
+    assert "SEGMENTANYTREE_PRETRAINED_CHECKPOINT=$RELEASED_CHECKPOINT" in submitter
+    assert "SEGMENTANYTREE_TRAIN_EPOCHS=1" in submitter
+    assert "SEGMENTANYTREE_TRAIN_EPOCHS=35" in submitter
+    assert "SEGMENTANYTREE_TRAIN_BASE_LR=0.0001" in submitter
+    assert "--array=0-4%2" in submitter
+    assert "--array=0-4%4" in submitter
+    assert "SEGMENTANYTREE_VARIANT_EXPECTED_PLOTS=5" in submitter
+    assert "SEGMENTANYTREE_VARIANT_EXPECTED_SPLIT=dev" in submitter
+    assert "SEGMENTANYTREE_VARIANT_REQUIRE_PREDICTIONS=1" in submitter
+    assert "SEGMENTANYTREE_FINAL_TEST_CONFIRMED" not in submitter
+    assert "test_from_checkpoint" not in submitter
+    assert "SEGMENTANYTREE_VARIANT_EXPECTED_SPLIT=test" not in submitter
+    assert "%.9L" in monitor
+    assert "%.19e" in monitor
+    assert "tail " not in monitor
+    assert "held_out_test_jobs=0" in monitor
+
+
+def test_finetuned_test_freeze_and_submission_are_one_time(
+    tmp_path: Path,
+) -> None:
+    freezer = load_script(
+        "methods/segmentanytree/scripts/evaluation/prepare_finetuned_test_freeze.py",
+        "segmentanytree_finetuned_test_freezer",
+    )
+    run_id = "segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931"
+    checkpoint = tmp_path / "PointGroup-PAPER.pt"
+    checkpoint.write_bytes(b"fine tuned weights")
+    checkpoint_sha256 = freezer.sha256(checkpoint)
+
+    development_freeze = tmp_path / "development_freeze.json"
+    development_freeze.write_text(
+        json.dumps(
+            {
+                "status": "frozen_for_development_only_fine_tuning",
+                "run_id": run_id,
+                "training_mode": "fine_tuned_on_dev",
+                "held_out_test_jobs_permitted": False,
+                "next_gate": (
+                    "five_plot_development_validation_with_nonzero_instances"
+                ),
+            }
+        ),
+        encoding="utf-8",
+    )
+    development_summary = tmp_path / "validation_summary.csv"
+    development_summary.write_text(
+        "variant,result_status,dataset_split,plots,predicted_instances,"
+        "metrics_root,mean_plot_f1\n"
+        "fine_tuned_on_dev_validation,completed_aligned_pointwise_test,dev,5,"
+        f"270,/results/{run_id},0.5666797905966935\n",
+        encoding="utf-8",
+    )
+    training_metadata = tmp_path / "training.json"
+    training_metadata.write_text(
+        json.dumps(
+            {
+                "run_id": run_id,
+                "training_mode": "fine_tuned_on_dev",
+                "profile": "full",
+                "status": "completed",
+                "return_code": 0,
+                "requested_epochs": 35,
+                "batch_size": 8,
+                "external_commit": freezer.EXPECTED_EXTERNAL_COMMIT,
+                "pretrained_checkpoint_sha256": freezer.EXPECTED_RELEASED_SHA256,
+                "pretrained_weight_name": "latest",
+                "base_lr": 0.0001,
+                "pretrained_load_validation": {"compatible_fraction": 0.99},
+                "checkpoint_sha256": checkpoint_sha256,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = freezer.freeze_finetuned_test(
+        run_id,
+        development_freeze,
+        development_summary,
+        training_metadata,
+        checkpoint,
+    )
+    assert payload["status"] == "frozen_for_one_time_held_out_evaluation"
+    assert payload["training_mode"] == "fine_tuned_on_dev"
+    assert payload["expected_test_plots"] == 11
+    assert payload["weight_updates"] is False
+    assert payload["repeat_test_for_setting_selection_permitted"] is False
+    assert payload["development_predicted_instances"] == 270
+
+    training = json.loads(training_metadata.read_text(encoding="utf-8"))
+    training["requested_epochs"] = 34
+    training_metadata.write_text(json.dumps(training), encoding="utf-8")
+    with pytest.raises(ValueError, match="requested_epochs"):
+        freezer.freeze_finetuned_test(
+            run_id,
+            development_freeze,
+            development_summary,
+            training_metadata,
+            checkpoint,
+        )
+
+    submitter = (
+        ROOT / "methods/segmentanytree/slurm/submit_finetuned_test.sh"
+    ).read_text(encoding="utf-8")
+    monitor = (
+        ROOT / "methods/segmentanytree/slurm/monitor_finetuned_test.sh"
+    ).read_text(encoding="utf-8")
+    assert "SEGMENTANYTREE_FINETUNED_TEST_CONFIRMED" in submitter
+    assert "SEGMENTANYTREE_FINAL_TEST_CONFIRMED=1" in submitter
+    assert "--array=0-10%2" in submitter
+    assert "--array=0-10%4" in submitter
+    assert "SEGMENTANYTREE_VARIANT_EXPECTED_PLOTS=11" in submitter
+    assert "SEGMENTANYTREE_VARIANT_EXPECTED_SPLIT=test" in submitter
+    assert "Repeated test submission is refused" in submitter
+    assert "train_segmentanytree" not in submitter
     assert "%.9L" in monitor
     assert "%.19e" in monitor
     assert "tail " not in monitor
@@ -2223,7 +2471,274 @@ def test_public_segmentanytree_pilot_record_matches_evaluation() -> None:
     assert status["historical_aligned_result_status"] == (
         "completed_retained_historical"
     )
-    assert status["current_target_status"] == "pretrained_finetune_comparison_pending"
+    assert status["current_target_status"] == "completed_target_comparison"
+
+
+def test_completed_segmentanytree_target_results_are_consistent() -> None:
+    path = (
+        ROOT
+        / "methods/segmentanytree/examples/"
+        "sat_completed_target_results_20260711.csv"
+    )
+    with path.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert [row["training_mode"] for row in rows] == [
+        "published_pretrained",
+        "fine_tuned_on_dev",
+    ]
+    assert {row["dataset_split"] for row in rows} == {"test"}
+    assert {int(row["plots"]) for row in rows} == {11}
+    assert {int(row["reference_instances"]) for row in rows} == {323}
+    for row in rows:
+        tp = int(row["true_positives"])
+        fp = int(row["false_positives"])
+        fn = int(row["false_negatives"])
+        assert int(row["predicted_instances"]) == tp + fp
+        assert int(row["reference_instances"]) == tp + fn
+        assert float(row["micro_precision"]) == pytest.approx(tp / (tp + fp))
+        assert float(row["micro_recall"]) == pytest.approx(tp / (tp + fn))
+        assert float(row["micro_f1"]) == pytest.approx(
+            2 * tp / (2 * tp + fp + fn)
+        )
+
+    baseline, primary = rows
+    assert float(baseline["mean_plot_f1"]) == pytest.approx(
+        0.45340897930934665
+    )
+    assert float(primary["mean_plot_f1"]) == pytest.approx(
+        0.5446789009405125
+    )
+    assert int(primary["false_positives"]) == 331
+    assert float(primary["micro_f1"]) > float(baseline["micro_f1"])
+
+    provenance = json.loads(
+        (
+            ROOT
+            / "methods/segmentanytree/examples/"
+            "sat_completed_target_provenance_20260711.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert provenance["fine_tuned"]["run_id"] == primary["run_id"]
+    assert provenance["published_pretrained"]["run_id"] == baseline["run_id"]
+    assert provenance["repeat_test_for_setting_selection_permitted"] is False
+    assert provenance["site_result_table"].endswith(
+        "sat_completed_target_site_results_20260711.csv"
+    )
+    assert provenance["retention_verification"]["status"] == "retention-verified"
+
+
+def test_segmentanytree_retention_verifier_requires_aligned_outputs(
+    tmp_path: Path,
+) -> None:
+    verifier = load_script(
+        (
+            "methods/segmentanytree/scripts/evaluation/"
+            "verify_completed_sat_retention.py"
+        ),
+        "segmentanytree_retention_verifier",
+    )
+    predictions = tmp_path / "predictions"
+    metadata = tmp_path / "run_metadata"
+    metrics = tmp_path / "metrics"
+    output_dir = predictions / "CULS/plot_1"
+    output_dir.mkdir(parents=True)
+    metadata_dir = metadata / "CULS"
+    metadata_dir.mkdir(parents=True)
+    metric_dir = metrics / "CULS"
+    metric_dir.mkdir(parents=True)
+    instance = output_dir / "Instance_results_forEval_0.ply"
+    semantic = output_dir / "semantic_segmentation_0.ply"
+    instance.write_bytes(b"instance labels")
+    semantic.write_bytes(b"semantic labels")
+    (metadata_dir / "plot_1_run.json").write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "split": "test",
+                "aligned_instance_evaluation": str(instance),
+                "aligned_instance_evaluation_sha256": "instance-sha",
+                "aligned_semantic_evaluation": str(semantic),
+                "aligned_semantic_evaluation_sha256": "semantic-sha",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (metric_dir / "plot_1.json").write_text("{}\n", encoding="utf-8")
+    summary = tmp_path / "summary.csv"
+    summary.write_text(
+        "result_status,dataset_split,plots,predicted_instances,"
+        "reference_instances,true_positives,false_positives,false_negatives,"
+        "mean_plot_f1,micro_f1\n"
+        "completed_aligned_pointwise_test,test,1,3,2,1,2,1,0.4,0.4\n",
+        encoding="utf-8",
+    )
+
+    payload = verifier.validate_aligned_run(
+        tmp_path,
+        "synthetic",
+        predictions,
+        metadata,
+        metrics,
+        summary,
+        "test",
+        1,
+    )
+    assert len(payload["prediction_instance_files"]) == 1
+    assert len(payload["prediction_semantic_files"]) == 1
+    assert payload["summary_metrics"]["micro_f1"] == "0.4"
+
+    semantic.unlink()
+    with pytest.raises(ValueError, match="retained counts"):
+        verifier.validate_aligned_run(
+            tmp_path,
+            "synthetic",
+            predictions,
+            metadata,
+            metrics,
+            summary,
+            "test",
+            1,
+        )
+
+
+def test_completed_segmentanytree_site_summary_groups_all_five_sites(
+    tmp_path: Path,
+) -> None:
+    summariser = load_script(
+        (
+            "methods/segmentanytree/scripts/evaluation/"
+            "summarise_completed_sat_sites.py"
+        ),
+        "segmentanytree_completed_site_summariser",
+    )
+    metrics = tmp_path / "metrics"
+    metrics.mkdir()
+    for index, site in enumerate(summariser.EXPECTED_SITES, start=1):
+        payload = {
+            "evaluator": "pointwise_instance_metrics",
+            "collection": site,
+            "plot_name": f"plot_{index}",
+            "relative_path": f"{site}/plot_{index}.las",
+            "split": "test",
+            "prediction_instance_count": index + 2,
+            "reference_instance_count": index + 1,
+            "mean_unweighted_coverage": 0.6 + index / 100,
+            "mean_weighted_coverage": 0.7 + index / 100,
+            "harmonized": {
+                "true_positives": index,
+                "false_positives": 2,
+                "false_negatives": 1,
+                "precision": index / (index + 2),
+                "recall": index / (index + 1),
+                "f1": 2 * index / (2 * index + 3),
+                "mean_matched_iou": 0.8 + index / 100,
+            },
+            "paper_compatible": {"f1": 2 * index / (2 * index + 3)},
+        }
+        (metrics / f"{site}.json").write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
+
+    rows = summariser.summarise_sites("fine_tuned_on_dev", metrics, 5, "test")
+    assert [row["site"] for row in rows] == list(summariser.EXPECTED_SITES)
+    assert sum(int(row["plots"]) for row in rows) == 5
+    assert sum(int(row["true_positives"]) for row in rows) == 15
+    assert rows[0]["micro_f1"] == pytest.approx(2 / 5)
+    assert rows[-1]["micro_f1"] == pytest.approx(10 / 13)
+    assert {row["result_status"] for row in rows} == {
+        "completed_aligned_pointwise_site_summary"
+    }
+
+    (metrics / "TUWIEN.json").unlink()
+    with pytest.raises(ValueError, match="expected 5 metrics"):
+        summariser.summarise_sites("fine_tuned_on_dev", metrics, 5, "test")
+
+
+def test_completed_segmentanytree_public_site_results_reconcile() -> None:
+    site_path = (
+        ROOT
+        / "methods/segmentanytree/examples/"
+        "sat_completed_target_site_results_20260711.csv"
+    )
+    aggregate_path = (
+        ROOT
+        / "methods/segmentanytree/examples/"
+        "sat_completed_target_results_20260711.csv"
+    )
+    with site_path.open(encoding="utf-8", newline="") as handle:
+        site_rows = list(csv.DictReader(handle))
+    with aggregate_path.open(encoding="utf-8", newline="") as handle:
+        aggregate_rows = {
+            row["training_mode"]: row for row in csv.DictReader(handle)
+        }
+
+    expected_sites = {"CULS", "NIBIO", "RMIT", "SCION", "TUWIEN"}
+    assert len(site_rows) == 10
+    assert {row["variant"] for row in site_rows} == set(aggregate_rows)
+    assert {row["dataset_split"] for row in site_rows} == {"test"}
+    assert {row["result_status"] for row in site_rows} == {
+        "completed_aligned_pointwise_site_summary"
+    }
+
+    for variant, aggregate in aggregate_rows.items():
+        rows = [row for row in site_rows if row["variant"] == variant]
+        assert {row["site"] for row in rows} == expected_sites
+        for field in (
+            "plots",
+            "predicted_instances",
+            "reference_instances",
+            "true_positives",
+            "false_positives",
+            "false_negatives",
+        ):
+            assert sum(int(row[field]) for row in rows) == int(aggregate[field])
+        for row in rows:
+            tp = int(row["true_positives"])
+            fp = int(row["false_positives"])
+            fn = int(row["false_negatives"])
+            assert float(row["micro_precision"]) == pytest.approx(tp / (tp + fp))
+            assert float(row["micro_recall"]) == pytest.approx(tp / (tp + fn))
+            assert float(row["micro_f1"]) == pytest.approx(
+                2 * tp / (2 * tp + fp + fn)
+            )
+
+    fine_tuned = {
+        row["site"]: row
+        for row in site_rows
+        if row["variant"] == "fine_tuned_on_dev"
+    }
+    assert float(fine_tuned["SCION"]["mean_plot_f1"]) == pytest.approx(
+        0.7206349206349205
+    )
+    assert float(fine_tuned["TUWIEN"]["mean_plot_f1"]) == pytest.approx(
+        0.3661971830985915
+    )
+    assert float(fine_tuned["RMIT"]["mean_plot_f1"]) == pytest.approx(
+        0.4768211920529801
+    )
+
+
+def test_completed_segmentanytree_workbook_has_final_target_values() -> None:
+    workbook = (
+        ROOT
+        / "outputs/sat_treex_benchmark_metrics/"
+        "for_instance_method_benchmark_tracker.xlsx"
+    )
+    with zipfile.ZipFile(workbook) as archive:
+        text = "\n".join(
+            archive.read(name).decode("utf-8", errors="ignore")
+            for name in archive.namelist()
+            if name.endswith(".xml")
+        )
+    assert "published pretrained (completed baseline)" in text
+    assert "fine-tuned on development (primary)" in text
+    assert "SegmentAnyTree published pretrained (completed baseline)" in text
+    assert "SegmentAnyTree fine-tuned on development (primary)" in text
+    assert "Completed SAT target, historical SAT and TreeX site metrics" in text
+    assert "Final SAT target aggregates are in Results Summary" not in text
+    assert "Pending aligned evaluation" not in text
+    assert "Pending released-weight fine-tuning" not in text
 
 
 def test_public_provisional_segmentanytree_diagnostics_are_sanitised() -> None:
@@ -2265,9 +2780,7 @@ def test_public_provisional_segmentanytree_diagnostics_are_sanitised() -> None:
     assert manifest["historical_aligned_result_status"] == (
         "completed_retained_historical"
     )
-    assert manifest["current_target_status"] == (
-        "pretrained_finetune_comparison_pending"
-    )
+    assert manifest["current_target_status"] == "completed_target_comparison"
 
     published_text = "\n".join(
         path.read_text(encoding="utf-8")

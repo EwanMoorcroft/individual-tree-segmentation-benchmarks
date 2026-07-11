@@ -4,7 +4,7 @@ project:
   dataset_slug: for-instance
   method_slug: segmentanytree
   mode: labelled_accuracy_benchmark
-  status: pretrained_finetune_comparison_pending
+  status: completed
   protocol_id: for_instance_pointwise_v1
   barkla_root: "~/scratch/tree-seg-benchmark"
   barkla_specific: true
@@ -60,8 +60,8 @@ benchmark:
   completed_prediction_count: 32
   completed_normalisation_count: 32
   provisional_coordinate_evaluation_count: 32
-  validated_pointwise_evaluation_count: 11
-  validated_pointwise_evaluation_scope: historical_retrained_held_out_test
+  validated_pointwise_evaluation_count: 33
+  validated_pointwise_evaluation_scope: published_pretrained_fine_tuned_and_historical_retrained_held_out_test
   development_validation_pointwise_evaluation_count: 5
 
 method:
@@ -100,14 +100,14 @@ method:
 
 training:
   current_mode: published_pretrained_then_fine_tuned_on_dev
-  local_weight_updates_performed: historical_and_planned
+  local_weight_updates_performed: historical_and_completed_fine_tuning
   permitted_for_instance_training_split:
     - dev
   forbidden_training_split:
     - test
-  note: "The current target evaluates the released checkpoint, then fine-tunes those weights on development data and evaluates the resulting checkpoint. The earlier from-scratch run remains historical evidence."
+  note: "The completed comparison evaluates the released checkpoint, then fine-tunes those weights on development data and evaluates the frozen resulting checkpoint. The earlier from-scratch run remains historical evidence."
   target_comparison:
-    status: pending_execution
+    status: completed
     baseline_mode: published_pretrained
     adapted_mode: fine_tuned_on_dev
     source_checkpoint_sha256: "0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a"
@@ -116,9 +116,12 @@ training:
     final_reporting_split: test
     from_scratch_training_permitted: false
     preserve_existing_predictions_and_results: true
-    submitter: "methods/segmentanytree/slurm/submit_pretrained_finetune_comparison.sh"
+    public_results: "methods/segmentanytree/examples/sat_completed_target_results_20260711.csv"
+    public_site_results: "methods/segmentanytree/examples/sat_completed_target_site_results_20260711.csv"
+    public_provenance: "methods/segmentanytree/examples/sat_completed_target_provenance_20260711.json"
+    retention_verifier: "methods/segmentanytree/scripts/evaluation/verify_completed_sat_retention.py"
     stage1_development_smoke:
-      status: scaffolded_not_run
+      status: completed
       training_mode: published_pretrained
       relative_path: "CULS/plot_1_annotated.las"
       split: dev
@@ -129,7 +132,7 @@ training:
       submits_fine_tuning: false
       next_gate: manual_review_before_held_out_test_submission
     stage1_held_out_test:
-      status: manual_approval_recorded_route_scaffolded_not_run
+      status: completed_frozen_one_time_evaluation
       training_mode: published_pretrained
       expected_plots: 11
       submitter: "methods/segmentanytree/slurm/submit_published_pretrained_test.sh"
@@ -138,6 +141,24 @@ training:
       permits_weight_updates: false
       permits_postprocessing_updates: false
       permits_repeat_test_selection: false
+      run_id: segmentanytree_for-instance_published_pretrained_20260710_231601
+      mean_plot_f1: 0.45340897930934665
+      micro_f1: 0.4442446043165468
+    fine_tuned_result:
+      status: completed_primary_result
+      run_id: segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931
+      development_validation_plots: 5
+      development_validation_mean_f1: 0.5666797905966935
+      final_test_plots: 11
+      final_test_mean_plot_f1: 0.5446789009405125
+      final_test_mean_precision: 0.4296635853788897
+      final_test_mean_recall: 0.780590486248381
+      final_test_micro_f1: 0.531986531986532
+      final_test_total_tp: 237
+      final_test_total_fp: 331
+      final_test_total_fn: 86
+      final_test_mean_matched_iou: 0.85847139408441
+      repeat_test_for_setting_selection_permitted: false
   historical_retrained_experiment:
     config: "methods/segmentanytree/configs/for_instance_training.yml"
     mode: retrained_from_dev
@@ -165,7 +186,7 @@ training:
 
 evaluation:
   protocol_id: for_instance_pointwise_v1
-  status: target_comparison_pending_historical_result_retained
+  status: target_comparison_completed_historical_result_retained
   primary_input: aligned_internal_prediction_arrays
   primary_reporting_split: test
   reference_instance_field: treeID

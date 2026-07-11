@@ -1,5 +1,10 @@
 # SegmentAnyTree training progress through 8 July 2026
 
+> Historical training note. The replacement released-weight fine-tune
+> completed on 11 July 2026 and supersedes the epoch-49 run as the primary SAT
+> result. See [`final_results_20260711.md`](final_results_20260711.md). The
+> epoch-49 values below remain valid historical evidence.
+
 This note records development-only training and validation progress for the
 corrected FOR-instance experiment and the final held-out test evaluation for
 the selected checkpoint.
@@ -102,5 +107,6 @@ The later `fine_tuned_on_dev` follow-up
 `segmentanytree_for-instance_fine_tuned_on_dev_20260708_215054_full` is not an
 accepted result. A held-out smoke audit found millions of tree-semantic points
 but zero accepted instance predictions in the aligned instance output. The
-accepted SAT result therefore remains the unfiltered
-`sat_for_quicktune_to49_20260706_140730` checkpoint.
+accepted SAT result therefore remained the unfiltered
+`sat_for_quicktune_to49_20260706_140730` checkpoint. It is now retained as a
+historical comparison rather than the primary result.

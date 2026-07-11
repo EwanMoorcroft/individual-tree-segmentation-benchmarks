@@ -3,7 +3,7 @@ project:
   experiment: for_instance_segmentanytree_pretrained_finetune_comparison
   dataset_slug: for-instance
   method_slug: segmentanytree
-  status: pending_guarded_execution
+  status: completed
   protocol_id: for_instance_pointwise_v1
   barkla_specific: true
 
@@ -99,7 +99,7 @@ training:
   checkpoint_input: null
   checkpoint_output_root: "~/fastscratch/segmentanytree_for_instance_checkpoints"
   test_evaluation_during_training: false
-  progress_as_of: "2026-07-10"
+  progress_as_of: "2026-07-11"
   historical_retrained_result:
     status: completed_retained_historical
     run_id: sat_for_quicktune_to49_20260706_140730
@@ -138,7 +138,7 @@ training:
     accepted_instance_predictions: 0
     note: "The follow-up produced semantic tree predictions but all aligned instance predictions were background on the audited held-out plots."
   replacement_fine_tuned_protocol:
-    status: current_target_pending_execution
+    status: completed_primary_result
     initialisation: released_checkpoint_weights_only
     optimizer_state: fresh
     epoch_history: fresh
@@ -149,18 +149,67 @@ training:
     smoke_required: true
     development_validation_gate_required: true
     held_out_test_gate_required: true
+    held_out_test_auto_submission: false
+    development_submission_script: methods/segmentanytree/slurm/submit_finetuned_dev_validation.sh
+    development_monitor_script: methods/segmentanytree/slurm/monitor_finetuned_dev_validation.sh
     from_scratch_training_permitted: false
+    run_id: segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931
+    development_validation:
+      plots: 5
+      predicted_instances: 270
+      reference_instances: 223
+      mean_plot_f1: 0.5666797905966935
+      micro_f1: 0.5111561866125761
+    held_out_test:
+      status: completed_frozen_one_time_evaluation
+      plots: 11
+      predicted_instances: 568
+      reference_instances: 323
+      true_positives: 237
+      false_positives: 331
+      false_negatives: 86
+      mean_plot_f1: 0.5446789009405125
+      mean_plot_precision: 0.4296635853788897
+      mean_plot_recall: 0.780590486248381
+      micro_precision: 0.41725352112676056
+      micro_recall: 0.7337461300309598
+      micro_f1: 0.531986531986532
+      mean_matched_iou: 0.85847139408441
+      mean_unweighted_coverage: 0.7113647724850037
+      mean_weighted_coverage: 0.8214548358281224
+      repeat_test_for_setting_selection_permitted: false
   published_pretrained_protocol:
-    status: current_target_pending_execution
+    status: completed_target_baseline
+    run_id: segmentanytree_for-instance_published_pretrained_20260710_231601
     checkpoint_sha256: "0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a"
     weight_updates: false
     held_out_test_plots: 11
+    predicted_instances: 789
+    reference_instances: 323
+    true_positives: 247
+    false_positives: 542
+    false_negatives: 76
+    mean_plot_f1: 0.45340897930934665
+    mean_plot_precision: 0.32301693464050424
+    mean_plot_recall: 0.8085742004820952
+    micro_precision: 0.31305449936628643
+    micro_recall: 0.7647058823529411
+    micro_f1: 0.4442446043165468
+    mean_matched_iou: 0.8603003216196654
+    mean_unweighted_coverage: 0.7406852849280157
+    mean_weighted_coverage: 0.8357016121910606
+    repeat_test_for_setting_selection_permitted: false
+    training_manifest_status: unresolved_do_not_claim_leakage_free
   result_retention:
     preserve_existing_predictions_and_results: true
     recovery_archive_root: "~/fastscratch/segmentanytree_recovery_archive"
     historical_retrained_result_status: completed_retained_historical
     rejected_runs_status: retained_diagnostics
-  held_out_test_status: historical_retrained_complete_target_comparison_pending
+    verification_script: methods/segmentanytree/scripts/evaluation/verify_completed_sat_retention.py
+    verification_manifest_root: results/metadata/segmentanytree_for_instance/retention_manifests
+    future_metrics_use_retained_aligned_predictions: true
+    public_site_results: methods/segmentanytree/examples/sat_completed_target_site_results_20260711.csv
+  held_out_test_status: completed_no_repeat_for_setting_selection
 
 paths:
   split_manifest_root: "results/metadata/segmentanytree_for_instance/training_splits"
@@ -172,6 +221,7 @@ paths:
   final_test_tables_root: "results/tables/segmentanytree_for_instance/trained_test"
   variant_predictions_root: "data/predictions/segmentanytree/for_instance_variants"
   comparison_tables_root: "results/tables/segmentanytree_for_instance/pretrained_finetune_comparison"
+  retention_manifest_root: "results/metadata/segmentanytree_for_instance/retention_manifests"
   logs_root: "logs/segmentanytree_for_instance"
 
 evaluation:

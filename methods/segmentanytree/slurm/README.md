@@ -190,6 +190,25 @@ Only a successful five-plot development gate permits a later manual decision
 about one held-out evaluation. That evaluation is deliberately absent from
 this submission route.
 
+After that manual decision, freeze and submit exactly one held-out evaluation
+of the accepted development run:
+
+```bash
+export SEGMENTANYTREE_FINETUNED_TEST_CONFIRMED=1
+export SEGMENTANYTREE_TRAINING_RUN_ID=<accepted_fine_tuned_run_id>
+bash methods/segmentanytree/slurm/submit_finetuned_test.sh
+```
+
+The wrapper verifies the development freeze, five-plot summary, training
+metadata, released-weight compatibility and fine-tuned checkpoint hash. It
+refuses any existing prediction, metric, table or freeze target. It submits no
+training job and records that the test must not be repeated for setting
+selection. Monitor the printed state file without logs using:
+
+```bash
+bash methods/segmentanytree/slurm/monitor_finetuned_test.sh <state_file>
+```
+
 The later target comparison has two variants:
 
 1. `published_pretrained`: extract the released checkpoint from the pinned

@@ -1635,6 +1635,8 @@ def test_segmentanytree_training_shell_scripts_parse() -> None:
         "methods/segmentanytree/slurm/monitor_published_pretrained_test.sh",
         "methods/segmentanytree/slurm/submit_finetuned_dev_validation.sh",
         "methods/segmentanytree/slurm/monitor_finetuned_dev_validation.sh",
+        "methods/segmentanytree/slurm/submit_finetuned_test.sh",
+        "methods/segmentanytree/slurm/monitor_finetuned_test.sh",
         "methods/segmentanytree/slurm/submit_three_variation_overnight.sh",
         "methods/segmentanytree/slurm/recover_three_variation_pretrained.sh",
         "methods/segmentanytree/slurm/monitor_three_variation_overnight.sh",
@@ -1991,6 +1993,108 @@ def test_finetuned_dev_freeze_and_submission_are_development_only(
     assert "%.19e" in monitor
     assert "tail " not in monitor
     assert "held_out_test_jobs=0" in monitor
+
+
+def test_finetuned_test_freeze_and_submission_are_one_time(
+    tmp_path: Path,
+) -> None:
+    freezer = load_script(
+        "methods/segmentanytree/scripts/evaluation/prepare_finetuned_test_freeze.py",
+        "segmentanytree_finetuned_test_freezer",
+    )
+    run_id = "segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931"
+    checkpoint = tmp_path / "PointGroup-PAPER.pt"
+    checkpoint.write_bytes(b"fine tuned weights")
+    checkpoint_sha256 = freezer.sha256(checkpoint)
+
+    development_freeze = tmp_path / "development_freeze.json"
+    development_freeze.write_text(
+        json.dumps(
+            {
+                "status": "frozen_for_development_only_fine_tuning",
+                "run_id": run_id,
+                "training_mode": "fine_tuned_on_dev",
+                "held_out_test_jobs_permitted": False,
+                "next_gate": (
+                    "five_plot_development_validation_with_nonzero_instances"
+                ),
+            }
+        ),
+        encoding="utf-8",
+    )
+    development_summary = tmp_path / "validation_summary.csv"
+    development_summary.write_text(
+        "variant,result_status,dataset_split,plots,predicted_instances,"
+        "metrics_root,mean_plot_f1\n"
+        "fine_tuned_on_dev_validation,completed_aligned_pointwise_test,dev,5,"
+        f"270,/results/{run_id},0.5666797905966935\n",
+        encoding="utf-8",
+    )
+    training_metadata = tmp_path / "training.json"
+    training_metadata.write_text(
+        json.dumps(
+            {
+                "run_id": run_id,
+                "training_mode": "fine_tuned_on_dev",
+                "profile": "full",
+                "status": "completed",
+                "return_code": 0,
+                "requested_epochs": 35,
+                "batch_size": 8,
+                "external_commit": freezer.EXPECTED_EXTERNAL_COMMIT,
+                "pretrained_checkpoint_sha256": freezer.EXPECTED_RELEASED_SHA256,
+                "pretrained_weight_name": "latest",
+                "base_lr": 0.0001,
+                "pretrained_load_validation": {"compatible_fraction": 0.99},
+                "checkpoint_sha256": checkpoint_sha256,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = freezer.freeze_finetuned_test(
+        run_id,
+        development_freeze,
+        development_summary,
+        training_metadata,
+        checkpoint,
+    )
+    assert payload["status"] == "frozen_for_one_time_held_out_evaluation"
+    assert payload["training_mode"] == "fine_tuned_on_dev"
+    assert payload["expected_test_plots"] == 11
+    assert payload["weight_updates"] is False
+    assert payload["repeat_test_for_setting_selection_permitted"] is False
+    assert payload["development_predicted_instances"] == 270
+
+    training = json.loads(training_metadata.read_text(encoding="utf-8"))
+    training["requested_epochs"] = 34
+    training_metadata.write_text(json.dumps(training), encoding="utf-8")
+    with pytest.raises(ValueError, match="requested_epochs"):
+        freezer.freeze_finetuned_test(
+            run_id,
+            development_freeze,
+            development_summary,
+            training_metadata,
+            checkpoint,
+        )
+
+    submitter = (
+        ROOT / "methods/segmentanytree/slurm/submit_finetuned_test.sh"
+    ).read_text(encoding="utf-8")
+    monitor = (
+        ROOT / "methods/segmentanytree/slurm/monitor_finetuned_test.sh"
+    ).read_text(encoding="utf-8")
+    assert "SEGMENTANYTREE_FINETUNED_TEST_CONFIRMED" in submitter
+    assert "SEGMENTANYTREE_FINAL_TEST_CONFIRMED=1" in submitter
+    assert "--array=0-10%2" in submitter
+    assert "--array=0-10%4" in submitter
+    assert "SEGMENTANYTREE_VARIANT_EXPECTED_PLOTS=11" in submitter
+    assert "SEGMENTANYTREE_VARIANT_EXPECTED_SPLIT=test" in submitter
+    assert "Repeated test submission is refused" in submitter
+    assert "train_segmentanytree" not in submitter
+    assert "%.9L" in monitor
+    assert "%.19e" in monitor
+    assert "tail " not in monitor
 
 
 def test_full_training_submission_wrapper_derives_validation_array() -> None:

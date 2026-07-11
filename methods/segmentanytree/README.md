@@ -94,6 +94,8 @@ The completed `fine_tuned_on_dev` primary result has held-out mean plot F1
 plot F1 `0.4534` and micro F1 `0.4442` (TP=247, FP=542, FN=76). The full values
 and provenance are recorded in
 [`docs/final_results_20260711.md`](docs/final_results_20260711.md).
+The committed site table is
+[`examples/sat_completed_target_site_results_20260711.csv`](examples/sat_completed_target_site_results_20260711.csv).
 
 On the 11 held-out plots, the retained historical from-scratch checkpoint has
 mean plot F1 `0.4825`
@@ -106,11 +108,13 @@ result.
 
 ## Known Limitations
 
-Failure-mode diagnostics show that the low held-out score is mainly caused by
-over-segmentation and background-confusion false positives. TUWIEN and RMIT
-are the weakest site-transfer cases; NIBIO has relatively high recall but low
-precision. A validation-only post-processing sweep is retained as a diagnostic
-ablation and does not replace the historical unfiltered test result.
+Failure-mode diagnostics show that the held-out errors are mainly caused by
+over-segmentation and background-confusion false positives. For the completed
+fine-tuned target, SCION is strongest at mean F1 `0.7206`, TUWIEN is weakest at
+`0.3662`, and RMIT is the only site below its released-baseline result. NIBIO
+improves to `0.5356` mainly through 136 fewer false positives, with a small
+recall reduction. A validation-only post-processing sweep is retained as a
+diagnostic ablation and does not replace any completed test result.
 
 ## Current Benchmark Status
 

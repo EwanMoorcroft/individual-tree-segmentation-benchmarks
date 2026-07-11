@@ -141,6 +141,10 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     )
     assert config["training"]["target_comparison"]["from_scratch_training_permitted"] is False
     assert config["training"]["target_comparison"]["status"] == "completed"
+    assert config["training"]["target_comparison"]["public_site_results"] == (
+        "methods/segmentanytree/examples/"
+        "sat_completed_target_site_results_20260711.csv"
+    )
     fine_tuned = config["training"]["target_comparison"]["fine_tuned_result"]
     assert fine_tuned["run_id"] == (
         "segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931"
@@ -1295,6 +1299,10 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
     assert baseline["mean_plot_f1"] == pytest.approx(0.45340897930934665)
     assert config["training"]["held_out_test_status"] == (
         "completed_no_repeat_for_setting_selection"
+    )
+    assert config["training"]["result_retention"]["public_site_results"] == (
+        "methods/segmentanytree/examples/"
+        "sat_completed_target_site_results_20260711.csv"
     )
 
     training_task = (
@@ -2514,6 +2522,10 @@ def test_completed_segmentanytree_target_results_are_consistent() -> None:
     assert provenance["fine_tuned"]["run_id"] == primary["run_id"]
     assert provenance["published_pretrained"]["run_id"] == baseline["run_id"]
     assert provenance["repeat_test_for_setting_selection_permitted"] is False
+    assert provenance["site_result_table"].endswith(
+        "sat_completed_target_site_results_20260711.csv"
+    )
+    assert provenance["retention_verification"]["status"] == "retention-verified"
 
 
 def test_segmentanytree_retention_verifier_requires_aligned_outputs(
@@ -2643,6 +2655,70 @@ def test_completed_segmentanytree_site_summary_groups_all_five_sites(
         summariser.summarise_sites("fine_tuned_on_dev", metrics, 5, "test")
 
 
+def test_completed_segmentanytree_public_site_results_reconcile() -> None:
+    site_path = (
+        ROOT
+        / "methods/segmentanytree/examples/"
+        "sat_completed_target_site_results_20260711.csv"
+    )
+    aggregate_path = (
+        ROOT
+        / "methods/segmentanytree/examples/"
+        "sat_completed_target_results_20260711.csv"
+    )
+    with site_path.open(encoding="utf-8", newline="") as handle:
+        site_rows = list(csv.DictReader(handle))
+    with aggregate_path.open(encoding="utf-8", newline="") as handle:
+        aggregate_rows = {
+            row["training_mode"]: row for row in csv.DictReader(handle)
+        }
+
+    expected_sites = {"CULS", "NIBIO", "RMIT", "SCION", "TUWIEN"}
+    assert len(site_rows) == 10
+    assert {row["variant"] for row in site_rows} == set(aggregate_rows)
+    assert {row["dataset_split"] for row in site_rows} == {"test"}
+    assert {row["result_status"] for row in site_rows} == {
+        "completed_aligned_pointwise_site_summary"
+    }
+
+    for variant, aggregate in aggregate_rows.items():
+        rows = [row for row in site_rows if row["variant"] == variant]
+        assert {row["site"] for row in rows} == expected_sites
+        for field in (
+            "plots",
+            "predicted_instances",
+            "reference_instances",
+            "true_positives",
+            "false_positives",
+            "false_negatives",
+        ):
+            assert sum(int(row[field]) for row in rows) == int(aggregate[field])
+        for row in rows:
+            tp = int(row["true_positives"])
+            fp = int(row["false_positives"])
+            fn = int(row["false_negatives"])
+            assert float(row["micro_precision"]) == pytest.approx(tp / (tp + fp))
+            assert float(row["micro_recall"]) == pytest.approx(tp / (tp + fn))
+            assert float(row["micro_f1"]) == pytest.approx(
+                2 * tp / (2 * tp + fp + fn)
+            )
+
+    fine_tuned = {
+        row["site"]: row
+        for row in site_rows
+        if row["variant"] == "fine_tuned_on_dev"
+    }
+    assert float(fine_tuned["SCION"]["mean_plot_f1"]) == pytest.approx(
+        0.7206349206349205
+    )
+    assert float(fine_tuned["TUWIEN"]["mean_plot_f1"]) == pytest.approx(
+        0.3661971830985915
+    )
+    assert float(fine_tuned["RMIT"]["mean_plot_f1"]) == pytest.approx(
+        0.4768211920529801
+    )
+
+
 def test_completed_segmentanytree_workbook_has_final_target_values() -> None:
     workbook = (
         ROOT
@@ -2657,6 +2733,10 @@ def test_completed_segmentanytree_workbook_has_final_target_values() -> None:
         )
     assert "published pretrained (completed baseline)" in text
     assert "fine-tuned on development (primary)" in text
+    assert "SegmentAnyTree published pretrained (completed baseline)" in text
+    assert "SegmentAnyTree fine-tuned on development (primary)" in text
+    assert "Completed SAT target, historical SAT and TreeX site metrics" in text
+    assert "Final SAT target aggregates are in Results Summary" not in text
     assert "Pending aligned evaluation" not in text
     assert "Pending released-weight fine-tuning" not in text
 

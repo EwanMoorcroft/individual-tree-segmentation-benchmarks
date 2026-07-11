@@ -35,8 +35,36 @@ diagnostic only because it produced zero accepted instances.
 
 The machine-readable aggregate values are in
 [`../examples/sat_completed_target_results_20260711.csv`](../examples/sat_completed_target_results_20260711.csv),
+the site-level values are in
+[`../examples/sat_completed_target_site_results_20260711.csv`](../examples/sat_completed_target_site_results_20260711.csv),
 with run and freeze locations in
 [`../examples/sat_completed_target_provenance_20260711.json`](../examples/sat_completed_target_provenance_20260711.json).
+
+## Held-out site results
+
+The 11 held-out plots cover five sites. Values below are site means across
+plots, so NIBIO contributes six plots, SCION contributes two, and the other
+sites contribute one each.
+
+| Variant | Site | Plots | Mean F1 | Mean precision | Mean recall | Mean matched IoU | TP | FP | FN |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `published_pretrained` | CULS | 1 | 0.4545 | 0.2941 | 1.0000 | 0.9766 | 20 | 48 | 0 |
+| `published_pretrained` | NIBIO | 6 | 0.4263 | 0.2884 | 0.8381 | 0.8588 | 133 | 326 | 28 |
+| `published_pretrained` | RMIT | 1 | 0.5000 | 0.4318 | 0.5938 | 0.8165 | 38 | 50 | 26 |
+| `published_pretrained` | SCION | 2 | 0.5857 | 0.4429 | 0.8644 | 0.9009 | 37 | 47 | 6 |
+| `published_pretrained` | TUWIEN | 1 | 0.3040 | 0.2111 | 0.5429 | 0.7157 | 19 | 71 | 16 |
+| `fine_tuned_on_dev` | CULS | 1 | 0.4938 | 0.3279 | 1.0000 | 0.9875 | 20 | 41 | 0 |
+| `fine_tuned_on_dev` | NIBIO | 6 | 0.5356 | 0.4043 | 0.8073 | 0.8548 | 129 | 190 | 32 |
+| `fine_tuned_on_dev` | RMIT | 1 | 0.4768 | 0.4138 | 0.5625 | 0.7957 | 36 | 51 | 28 |
+| `fine_tuned_on_dev` | SCION | 2 | **0.7206** | **0.5989** | 0.9044 | 0.9140 | 39 | 26 | 4 |
+| `fine_tuned_on_dev` | TUWIEN | 1 | 0.3662 | 0.3611 | 0.3714 | 0.7032 | 13 | 23 | 22 |
+
+Fine-tuning improves mean F1 on CULS (`+0.0393`), NIBIO (`+0.1093`), SCION
+(`+0.1350`) and TUWIEN (`+0.0622`). RMIT decreases by `0.0232`. SCION is the
+strongest fine-tuned site, while TUWIEN remains the weakest. The main change is
+lower over-segmentation: false positives fall by 7 on CULS, 136 on NIBIO, 21
+on SCION and 48 on TUWIEN. This comes with small recall losses on NIBIO and a
+larger recall loss on TUWIEN; CULS retains full recall.
 
 ## Retained artefacts
 
@@ -75,7 +103,8 @@ Success prints `status=retention-verified`. The generated manifest inventories
 the aligned predictions, run metadata, per-plot metrics, summaries, freezes and
 three accepted checkpoints. It also records the total retained SAT prediction
 file count and size. Do not delete or move these roots without regenerating and
-reviewing the manifest.
+reviewing the manifest. The 11 July Barkla verification completed successfully;
+its status and manifest location are recorded in the public provenance JSON.
 
 ## Closure
 
@@ -99,5 +128,5 @@ python methods/segmentanytree/scripts/evaluation/summarise_completed_sat_sites.p
 ```
 
 The output contains separate CULS, NIBIO, RMIT, SCION and TUWIEN rows for both
-target variants. Transfer that small CSV into the public examples and workbook;
-do not infer site values from the overall aggregates.
+target variants. Its committed public-safe copy is
+[`../examples/sat_completed_target_site_results_20260711.csv`](../examples/sat_completed_target_site_results_20260711.csv).

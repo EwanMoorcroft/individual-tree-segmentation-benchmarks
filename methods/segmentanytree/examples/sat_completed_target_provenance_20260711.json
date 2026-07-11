@@ -34,7 +34,13 @@
     "run_id": "segmentanytree_for-instance_published_pretrained_20260710_231601",
     "test_freeze": "results/metadata/segmentanytree_for_instance/test_freezes/segmentanytree_for-instance_published_pretrained_20260710_231601.json"
   },
+  "retention_verification": {
+    "manifest": "results/metadata/segmentanytree_for_instance/retention_manifests/segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931.json",
+    "status": "retention-verified",
+    "verified_date_utc": "2026-07-11"
+  },
   "repeat_test_for_setting_selection_permitted": false,
   "result_table": "methods/segmentanytree/examples/sat_completed_target_results_20260711.csv",
+  "site_result_table": "methods/segmentanytree/examples/sat_completed_target_site_results_20260711.csv",
   "source": "Barkla Slurm completion records and frozen aggregate summaries supplied after each final gate completed"
 }

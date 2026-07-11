@@ -43,4 +43,6 @@ filter improved validation slightly but did not replace that historical result.
 historical result roles. The aligned pretrained and replacement fine-tuned
 target rows are complete. Their authoritative public aggregates are in
 `sat_completed_target_results_20260711.csv`; the matching provenance record is
-`sat_completed_target_provenance_20260711.json`.
+`sat_completed_target_provenance_20260711.json`. The exact CULS, NIBIO, RMIT,
+SCION and TUWIEN breakdown for both targets is in
+`sat_completed_target_site_results_20260711.csv`.

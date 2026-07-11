@@ -208,6 +208,7 @@ training:
     verification_script: methods/segmentanytree/scripts/evaluation/verify_completed_sat_retention.py
     verification_manifest_root: results/metadata/segmentanytree_for_instance/retention_manifests
     future_metrics_use_retained_aligned_predictions: true
+    public_site_results: methods/segmentanytree/examples/sat_completed_target_site_results_20260711.csv
   held_out_test_status: completed_no_repeat_for_setting_selection
 
 paths:

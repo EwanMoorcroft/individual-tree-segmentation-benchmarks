@@ -117,6 +117,7 @@ training:
     from_scratch_training_permitted: false
     preserve_existing_predictions_and_results: true
     public_results: "methods/segmentanytree/examples/sat_completed_target_results_20260711.csv"
+    public_site_results: "methods/segmentanytree/examples/sat_completed_target_site_results_20260711.csv"
     public_provenance: "methods/segmentanytree/examples/sat_completed_target_provenance_20260711.json"
     retention_verifier: "methods/segmentanytree/scripts/evaluation/verify_completed_sat_retention.py"
     stage1_development_smoke:

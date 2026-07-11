@@ -341,7 +341,7 @@ def main() -> int:
         "evaluation_input": "provisional_coordinate_rematched_final_export",
         "historical_aligned_result_status": "completed_retained_historical",
         "historical_aligned_run_id": "sat_for_quicktune_to49_20260706_140730",
-        "current_target_status": "pretrained_finetune_comparison_pending",
+        "current_target_status": "completed_target_comparison",
         "plot_count": len(public_plots),
         "match_count": len(public_matches),
         "source_file_count": len(source_inventory),

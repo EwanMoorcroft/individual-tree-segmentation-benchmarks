@@ -101,7 +101,7 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     )
 
     assert config["project"]["benchmark_name"] == "for_instance_segmentanytree"
-    assert config["project"]["status"] == "pretrained_finetune_comparison_pending"
+    assert config["project"]["status"] == "completed"
     assert config["project"]["protocol_id"] == "for_instance_pointwise_v1"
     assert config["dataset"]["name"] == "FOR-instance"
     assert config["dataset"]["root"] == (
@@ -117,9 +117,9 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
     )
     assert config["benchmark"]["array_size"] == 32
     assert config["benchmark"]["provisional_coordinate_evaluation_count"] == 32
-    assert config["benchmark"]["validated_pointwise_evaluation_count"] == 11
+    assert config["benchmark"]["validated_pointwise_evaluation_count"] == 33
     assert config["benchmark"]["validated_pointwise_evaluation_scope"] == (
-        "historical_retrained_held_out_test"
+        "published_pretrained_fine_tuned_and_historical_retrained_held_out_test"
     )
     assert config["benchmark"]["development_validation_pointwise_evaluation_count"] == 5
     assert config["benchmark"]["primary_reporting_split"] == "test"
@@ -140,6 +140,15 @@ def test_segmentanytree_config_has_required_for_instance_fields() -> None:
         "published_pretrained_then_fine_tuned_on_dev"
     )
     assert config["training"]["target_comparison"]["from_scratch_training_permitted"] is False
+    assert config["training"]["target_comparison"]["status"] == "completed"
+    fine_tuned = config["training"]["target_comparison"]["fine_tuned_result"]
+    assert fine_tuned["run_id"] == (
+        "segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931"
+    )
+    assert fine_tuned["final_test_mean_plot_f1"] == pytest.approx(
+        0.5446789009405125
+    )
+    assert fine_tuned["final_test_micro_f1"] == pytest.approx(0.531986531986532)
     assert (
         config["training"]["historical_retrained_experiment"]["latest_completed_run_id"]
         == "sat_for_quicktune_to49_20260706_140730"
@@ -1275,6 +1284,18 @@ def test_training_config_and_slurm_gates_are_explicit() -> None:
     assert config["dataset"]["internal_validation"]["expected_validation_plots"] == 5
     assert config["preparation"]["convert_test_for_training"] is False
     assert config["evaluation"]["use_test_for_model_selection"] is False
+    assert config["project"]["status"] == "completed"
+    primary = config["training"]["replacement_fine_tuned_protocol"]
+    baseline = config["training"]["published_pretrained_protocol"]
+    assert primary["status"] == "completed_primary_result"
+    assert primary["held_out_test"]["mean_plot_f1"] == pytest.approx(
+        0.5446789009405125
+    )
+    assert baseline["status"] == "completed_target_baseline"
+    assert baseline["mean_plot_f1"] == pytest.approx(0.45340897930934665)
+    assert config["training"]["held_out_test_status"] == (
+        "completed_no_repeat_for_setting_selection"
+    )
 
     training_task = (
         ROOT / "methods/segmentanytree/slurm/training/train_segmentanytree_for_instance_task.sh"
@@ -2442,7 +2463,149 @@ def test_public_segmentanytree_pilot_record_matches_evaluation() -> None:
     assert status["historical_aligned_result_status"] == (
         "completed_retained_historical"
     )
-    assert status["current_target_status"] == "pretrained_finetune_comparison_pending"
+    assert status["current_target_status"] == "completed_target_comparison"
+
+
+def test_completed_segmentanytree_target_results_are_consistent() -> None:
+    path = (
+        ROOT
+        / "methods/segmentanytree/examples/"
+        "sat_completed_target_results_20260711.csv"
+    )
+    with path.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert [row["training_mode"] for row in rows] == [
+        "published_pretrained",
+        "fine_tuned_on_dev",
+    ]
+    assert {row["dataset_split"] for row in rows} == {"test"}
+    assert {int(row["plots"]) for row in rows} == {11}
+    assert {int(row["reference_instances"]) for row in rows} == {323}
+    for row in rows:
+        tp = int(row["true_positives"])
+        fp = int(row["false_positives"])
+        fn = int(row["false_negatives"])
+        assert int(row["predicted_instances"]) == tp + fp
+        assert int(row["reference_instances"]) == tp + fn
+        assert float(row["micro_precision"]) == pytest.approx(tp / (tp + fp))
+        assert float(row["micro_recall"]) == pytest.approx(tp / (tp + fn))
+        assert float(row["micro_f1"]) == pytest.approx(
+            2 * tp / (2 * tp + fp + fn)
+        )
+
+    baseline, primary = rows
+    assert float(baseline["mean_plot_f1"]) == pytest.approx(
+        0.45340897930934665
+    )
+    assert float(primary["mean_plot_f1"]) == pytest.approx(
+        0.5446789009405125
+    )
+    assert int(primary["false_positives"]) == 331
+    assert float(primary["micro_f1"]) > float(baseline["micro_f1"])
+
+    provenance = json.loads(
+        (
+            ROOT
+            / "methods/segmentanytree/examples/"
+            "sat_completed_target_provenance_20260711.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert provenance["fine_tuned"]["run_id"] == primary["run_id"]
+    assert provenance["published_pretrained"]["run_id"] == baseline["run_id"]
+    assert provenance["repeat_test_for_setting_selection_permitted"] is False
+
+
+def test_segmentanytree_retention_verifier_requires_aligned_outputs(
+    tmp_path: Path,
+) -> None:
+    verifier = load_script(
+        (
+            "methods/segmentanytree/scripts/evaluation/"
+            "verify_completed_sat_retention.py"
+        ),
+        "segmentanytree_retention_verifier",
+    )
+    predictions = tmp_path / "predictions"
+    metadata = tmp_path / "run_metadata"
+    metrics = tmp_path / "metrics"
+    output_dir = predictions / "CULS/plot_1"
+    output_dir.mkdir(parents=True)
+    metadata_dir = metadata / "CULS"
+    metadata_dir.mkdir(parents=True)
+    metric_dir = metrics / "CULS"
+    metric_dir.mkdir(parents=True)
+    instance = output_dir / "Instance_results_forEval_0.ply"
+    semantic = output_dir / "semantic_segmentation_0.ply"
+    instance.write_bytes(b"instance labels")
+    semantic.write_bytes(b"semantic labels")
+    (metadata_dir / "plot_1_run.json").write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "split": "test",
+                "aligned_instance_evaluation": str(instance),
+                "aligned_instance_evaluation_sha256": "instance-sha",
+                "aligned_semantic_evaluation": str(semantic),
+                "aligned_semantic_evaluation_sha256": "semantic-sha",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (metric_dir / "plot_1.json").write_text("{}\n", encoding="utf-8")
+    summary = tmp_path / "summary.csv"
+    summary.write_text(
+        "result_status,dataset_split,plots,predicted_instances,"
+        "reference_instances,true_positives,false_positives,false_negatives,"
+        "mean_plot_f1,micro_f1\n"
+        "completed_aligned_pointwise_test,test,1,3,2,1,2,1,0.4,0.4\n",
+        encoding="utf-8",
+    )
+
+    payload = verifier.validate_aligned_run(
+        tmp_path,
+        "synthetic",
+        predictions,
+        metadata,
+        metrics,
+        summary,
+        "test",
+        1,
+    )
+    assert len(payload["prediction_instance_files"]) == 1
+    assert len(payload["prediction_semantic_files"]) == 1
+    assert payload["summary_metrics"]["micro_f1"] == "0.4"
+
+    semantic.unlink()
+    with pytest.raises(ValueError, match="retained counts"):
+        verifier.validate_aligned_run(
+            tmp_path,
+            "synthetic",
+            predictions,
+            metadata,
+            metrics,
+            summary,
+            "test",
+            1,
+        )
+
+
+def test_completed_segmentanytree_workbook_has_final_target_values() -> None:
+    workbook = (
+        ROOT
+        / "outputs/sat_treex_benchmark_metrics/"
+        "for_instance_method_benchmark_tracker.xlsx"
+    )
+    with zipfile.ZipFile(workbook) as archive:
+        text = "\n".join(
+            archive.read(name).decode("utf-8", errors="ignore")
+            for name in archive.namelist()
+            if name.endswith(".xml")
+        )
+    assert "published pretrained (completed baseline)" in text
+    assert "fine-tuned on development (primary)" in text
+    assert "Pending aligned evaluation" not in text
+    assert "Pending released-weight fine-tuning" not in text
 
 
 def test_public_provisional_segmentanytree_diagnostics_are_sanitised() -> None:
@@ -2484,9 +2647,7 @@ def test_public_provisional_segmentanytree_diagnostics_are_sanitised() -> None:
     assert manifest["historical_aligned_result_status"] == (
         "completed_retained_historical"
     )
-    assert manifest["current_target_status"] == (
-        "pretrained_finetune_comparison_pending"
-    )
+    assert manifest["current_target_status"] == "completed_target_comparison"
 
     published_text = "\n".join(
         path.read_text(encoding="utf-8")

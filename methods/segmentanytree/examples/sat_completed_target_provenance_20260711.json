@@ -1,0 +1,40 @@
+{
+  "benchmark": "for_instance_segmentanytree",
+  "completed_date_utc": "2026-07-11",
+  "dataset_split": "test",
+  "evaluation_protocol": "for_instance_pointwise_v1",
+  "fine_tuned": {
+    "development_jobs": [
+      "9753408",
+      "9753409",
+      "9753410",
+      "9753411",
+      "9753412"
+    ],
+    "development_summary": "results/tables/segmentanytree_for_instance/trained_validation/segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931/validation_summary.csv",
+    "held_out_jobs": [
+      "9755841",
+      "9755842",
+      "9755843"
+    ],
+    "held_out_summary": "results/tables/segmentanytree_for_instance/trained_test/segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931/final_summary.csv",
+    "run_id": "segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931",
+    "test_freeze": "results/metadata/segmentanytree_for_instance/finetuned_test_freezes/segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931.json",
+    "training_metadata": "results/metadata/segmentanytree_for_instance/training_runs/segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931.json"
+  },
+  "matching_policy": "maximum_cardinality_one_to_one",
+  "published_pretrained": {
+    "checkpoint_sha256": "0b4d74b4644e37a16f59008ad0f5c62894fc4d2d906f3abd803bbfc5b5dd803a",
+    "held_out_jobs": [
+      "9753336",
+      "9753337",
+      "9753338"
+    ],
+    "held_out_summary": "results/tables/segmentanytree_for_instance/variants/segmentanytree_for-instance_published_pretrained_20260710_231601/held_out_test/final_summary.csv",
+    "run_id": "segmentanytree_for-instance_published_pretrained_20260710_231601",
+    "test_freeze": "results/metadata/segmentanytree_for_instance/test_freezes/segmentanytree_for-instance_published_pretrained_20260710_231601.json"
+  },
+  "repeat_test_for_setting_selection_permitted": false,
+  "result_table": "methods/segmentanytree/examples/sat_completed_target_results_20260711.csv",
+  "source": "Barkla Slurm completion records and frozen aggregate summaries supplied after each final gate completed"
+}

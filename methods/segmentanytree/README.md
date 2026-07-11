@@ -16,15 +16,15 @@ and [`configs/for_instance_benchmark.yml`](configs/for_instance_benchmark.yml).
 
 ## Training Mode Support
 
-The current comparison has two target variants: `published_pretrained`, which
+The completed comparison has two target variants: `published_pretrained`, which
 does not update weights, and `fine_tuned_on_dev`, which starts from the same
 released checkpoint and updates weights using 16 development training plots.
 Five development plots gate checkpoint selection before the 11 held-out test
-plots are evaluated. Training from scratch is not part of the current plan.
+plots are evaluated. Training from scratch is not part of the target comparison.
 
 The completed `retrained_from_dev` run and the rejected 8 July fine-tune remain
 historical evidence. Their predictions and results are retained, but neither
-is a current target or initial checkpoint. The result roles are recorded in
+is a completed target or initial checkpoint. The result roles are recorded in
 [`examples/for_instance_result_registry.csv`](examples/for_instance_result_registry.csv).
 
 ## Input Requirements
@@ -43,7 +43,7 @@ for accuracy.
 
 ## FOR-instance Compatibility
 
-The comparison follows `for_instance_pointwise_v1`. It preserves the
+The completed comparison follows `for_instance_pointwise_v1`. It preserves the
 supplied development/test boundary and uses development validation only for
 checkpoint selection.
 
@@ -63,13 +63,15 @@ Start with:
   for the initial full-run provenance;
 - [`docs/training_progress_20260706.md`](docs/training_progress_20260706.md)
   for resume, validation and optimization progress;
+- [`docs/final_results_20260711.md`](docs/final_results_20260711.md) for the
+  completed target results and retained-artifact contract;
 - [`slurm/README.md`](slurm/README.md) for the canonical submission sequence;
 - [`configs/for_instance_training.yml`](configs/for_instance_training.yml) for
   the fixed training protocol; and
 - [`examples/README.md`](examples/README.md) for the distinction between
-  provisional diagnostics, historical results and current targets.
+  provisional diagnostics, historical results and completed targets.
 
-Current canonical equivalents are:
+Canonical equivalents are:
 
 - preparation: [`scripts/data/prepare_segmentanytree_for_instance_training.py`](scripts/data/prepare_segmentanytree_for_instance_training.py);
 - inference: [`scripts/runtime/run_segmentanytree_for_instance.py`](scripts/runtime/run_segmentanytree_for_instance.py);
@@ -81,10 +83,17 @@ Current canonical equivalents are:
 
 ## Evaluation Route
 
-Both target results must use aligned internal prediction arrays and the shared
+Both target results use aligned internal prediction arrays and the shared
 one-to-one point-wise evaluator. The provisional coordinate-rematched
-released-checkpoint tables remain diagnostic evidence only and cannot stand in
-for the pending aligned pretrained result.
+released-checkpoint tables remain diagnostic evidence only and do not stand in
+for the completed aligned pretrained result.
+
+The completed `fine_tuned_on_dev` primary result has held-out mean plot F1
+`0.5447`, micro F1 `0.5320`, mean precision `0.4297` and mean recall `0.7806`
+(TP=237, FP=331, FN=86). The completed `published_pretrained` baseline has mean
+plot F1 `0.4534` and micro F1 `0.4442` (TP=247, FP=542, FN=76). The full values
+and provenance are recorded in
+[`docs/final_results_20260711.md`](docs/final_results_20260711.md).
 
 On the 11 held-out plots, the retained historical from-scratch checkpoint has
 mean plot F1 `0.4825`
@@ -93,7 +102,7 @@ and micro F1 `0.4692` (TP=202, FP=336, FN=121). The
 and [`provenance manifest`](examples/sat_final_test_aligned_provenance_sat_for_quicktune_to49_20260706_140730.json)
 are authoritative for that historical run. The `0.4798` failure-mode tables
 are an older diagnostic snapshot for the same checkpoint, not an alternate
-result. No metric is reported yet for either current target.
+result.
 
 ## Known Limitations
 
@@ -113,12 +122,14 @@ rejected because its instance output was all background on the audited
 held-out plots. The current status is recorded in
 [`../../BENCHMARKS.md`](../../BENCHMARKS.md).
 
-The released-pretrained and replacement fine-tuned target results are pending.
-The first guarded route in [`slurm/README.md`](slurm/README.md) is now an
-isolated released-pretrained smoke on one development plot. It writes each run
-to a unique output root, validates the complete released model bundle and
-aligned non-zero instance output, and submits neither held-out test inference
-nor fine-tuning. Repeated run identifiers archive partial outputs before
-retrying.
+The released-pretrained and replacement fine-tuned target results are complete.
+The fine-tuned run
+`segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931` is the primary
+result. The released baseline is
+`segmentanytree_for-instance_published_pretrained_20260710_231601`. Both used
+frozen, one-time held-out evaluation routes and must not be rerun for setting
+selection. Their aligned prediction files, per-plot metadata and summaries are
+retained on Barkla for future metrics; use the verifier documented in
+[`docs/final_results_20260711.md`](docs/final_results_20260711.md).
 The rejected 8 July run remains historical evidence and is never used as an
 initial checkpoint or target result.

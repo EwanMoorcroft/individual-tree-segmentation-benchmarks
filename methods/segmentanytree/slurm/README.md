@@ -1,5 +1,14 @@
 # SegmentAnyTree Slurm workflows
 
+The target benchmark completed on 11 July 2026. The primary fine-tuned test
+result is `segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931`; the
+released baseline is
+`segmentanytree_for-instance_published_pretrained_20260710_231601`. Their test
+submission guards now serve as provenance and repeat-prevention controls. Do
+not resubmit either held-out route for setting selection. Use
+`verify_completed_sat_retention.py` to confirm the retained predictions needed
+for future metrics.
+
 The canonical workflow is grouped by stage:
 
 - `environment/`: one-off container and Python-stack checks;
@@ -86,7 +95,7 @@ workflow.
 
 ## Released-pretrained development smoke
 
-The first current target is an isolated `published_pretrained` smoke on
+The completed first target began with an isolated `published_pretrained` smoke on
 `CULS/plot_1_annotated.las`, which is in the supplied development split. It
 extracts the complete released model bundle, including Hydra overrides,
 verifies the checkpoint SHA-256, runs aligned inference, evaluates the aligned
@@ -157,7 +166,7 @@ bash methods/segmentanytree/slurm/monitor_published_pretrained_test.sh \
 
 ## Pretrained and fine-tuned comparison
 
-The current fine-tuning route is isolated to the development split. It freezes
+The completed fine-tuning route is isolated to the development split. It freezes
 the reviewed released checkpoint, the 16/5/0 development split manifest and
 the completed Stage 1 evidence before submitting any work:
 
@@ -209,7 +218,7 @@ selection. Monitor the printed state file without logs using:
 bash methods/segmentanytree/slurm/monitor_finetuned_test.sh <state_file>
 ```
 
-The later target comparison has two variants:
+The completed target comparison has two variants:
 
 1. `published_pretrained`: extract the released checkpoint from the pinned
    container, verify its hash and evaluate it without weight updates; and
@@ -254,5 +263,5 @@ deletes them. Use `recover_pretrained_finetune_pretrained.sh` only after
 reviewing the state file and confirming the fine-tune branch is healthy.
 
 The `three_variation` script names remain as compatibility implementation
-details for state files created before this plan changed. New work should use
-the canonical commands above.
+details for state files created before this plan changed. They are retained for
+provenance, not as a reason to repeat the completed target tests.

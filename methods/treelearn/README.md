@@ -5,7 +5,7 @@
 TreeLearn is a deep learning method for individual-tree segmentation in forest
 point clouds. The repository now has two guarded FOR-instance routes using the
 released TreeLearn weights: the completed one-plot development smoke and a
-full 21-plot development-only evaluation route. Both perform inference and
+completed 21-plot development-only evaluation. Both perform inference and
 fixed harmonised evaluation without training or fine-tuning. Neither route can
 submit held-out test data.
 
@@ -143,7 +143,8 @@ prediction-size filtering or threshold selection is permitted.
 - The setup follows upstream dependency pins, but upstream leaves some pip
   packages only partially pinned; the resolved Barkla environment must be
   retained with the run evidence.
-- The full development route is ready but has not yet produced results.
+- The completed result is development-only and must not be presented as a
+  held-out benchmark score.
 - The held-out test split remains locked and no TreeLearn test route exists.
 
 ## Current Benchmark Status
@@ -153,5 +154,12 @@ accepted. It evaluated 1,816,672 source-aligned points with F1 `0.705882`,
 precision `0.545455`, recall `1.000000`, TP `6`, FP `5` and FN `0`. Row count
 and order were preserved, the maximum coordinate delta was
 `0.00027683842927217484` m and all five raw/aligned prediction artefacts were
-retained. The exact 21-plot full development route is ready but not run. No
+retained. The exact 21-plot full development run
+`treelearn_for-instance_published_pretrained_development_20260712_150030`
+also completed with zero failures. Its mean plot F1 is `0.515571` and its
+count-aggregated micro F1 is `0.510760` (micro precision `0.415888`, micro
+recall `0.661710`). CULS has the highest site mean F1 (`0.715010`) and NIBIO
+the lowest (`0.446965`). All 105 raw and aligned prediction artefacts, totalling
+9,645,423,654 bytes, passed retention verification. See the
+[`completed development result`](docs/development_results_20260712.md). No
 held-out test result exists.

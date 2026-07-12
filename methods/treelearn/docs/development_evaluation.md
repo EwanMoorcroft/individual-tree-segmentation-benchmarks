@@ -7,9 +7,11 @@ exact 21 locally available FOR-instance development plots. It performs no
 training, fine-tuning, checkpoint selection, threshold selection or
 post-processing selection. It cannot read or submit the held-out test split.
 
-The route is ready but has not yet been run. Until its final gate completes,
-the accepted one-plot smoke remains diagnostic adapter evidence rather than a
-full development result.
+The route completed as
+`treelearn_for-instance_published_pretrained_development_20260712_150030`.
+All 21 plots completed and the final retention gate passed with zero failures.
+See the [`completed result`](development_results_20260712.md). This remains a
+development diagnostic rather than a held-out result.
 
 ## Frozen acceptance evidence
 
@@ -142,3 +144,7 @@ must pass their size and SHA-256 checks. Any missing, changed,
 non-development or unretained result blocks that gate. A successful
 development gate documents the frozen development result; it does not
 authorise held-out evaluation. No TreeLearn held-out test route exists.
+
+The completed run passed this gate with 21/21 plots, zero documented failures
+and all 105 prediction artefacts retained. Its mean plot F1 is `0.515571` and
+its micro F1 is `0.510760`.

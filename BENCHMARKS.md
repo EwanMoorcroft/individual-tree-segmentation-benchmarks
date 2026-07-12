@@ -23,7 +23,7 @@ rows may use `pending` for run-specific fields until a run is scheduled.
 | for-instance | treex | treex_for_instance_exact_path_subset | external_training_only | harmonised_pointwise_test | Completed and frozen deterministic baseline; test mean plot F1 0.3831, micro F1 0.3627 | [`for_instance_benchmark.yml`](methods/treex/configs/for_instance_benchmark.yml); [`treex_split_summary.csv`](methods/treex/examples/treex_split_summary.csv) |
 | for-instance | tls2trees | tls2trees_for_instance_leaf_off_pilot | external_training_only | coordinate_fallback_leaf_off_pilot | Candidate compatibility test | [`for_instance_accuracy.yml`](methods/tls2trees/configs/for_instance_accuracy.yml); [`for_instance_pilot.md`](methods/tls2trees/docs/for_instance_pilot.md) |
 | for-instance | treelearn | treelearn_for-instance_published_pretrained_dev_smoke_20260712_135205 | published_pretrained | development_smoke_harmonised_pointwise | Accepted adapter diagnostic; one CULS development plot F1 0.7059 | [`accepted smoke`](methods/treelearn/examples/accepted_development_smoke_20260712.json); [`runbook`](methods/treelearn/docs/one_plot_smoke.md) |
-| for-instance | treelearn | pending | published_pretrained | full_development_harmonised_pointwise | Exact 21-plot development-only route ready; not run | [`development config`](methods/treelearn/configs/for_instance_development.yml); [`runbook`](methods/treelearn/docs/development_evaluation.md) |
+| for-instance | treelearn | treelearn_for-instance_published_pretrained_development_20260712_150030 | published_pretrained | full_development_harmonised_pointwise | Completed development diagnostic; mean plot F1 0.5156, micro F1 0.5108 | [`overall results`](methods/treelearn/examples/treelearn_completed_development_results_20260712.csv); [`site results`](methods/treelearn/examples/treelearn_completed_development_site_results_20260712.csv); [`result note`](methods/treelearn/docs/development_results_20260712.md) |
 | for-instance | randlanet | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
 | for-instance | pointnetpp | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
 | for-instance | pointgroup | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
@@ -51,8 +51,11 @@ The accepted TreeLearn smoke is adapter evidence from one CULS development
 plot, not a headline benchmark result. It preserved the source row count and
 order across 1,816,672 points, retained all five raw and aligned prediction
 artefacts and obtained F1 `0.705882` under the shared point-wise protocol. It
-authorises only the frozen 21-plot development route. TreeLearn has no held-out
-test result or test submission route.
+authorised only the frozen 21-plot development route. That route subsequently
+completed with mean plot F1 `0.515571` and count-aggregated micro F1 `0.510760`.
+CULS has the highest site mean F1 (`0.715010`) and NIBIO the lowest
+(`0.446965`). All 105 prediction artefacts remain retained for future metrics.
+TreeLearn has no held-out test result or test submission route.
 
 The permitted training mode values for completed or provisional runs are
 `published_pretrained`, `fine_tuned_on_dev`, `retrained_from_dev` and

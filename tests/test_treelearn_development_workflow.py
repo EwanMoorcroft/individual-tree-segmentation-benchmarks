@@ -1106,7 +1106,7 @@ def test_development_summary_accounts_for_entirely_absent_evaluation_root(
 def test_development_config_freezes_inventory_and_forbids_test_or_training() -> None:
     config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
 
-    assert config["project"]["status"] == "development_full_route_ready_not_run"
+    assert config["project"]["status"] == "completed_aligned_pointwise_development"
     assert config["accepted_smoke"]["status"] == "accepted"
     assert config["accepted_smoke"]["benchmark_commit"] == (
         "6fda72efb311873bb2beb0d4360109682710eeaa"
@@ -1121,10 +1121,90 @@ def test_development_config_freezes_inventory_and_forbids_test_or_training() -> 
     assert config["development"]["allow_test_split"] is False
     assert config["development"]["run_training"] is False
     assert config["development"]["tune_checkpoint"] is False
+    completed = config["completed_development"]
+    assert completed["run_id"] == (
+        "treelearn_for-instance_published_pretrained_development_20260712_150030"
+    )
+    assert completed["completed_plots"] == 21
+    assert completed["documented_failures"] == 0
+    assert completed["held_out_test_accessed"] is False
+    assert math.isclose(completed["metrics"]["mean_plot_f1"], 0.5155705605170436)
+    assert math.isclose(completed["metrics"]["micro_f1"], 0.5107604017216643)
+    assert completed["retention"]["verified_prediction_file_count"] == 105
     assert config["evaluation"]["postprocessing_selection_permitted"] is False
     assert "development_runs" in config["paths"]["predictions_root"] or (
         "for_instance_development" in config["paths"]["predictions_root"]
     )
+
+
+def test_completed_development_public_evidence_reconciles() -> None:
+    examples = ROOT / "methods/treelearn/examples"
+    with (
+        examples / "treelearn_completed_development_results_20260712.csv"
+    ).open(encoding="utf-8", newline="") as handle:
+        overall_rows = list(csv.DictReader(handle))
+    with (
+        examples / "treelearn_completed_development_site_results_20260712.csv"
+    ).open(encoding="utf-8", newline="") as handle:
+        sites = list(csv.DictReader(handle))
+    provenance = json.loads(
+        (
+            examples / "treelearn_completed_development_provenance_20260712.json"
+        ).read_text(encoding="utf-8")
+    )
+
+    assert len(overall_rows) == 1
+    overall = overall_rows[0]
+    assert overall["dataset_split"] == "dev"
+    assert overall["held_out_test_accessed"] == "false"
+    assert int(overall["plots"]) == 21
+    assert {row["site"] for row in sites} == set(SITE_COUNTS)
+    assert all(row["dataset_split"] == "dev" for row in sites)
+    assert all(row["held_out_test_accessed"] == "false" for row in sites)
+
+    for overall_field, site_field in (
+        ("point_count", "point_count"),
+        ("evaluated_point_count", "evaluated_point_count"),
+        ("predicted_instances", "predicted_instances"),
+        ("reference_instances", "reference_instances"),
+        ("true_positives", "true_positives"),
+        ("false_positives", "false_positives"),
+        ("false_negatives", "false_negatives"),
+    ):
+        assert int(overall[overall_field]) == sum(
+            int(row[site_field]) for row in sites
+        )
+
+    tp = int(overall["true_positives"])
+    fp = int(overall["false_positives"])
+    fn = int(overall["false_negatives"])
+    assert math.isclose(float(overall["micro_precision"]), tp / (tp + fp))
+    assert math.isclose(float(overall["micro_recall"]), tp / (tp + fn))
+    assert math.isclose(float(overall["micro_f1"]), 2 * tp / (2 * tp + fp + fn))
+    assert math.isclose(
+        float(overall["mean_plot_f1"]),
+        sum(float(row["mean_plot_f1"]) * int(row["completed_plots"]) for row in sites)
+        / 21,
+    )
+
+    assert provenance["run_id"] == overall["run_id"]
+    assert provenance["result_status"] == overall["result_status"]
+    assert provenance["held_out_test_accessed"] is False
+    assert provenance["test_result_exists"] is False
+    assert provenance["test_submission_route_exists"] is False
+    assert provenance["retention"]["verified_prediction_file_count"] == 105
+    assert provenance["retention"]["verified_prediction_size_bytes"] == 9645423654
+
+    public_docs = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            ROOT / "BENCHMARKS.md",
+            ROOT / "methods/treelearn/README.md",
+            ROOT / "methods/treelearn/docs/development_evaluation.md",
+        )
+    )
+    assert "development_full_route_ready_not_run" not in public_docs
+    assert "full development route is ready but" not in public_docs.casefold()
 
 
 def test_development_slurm_route_is_guarded_combined_and_log_free_to_monitor() -> None:

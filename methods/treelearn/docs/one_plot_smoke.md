@@ -208,7 +208,8 @@ The route passes only when:
 - matched and unmatched tables are present.
 
 These gates passed for the accepted run above, including the manual
-development-plot alignment review and five-file retention check. The next
-permitted action is the separate guarded full development-only route described
-in [`development_evaluation.md`](development_evaluation.md). Held-out
-evaluation must not be submitted from this smoke route.
+development-plot alignment review and five-file retention check. The separately
+guarded full development route described in
+[`development_evaluation.md`](development_evaluation.md) subsequently
+completed 21/21 plots. Held-out evaluation must not be submitted from this
+smoke route.

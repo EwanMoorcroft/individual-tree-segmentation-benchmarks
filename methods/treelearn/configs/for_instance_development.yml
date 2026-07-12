@@ -4,7 +4,7 @@ project:
   dataset_slug: for-instance
   method_slug: treelearn
   mode: labelled_accuracy_candidate
-  status: development_full_route_ready_not_run
+  status: completed_aligned_pointwise_development
   protocol_id: for_instance_pointwise_v1
   acceptance_protocol_id: for_instance_method_adapter_acceptance_v1
   barkla_root: "~/scratch/tree-seg-benchmark"
@@ -142,6 +142,49 @@ development:
   tune_postprocessing: false
   inference_concurrency: 2
   evaluation_concurrency: 2
+
+completed_development:
+  run_id: treelearn_for-instance_published_pretrained_development_20260712_150030
+  status: completed_aligned_pointwise_development
+  generated_at_utc: "2026-07-12T15:29:56.605980+00:00"
+  benchmark_commit: "1a66696be033816d7f776d7e1293340356b34452"
+  completed_plots: 21
+  expected_plots: 21
+  documented_failures: 0
+  held_out_test_accessed: false
+  metrics:
+    prediction_instances: 1284
+    reference_instances: 807
+    true_positives: 534
+    false_positives: 750
+    false_negatives: 273
+    mean_plot_precision: 0.4179100166336153
+    mean_plot_recall: 0.7324119883689664
+    mean_plot_f1: 0.5155705605170436
+    micro_precision: 0.4158878504672897
+    micro_recall: 0.6617100371747212
+    micro_f1: 0.5107604017216643
+  site_mean_plot_f1:
+    CULS: 0.7150101419878296
+    NIBIO: 0.44696480338087335
+    RMIT: 0.5894736842105263
+    SCION: 0.652892069171139
+    TUWIEN: 0.591304347826087
+  site_micro_f1:
+    CULS: 0.72
+    NIBIO: 0.4466615502686109
+    RMIT: 0.5894736842105263
+    SCION: 0.6464646464646465
+    TUWIEN: 0.591304347826087
+  retention:
+    status: retention_verified
+    inference_outputs_retained: 21
+    verified_prediction_file_count: 105
+    verified_prediction_size_bytes: 9645423654
+  public_result_table: methods/treelearn/examples/treelearn_completed_development_results_20260712.csv
+  public_site_result_table: methods/treelearn/examples/treelearn_completed_development_site_results_20260712.csv
+  public_provenance: methods/treelearn/examples/treelearn_completed_development_provenance_20260712.json
+  next_gate: manual_review_before_any_held_out_test_route
 
 plot_defaults:
   split: dev

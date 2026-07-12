@@ -64,12 +64,17 @@ def retained_file(path: Path) -> dict[str, Any]:
     return entry
 
 
-def validate_checkpoint_identity(checkpoint: Path, expected_md5: str) -> dict[str, str]:
-    """Require the exact official released checkpoint before inference."""
+def validate_checkpoint_identity(
+    checkpoint: Path,
+    expected_md5: str,
+    *,
+    allow_derived: bool = False,
+) -> dict[str, str]:
+    """Require released weights unless the route explicitly uses derived weights."""
 
     actual_md5 = md5(checkpoint).lower()
     expected_md5 = expected_md5.lower()
-    if actual_md5 != expected_md5:
+    if actual_md5 != expected_md5 and not allow_derived:
         raise ValueError(
             "TreeLearn checkpoint MD5 "
             f"{actual_md5} does not match official {expected_md5}"
@@ -758,6 +763,7 @@ def main() -> int:
         validate_checkpoint_identity(
             checkpoint,
             str(config["method"]["checkpoint"]["source_md5"]),
+            allow_derived=args.training_mode == "fine_tuned_on_dev",
         )
 
         dataset_validation = validate_dataset_source(

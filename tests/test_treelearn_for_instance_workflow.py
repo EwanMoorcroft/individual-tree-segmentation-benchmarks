@@ -504,6 +504,10 @@ def test_treelearn_checkpoint_identity_is_not_self_derived(tmp_path: Path) -> No
     assert len(identity["sha256"]) == 64
     with pytest.raises(ValueError, match="does not match official"):
         runner.validate_checkpoint_identity(checkpoint, "0" * 32)
+    derived = runner.validate_checkpoint_identity(
+        checkpoint, "0" * 32, allow_derived=True
+    )
+    assert derived["md5"] == expected_md5
 
 
 def test_treelearn_runner_records_preflight_failure_metadata(

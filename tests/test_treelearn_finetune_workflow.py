@@ -52,6 +52,8 @@ def test_finetune_preparation_is_seeded_and_development_only(tmp_path: Path) -> 
     assert full["pretrain"] == str(checkpoint.resolve())
     assert full["epochs"] == 100
     assert full["optimizer"]["lr"] == 0.0003
+    assert isinstance(full["scheduler"]["lr_min"], float)
+    assert isinstance(full["scheduler"]["warmup_lr_init"], float)
 
 
 def test_finetune_submission_has_smoke_gate_and_no_test_route() -> None:

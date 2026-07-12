@@ -403,6 +403,61 @@ def test_development_task_rejects_manifest_dataset_path_mismatch(
     assert failure["held_out_test_accessed"] is False
 
 
+def test_development_task_builds_string_only_subprocess_command(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    task = load_script(
+        "treelearn_development_task_command_types",
+        "run_for_instance_development_task.py",
+    )
+    row = manifest_rows(tmp_path)[0]
+    dataset_root = tmp_path / "dataset"
+    source = dataset_root / row["relative_path"]
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"synthetic source")
+    row["input_las"] = str(source.resolve())
+    captured: list[str] = []
+
+    monkeypatch.setattr(task, "read_manifest_row", lambda _path, _index: row)
+
+    def capture(command, *, cwd, check):
+        assert cwd == task.runner.ROOT
+        assert check is True
+        captured.extend(command)
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(task.subprocess, "run", capture)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            str(SCRIPTS / "run_for_instance_development_task.py"),
+            "--config",
+            str(CONFIG),
+            "--manifest",
+            str(tmp_path / "manifest.csv"),
+            "--task-index",
+            "0",
+            "--run-id",
+            "synthetic_command_types",
+            "--dataset-root",
+            str(dataset_root),
+            "--treelearn-repo",
+            str(tmp_path / "TreeLearn"),
+            "--checkpoint",
+            str(tmp_path / "checkpoint.pth"),
+        ],
+    )
+
+    assert task.main() == 0
+    assert captured
+    assert all(isinstance(value, str) for value in captured)
+    assert captured[captured.index("--expected-point-count") + 1] == str(
+        row["point_count"]
+    )
+
+
 def synthetic_smoke_evidence(tmp_path: Path, config: dict[str, Any]):
     checkpoint = tmp_path / "checkpoint.pth"
     checkpoint.write_bytes(b"synthetic published checkpoint")

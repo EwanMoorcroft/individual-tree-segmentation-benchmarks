@@ -1,4 +1,4 @@
-"""Resolve one task in the frozen TreeLearn long-run validation matrix."""
+"""Resolve one checkpoint task in the TreeLearn long-run validation matrix."""
 
 from __future__ import annotations
 
@@ -28,18 +28,18 @@ def resolve_task(freeze: dict, array_task_id: int) -> dict:
     trials = freeze.get("trials")
     if not isinstance(trials, list) or len(trials) != 8:
         raise ValueError("Long-run freeze must contain exactly eight trials")
-    if not 0 <= array_task_id < len(trials) * len(EPOCHS) * len(VALIDATION_TASKS) + 5:
-        raise ValueError("Validation array task must be between 0 and 204")
+    checkpoint_tasks = len(trials) * len(EPOCHS)
+    if not 0 <= array_task_id <= checkpoint_tasks:
+        raise ValueError("Validation array task must be between 0 and 40")
 
-    if array_task_id >= 200:
-        plot_slot = array_task_id - 200
+    if array_task_id == checkpoint_tasks:
         run_id = f'{freeze["run_id"]}_clean_pretrained_validation'
         return {
             "trial_index": -1,
             "config_id": "clean_pretrained",
             "seed": 0,
             "epoch": 0,
-            "manifest_task_index": VALIDATION_TASKS[plot_slot],
+            "manifest_task_indices": list(VALIDATION_TASKS),
             "checkpoint": str(Path(freeze["initial_checkpoint"]).expanduser().resolve()),
             "validation_run_id": run_id,
             "evaluation_config": str(Path(freeze["evaluation_config"]).expanduser().resolve()),
@@ -47,9 +47,8 @@ def resolve_task(freeze: dict, array_task_id: int) -> dict:
             "training_mode": "published_pretrained",
         }
 
-    plot_slot = array_task_id % len(VALIDATION_TASKS)
-    checkpoint_slot = (array_task_id // len(VALIDATION_TASKS)) % len(EPOCHS)
-    trial_slot = array_task_id // (len(EPOCHS) * len(VALIDATION_TASKS))
+    checkpoint_slot = array_task_id % len(EPOCHS)
+    trial_slot = array_task_id // len(EPOCHS)
     trial = trials[trial_slot]
     if int(trial.get("trial_index", -1)) != trial_slot:
         raise ValueError("Trials must be ordered by contiguous trial_index")
@@ -73,7 +72,7 @@ def resolve_task(freeze: dict, array_task_id: int) -> dict:
         "config_id": config_id,
         "seed": seed,
         "epoch": epoch,
-        "manifest_task_index": VALIDATION_TASKS[plot_slot],
+        "manifest_task_indices": list(VALIDATION_TASKS),
         "checkpoint": str(_checkpoint_for(trial, epoch)),
         "validation_run_id": run_id,
         "evaluation_config": str(Path(freeze["evaluation_config"]).expanduser().resolve()),
@@ -89,12 +88,13 @@ def main() -> int:
     args = parser.parse_args()
     task = resolve_task(json.loads(args.freeze.read_text()), args.array_task_id)
     for key in (
-        "trial_index", "config_id", "seed", "epoch", "manifest_task_index",
+        "trial_index", "config_id", "seed", "epoch", "manifest_task_indices",
         "checkpoint", "validation_run_id", "evaluation_config",
         "evaluation_config_sha256",
         "training_mode",
     ):
-        print(task[key])
+        value = task[key]
+        print(",".join(map(str, value)) if isinstance(value, list) else value)
     return 0
 
 

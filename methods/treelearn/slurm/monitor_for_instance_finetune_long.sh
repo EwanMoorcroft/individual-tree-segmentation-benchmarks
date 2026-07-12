@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 source "${1:?state file required}"
-JOBS="${TREELEARN_LONG_PREP_JOB},${TREELEARN_LONG_CROPS_JOB},${TREELEARN_LONG_CONSOLIDATE_JOB},${TREELEARN_LONG_TRAIN_JOB},${TREELEARN_LONG_VALIDATION_JOB},${TREELEARN_LONG_SELECTION_JOB},${TREELEARN_LONG_GATE_JOB}"
+JOBS=""
+for JOB in \
+  "$TREELEARN_LONG_PREP_JOB" \
+  "$TREELEARN_LONG_CROPS_JOB" \
+  "$TREELEARN_LONG_CONSOLIDATE_JOB" \
+  "$TREELEARN_LONG_TRAIN_JOB" \
+  "$TREELEARN_LONG_VALIDATION_JOB" \
+  "$TREELEARN_LONG_SELECTION_JOB" \
+  "$TREELEARN_LONG_GATE_JOB"
+do
+  [[ -n "$JOB" ]] && JOBS="${JOBS:+$JOBS,}$JOB"
+done
 date
 echo
 echo "submission_status=${TREELEARN_LONG_SUBMISSION_STATUS:-unknown}"
 echo
-squeue -j "$JOBS" \
-  -o "%.18i %.24j %.10T %.10M %.9L %.19e %R" 2>/dev/null || true
+if [[ -n "$JOBS" ]]; then
+  squeue -j "$JOBS" \
+    -o "%.18i %.24j %.10T %.10M %.9L %.19e %R" 2>/dev/null || true
+fi
 echo
 for ENTRY in \
   "prep:$TREELEARN_LONG_PREP_JOB" \
@@ -20,6 +33,10 @@ for ENTRY in \
 do
   LABEL=${ENTRY%%:*}
   JOB=${ENTRY#*:}
+  if [[ -z "$JOB" ]]; then
+    printf '%-9s job=%-10s %s\n' "$LABEL" "-" "not_submitted"
+    continue
+  fi
   STATES=$(sacct -X -n -j "$JOB" --format=State -P 2>/dev/null \
     | cut -d '|' -f 1 | sed 's/[[:space:]]//g' | sed '/^$/d' \
     | sort | uniq -c | tr '\n' ',' | sed 's/,$//')

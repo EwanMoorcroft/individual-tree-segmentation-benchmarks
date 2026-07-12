@@ -43,7 +43,7 @@ def frozen_trials(tmp_path: Path) -> dict:
     }
 
 
-def test_long_validation_array_maps_all_trials_epochs_and_plots(tmp_path: Path) -> None:
+def test_long_validation_array_maps_all_checkpoints_to_five_plots(tmp_path: Path) -> None:
     freeze = frozen_trials(tmp_path)
     first = resolver.resolve_task(freeze, 0)
     assert first == {
@@ -51,7 +51,7 @@ def test_long_validation_array_maps_all_trials_epochs_and_plots(tmp_path: Path) 
         "config_id": "full_lr_1e-5",
         "seed": 42,
         "epoch": 7,
-        "manifest_task_index": 0,
+        "manifest_task_indices": [0, 3, 7, 8, 20],
         "checkpoint": str((tmp_path / "trial_0/epoch_7.pth").resolve()),
         "validation_run_id": (
             "treelearn_long_unit_trial_00_full_lr_1e-5_seed_42_epoch_7_validation"
@@ -60,13 +60,13 @@ def test_long_validation_array_maps_all_trials_epochs_and_plots(tmp_path: Path) 
         "evaluation_config_sha256": "e" * 64,
         "training_mode": "fine_tuned_on_dev",
     }
-    last = resolver.resolve_task(freeze, 199)
+    last = resolver.resolve_task(freeze, 39)
     assert (last["trial_index"], last["seed"], last["epoch"]) == (7, 123456, 35)
-    assert last["manifest_task_index"] == 20
+    assert last["manifest_task_indices"] == [0, 3, 7, 8, 20]
     freeze["initial_checkpoint"] = str(tmp_path / "clean.pth")
-    baseline = resolver.resolve_task(freeze, 204)
+    baseline = resolver.resolve_task(freeze, 40)
     assert baseline["config_id"] == "clean_pretrained"
-    assert baseline["manifest_task_index"] == 20
+    assert baseline["manifest_task_indices"] == [0, 3, 7, 8, 20]
     assert baseline["training_mode"] == "published_pretrained"
 
 
@@ -95,10 +95,11 @@ def test_long_jobs_lock_test_and_use_expected_resources() -> None:
     crop = (
         ROOT / "methods/treelearn/slurm/generate_for_instance_finetune_long_crops.sbatch"
     ).read_text()
-    assert "#SBATCH --array=0-204%8" in validation
+    assert "#SBATCH --array=0-40%8" in validation
+    assert 'for MANIFEST_TASK_INDEX in "${PLOT_TASKS[@]}"' in validation
     assert "No held-out test job was submitted" in gate
     assert "--array=0-7%8" in submit
-    assert "--array=0-204%8" in submit
+    assert "--array=0-40%8" in submit
     assert "106a80de2991c5f23484a3f9d03e3b16" in submit
     assert "TREELEARN_DEV_MANIFEST_JSON=$TREELEARN_LONG_DEV_MANIFEST" in submit
     assert "No held-out test job was submitted" in submit

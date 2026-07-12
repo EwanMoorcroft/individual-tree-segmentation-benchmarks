@@ -111,7 +111,7 @@ TRAIN=$(sbatch --parsable --array=0-7%8 \
   methods/treelearn/slurm/run_for_instance_finetune_long_trial.sbatch)
 SUBMITTED_JOBS+=("$TRAIN")
 write_state submitting
-VALIDATION=$(sbatch --parsable --array=0-204%8 \
+VALIDATION=$(sbatch --parsable --array=0-40%8 \
   --dependency="afterok:$TRAIN" --kill-on-invalid-dep=yes --export="$EXPORTS" \
   methods/treelearn/slurm/run_for_instance_finetune_long_validation.sbatch)
 SUBMITTED_JOBS+=("$VALIDATION")

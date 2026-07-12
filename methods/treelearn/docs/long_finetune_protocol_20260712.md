@@ -55,6 +55,10 @@ is not claimed because pinned sparse CUDA kernels may remain nondeterministic.
 Crop generation is CPU-only and therefore uses the `nodes` partition rather
 than reserving idle GPUs. Training and validation use `%8` arrays, allowing all
 eight L40S GPUs to be occupied when scheduler capacity is available.
+Validation is submitted as 41 checkpoint-level array tasks; each GPU task runs
+the same five validation plots sequentially. This preserves the complete
+eight-seed, five-epoch and clean-baseline matrix while staying below Barkla's
+per-user submitted-job limit.
 
 Every validation plot retains five raw/adapted prediction artefacts. Selection
 requires exactly 1,025 unique files and verifies size and SHA-256. The final

@@ -170,7 +170,8 @@ Its training and validation arrays allow eight concurrent one-GPU tasks on
 The chain downloads and verifies the exact clean checkpoint when absent,
 hashes generated crop banks, retains and verifies all 1,025 validation
 prediction artefacts, freezes the selected epoch-35 setting and stops before
-test.
+test. Validation uses 41 checkpoint-level jobs, each processing five plots
+sequentially, so the chain remains below the Barkla submitted-job QOS limit.
 
 ## Evaluation Route
 

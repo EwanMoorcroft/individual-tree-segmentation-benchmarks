@@ -45,6 +45,23 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
+def canonical_metadata_path(value: object) -> str:
+    """Apply the same path normalisation as the accepted manifest builder."""
+
+    raw = str(value or "").strip().replace("\\", "/")
+    path = Path(raw)
+    if (
+        not raw
+        or raw.startswith(("/", "./"))
+        or path.is_absolute()
+        or any(part in {"", ".", ".."} for part in path.parts)
+        or path.as_posix() != raw
+        or path.suffix.casefold() != ".las"
+    ):
+        raise ValueError(f"Unsafe FOR-instance metadata path: {value!r}")
+    return raw
+
+
 def assign_roles(plots: list[dict], seed: int = SPLIT_SEED) -> list[dict]:
     if len(plots) != 21 or any(row.get("split") != "dev" for row in plots):
         raise ValueError("Long fine-tuning requires the frozen 21-plot development manifest")
@@ -69,12 +86,12 @@ def verify_supplied_split(source: dict) -> dict:
     with metadata_path.open(encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
     dev_paths = sorted(
-        str(row.get("path", "")).strip()
+        canonical_metadata_path(row.get("path"))
         for row in rows
         if str(row.get("split", "")).strip() == "dev"
     )
     test_paths = sorted(
-        str(row.get("path", "")).strip()
+        canonical_metadata_path(row.get("path"))
         for row in rows
         if str(row.get("split", "")).strip() == "test"
     )

@@ -28,6 +28,23 @@ def git(repo: Path, *args: str) -> str:
     ).stdout.strip()
 
 
+def canonical_metadata_path(value: object) -> str:
+    """Apply the same path normalisation as the accepted manifest builder."""
+
+    raw = str(value or "").strip().replace("\\", "/")
+    path = Path(raw)
+    if (
+        not raw
+        or raw.startswith(("/", "./"))
+        or path.is_absolute()
+        or any(part in {"", ".", ".."} for part in path.parts)
+        or path.as_posix() != raw
+        or path.suffix.casefold() != ".las"
+    ):
+        raise ValueError(f"Unsafe FOR-instance metadata path: {value!r}")
+    return raw
+
+
 def verify_supplied_split(freeze: dict, development_manifest: Path) -> None:
     contract = freeze.get("supplied_split_contract", {})
     metadata_path = Path(contract.get("source", "")).expanduser().resolve()
@@ -53,12 +70,12 @@ def verify_supplied_split(freeze: dict, development_manifest: Path) -> None:
     with metadata_path.open(encoding="utf-8-sig", newline="") as handle:
         metadata_rows = list(csv.DictReader(handle))
     supplied_dev = sorted(
-        str(row.get("path", "")).strip()
+        canonical_metadata_path(row.get("path"))
         for row in metadata_rows
         if str(row.get("split", "")).strip() == "dev"
     )
     supplied_test = [
-        row for row in metadata_rows
+        canonical_metadata_path(row.get("path")) for row in metadata_rows
         if str(row.get("split", "")).strip() == "test"
     ]
     frozen_dev = sorted(str(row["relative_path"]) for row in source.get("plots", []))

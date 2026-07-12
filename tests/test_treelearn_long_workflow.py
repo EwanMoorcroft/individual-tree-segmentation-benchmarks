@@ -50,14 +50,14 @@ def test_long_freeze_has_fixed_split_matrix_budget_and_clean_checkpoint(
         source = dataset / site / f"plot_{index}.las"
         source.parent.mkdir(parents=True, exist_ok=True)
         source.write_bytes(b"synthetic")
-        metadata_rows.append(f"{site}/plot_{index}.las,{site},dev")
+        metadata_rows.append(f"{site}\\plot_{index}.las,{site},dev")
         plots.append({
             "task_index": index, "split": "dev", "collection": site,
             "relative_path": f"{site}/plot_{index}.las", "input_las": str(source),
             "safe_plot_id": f"{site}_plot_{index}",
         })
     for index in range(11):
-        metadata_rows.append(f"TEST/test_{index}.las,TEST,test")
+        metadata_rows.append(f"TEST\\test_{index}.las,TEST,test")
     metadata.write_text("\n".join(metadata_rows) + "\n")
     metadata_sha256 = hashlib.sha256(metadata.read_bytes()).hexdigest()
     for row in plots:

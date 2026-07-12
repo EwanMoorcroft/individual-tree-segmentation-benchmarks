@@ -94,12 +94,15 @@ gap directly.
 ## Current Benchmark Status
 
 - TreeX was run and evaluated, not trained or fine-tuned.
+- Its development settings and held-out test result are frozen; the test split
+  must not be rerun to select or refine settings.
 - Public-safe summary CSVs, JSON metadata and small plots can be committed.
 - Full prediction outputs should be backed up locally under `local_outputs/`
   and must stay ignored by Git.
 
 The local backup was audited on 6 July 2026 and contains one `.npz` and one
 `.las` final prediction for each of the 32 evaluated plots. These files are not
-part of the public repository.
+part of the public repository. Future metrics should be derived from these
+retained aligned predictions without rerunning held-out inference.
 
 The current status is recorded in [`../../BENCHMARKS.md`](../../BENCHMARKS.md).

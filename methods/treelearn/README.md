@@ -3,11 +3,9 @@
 ## Method Summary
 
 TreeLearn is a deep learning method for individual-tree segmentation in forest
-point clouds. The repository now has two guarded FOR-instance routes using the
-released TreeLearn weights: the completed one-plot development smoke and a
-completed 21-plot development-only evaluation. Both perform inference and
-fixed harmonised evaluation without training or fine-tuning. Neither route can
-submit held-out test data.
+point clouds. The repository has completed released-weight development smoke
+and 21-plot development evaluation routes. It also has a separate guarded,
+development-only fine-tuning route. None can submit held-out test data.
 
 ## Upstream Repository And Citation
 
@@ -33,7 +31,11 @@ The candidate full benchmark modes remain:
 - `fine_tuned_on_dev`
 - `retrained_from_dev`
 
-Fine-tuning and retraining are not implemented in this first route.
+The fine-tuning route starts from the released checkpoint, freezes a seed-42
+16/5 split of the 21 development plots, generates 512 bounded random crops,
+runs a one-epoch smoke, then a fixed 100-epoch run. Training is limited to
+23.5 hours. It submits no test, inference or evaluation job; the resulting
+checkpoint requires separate development validation before any test route.
 
 ## Input Requirements
 

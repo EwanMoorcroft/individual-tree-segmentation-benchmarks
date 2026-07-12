@@ -1,0 +1,39 @@
+project:
+  name: tree-seg-benchmark
+  benchmark_name: for_instance_treelearn_finetune
+  dataset_slug: for-instance
+  method_slug: treelearn
+  mode: fine_tuned_on_dev
+  status: development_finetune_ready
+
+dataset:
+  slug: for-instance
+  name: FOR-instance
+  split_metadata_file: data_split_metadata.csv
+
+method:
+  slug: treelearn
+  name: TreeLearn
+  upstream_commit: fd240ce7caa4c444fe3418aca454dc578bc557d4
+  training_mode: fine_tuned_on_dev
+
+split:
+  source: frozen_completed_development_manifest
+  seed: 42
+  validation_fraction: 0.25
+  expected_development_plots: 21
+  expected_training_plots: 16
+  expected_validation_plots: 5
+  held_out_test_accessed: false
+
+training:
+  initialization: published_treelearn_checkpoint
+  random_crops: 512
+  crop_size_m: 35
+  epochs: 100
+  examples_per_epoch: 256
+  batch_size: 2
+  learning_rate: 0.0003
+  wall_time: "23:30:00"
+  smoke_epochs: 1
+  smoke_examples: 16

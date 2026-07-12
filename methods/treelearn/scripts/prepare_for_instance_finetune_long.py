@@ -85,19 +85,27 @@ def verify_supplied_split(source: dict) -> dict:
         raise ValueError("FOR-instance supplied split metadata changed")
     with metadata_path.open(encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
-    dev_paths = sorted(
+    metadata_dev_paths = sorted(
         canonical_metadata_path(row.get("path"))
         for row in rows
         if str(row.get("split", "")).strip() == "dev"
     )
-    test_paths = sorted(
+    metadata_test_paths = sorted(
         canonical_metadata_path(row.get("path"))
         for row in rows
         if str(row.get("split", "")).strip() == "test"
     )
     manifest_paths = sorted(str(row["relative_path"]) for row in source["plots"])
-    if dev_paths != manifest_paths or len(dev_paths) != 21 or len(test_paths) != 11:
-        raise ValueError("Development manifest differs from FOR-instance supplied split metadata")
+    if (
+        len(metadata_dev_paths) != 56
+        or len(set(metadata_dev_paths)) != 56
+        or len(metadata_test_paths) != 26
+        or len(set(metadata_test_paths)) != 26
+        or set(metadata_dev_paths) & set(metadata_test_paths)
+    ):
+        raise ValueError("FOR-instance supplied split metadata catalogue is invalid")
+    if len(manifest_paths) != 21 or not set(manifest_paths).issubset(metadata_dev_paths):
+        raise ValueError("Development manifest is not an exact-path subset of supplied dev rows")
     if any(
         row.get("split") != "dev"
         or row.get("split_metadata_sha256") != metadata_sha256
@@ -107,9 +115,11 @@ def verify_supplied_split(source: dict) -> dict:
     return {
         "source": str(metadata_path),
         "sha256": metadata_sha256,
-        "development_rows": len(dev_paths),
-        "held_out_test_rows": len(test_paths),
-        "mapping": "exact path match where split == dev",
+        "metadata_development_rows": len(metadata_dev_paths),
+        "metadata_test_rows": len(metadata_test_paths),
+        "benchmark_development_rows": len(manifest_paths),
+        "benchmark_expected_test_rows": 11,
+        "mapping": "every benchmark development path is an exact-path member where split == dev",
         "held_out_test_files_opened": False,
     }
 

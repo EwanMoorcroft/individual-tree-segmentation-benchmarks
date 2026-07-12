@@ -58,6 +58,10 @@ def test_long_freeze_has_fixed_split_matrix_budget_and_clean_checkpoint(
         })
     for index in range(11):
         metadata_rows.append(f"TEST\\test_{index}.las,TEST,test")
+    for index in range(35):
+        metadata_rows.append(f"NIBIO2\\dev_{index}.las,NIBIO2,dev")
+    for index in range(15):
+        metadata_rows.append(f"NIBIO2\\test_{index}.las,NIBIO2,test")
     metadata.write_text("\n".join(metadata_rows) + "\n")
     metadata_sha256 = hashlib.sha256(metadata.read_bytes()).hexdigest()
     for row in plots:
@@ -102,8 +106,10 @@ def test_long_freeze_has_fixed_split_matrix_budget_and_clean_checkpoint(
     )
     assert freeze["initial_checkpoint_persistent_id"] == "doi:10.25625/VPMPID/8CIIW0"
     assert freeze["held_out_test_accessed"] is False
-    assert freeze["supplied_split_contract"]["development_rows"] == 21
-    assert freeze["supplied_split_contract"]["held_out_test_rows"] == 11
+    assert freeze["supplied_split_contract"]["metadata_development_rows"] == 56
+    assert freeze["supplied_split_contract"]["metadata_test_rows"] == 26
+    assert freeze["supplied_split_contract"]["benchmark_development_rows"] == 21
+    assert freeze["supplied_split_contract"]["benchmark_expected_test_rows"] == 11
     assert freeze["supplied_split_contract"]["held_out_test_files_opened"] is False
     verifier = load(
         "treelearn_long_verify",

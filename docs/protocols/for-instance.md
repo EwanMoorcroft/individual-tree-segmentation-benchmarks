@@ -42,6 +42,9 @@ record.
   ignored run metadata.
 - Preserve each `relative_path`, collection and supplied split from
   `data_split_metadata.csv`.
+- The metadata catalogue contains 56 development and 26 test paths. The
+  downloaded 32-LAS benchmark is the exact-path subset of 21 development and
+  11 test plots; every method uses this same local subset.
 - Do not edit the source LAS files.
 - Record the observed point count, dimensions, semantic values and positive
   `treeID` count before running a method.

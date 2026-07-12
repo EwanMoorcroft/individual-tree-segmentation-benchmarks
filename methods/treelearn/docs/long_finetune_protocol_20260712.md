@@ -19,7 +19,9 @@ pretraining followed by fine-tuning on their L1W benchmark.
 ## Frozen data and budget
 
 - exact relative-path mapping from the supplied `data_split_metadata.csv`;
-- supplied boundary locked to 21 development and 11 held-out test plots;
+- full supplied catalogue locked to 56 development and 26 test entries;
+- local 32-plot benchmark locked to the exact-path 21-development/11-test
+  subset used by every completed method;
 - split-metadata SHA-256 rechecked at preparation and every downstream stage;
 - held-out test point-cloud files are not opened by this route;
 - seed-42 split: 16 tuning-training and five validation plots;
@@ -30,9 +32,10 @@ pretraining followed by fine-tuning on their L1W benchmark.
 - checkpoints at epochs 7, 14, 21, 28 and 35.
 
 The supplied metadata defines the `dev`/`test` boundary but does not define
-training and validation roles inside `dev`. The seed-42 16/5 subdivision is
-therefore made only within the 21 supplied `dev` rows; no supplied `test` row
-can enter tuning or validation.
+training and validation roles inside `dev`. Every one of the 21 locally
+available development paths must be an exact member of the 56 metadata rows
+marked `dev`. The seed-42 16/5 subdivision is made only within those 21 paths;
+no metadata row marked `test` can enter tuning or validation.
 
 The 35-epoch headline matches the completed SegmentAnyTree fine-tune. Epochs
 are not treated as equal compute across architectures, so examples, batch size
@@ -72,7 +75,7 @@ retained control file is size- and SHA-256-inventoried.
 
 ## Evaluation contract
 
-Future primary comparison uses all 11 supplied test plots under
+Future primary comparison uses all 11 locally available held-out test plots under
 `for_instance_pointwise_v1`: source-row-aligned labels, union evaluation mask,
 IoU threshold 0.5 and maximum-cardinality one-to-one matching. Site summaries
 remain separate for CULS, NIBIO, RMIT, SCION and TUWIEN. Development scores

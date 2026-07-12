@@ -54,8 +54,10 @@ def verify_supplied_split(freeze: dict, development_manifest: Path) -> None:
     if metadata_sha256 != contract.get("sha256"):
         raise ValueError("FOR-instance supplied split metadata changed")
     if (
-        contract.get("development_rows") != 21
-        or contract.get("held_out_test_rows") != 11
+        contract.get("metadata_development_rows") != 56
+        or contract.get("metadata_test_rows") != 26
+        or contract.get("benchmark_development_rows") != 21
+        or contract.get("benchmark_expected_test_rows") != 11
         or contract.get("held_out_test_files_opened") is not False
     ):
         raise ValueError("Frozen FOR-instance supplied split contract is invalid")
@@ -79,8 +81,16 @@ def verify_supplied_split(freeze: dict, development_manifest: Path) -> None:
         if str(row.get("split", "")).strip() == "test"
     ]
     frozen_dev = sorted(str(row["relative_path"]) for row in source.get("plots", []))
-    if supplied_dev != frozen_dev or len(supplied_dev) != 21 or len(supplied_test) != 11:
-        raise ValueError("Frozen development paths differ from supplied FOR-instance split")
+    if (
+        len(supplied_dev) != 56
+        or len(set(supplied_dev)) != 56
+        or len(supplied_test) != 26
+        or len(set(supplied_test)) != 26
+        or set(supplied_dev) & set(supplied_test)
+    ):
+        raise ValueError("FOR-instance supplied split metadata catalogue is invalid")
+    if len(frozen_dev) != 21 or not set(frozen_dev).issubset(supplied_dev):
+        raise ValueError("Frozen development paths are not an exact subset of supplied dev rows")
     if any(
         row.get("split") != "dev"
         or row.get("split_metadata_sha256") != metadata_sha256

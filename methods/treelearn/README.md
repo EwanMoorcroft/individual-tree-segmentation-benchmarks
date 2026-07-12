@@ -74,11 +74,12 @@ freezes the exact 21 locally available paths identified as `dev` in
 Every input LAS must contain `treeID` and `classification` dimensions. The
 manifest records each input hash, point count, reference-tree count and split
 metadata hash before the array is submitted. The long route re-hashes that
-metadata and requires exact path equality with all 21 `dev` rows plus an
-unchanged count of 11 `test` rows at preparation and every downstream stage;
-it reads no held-out test point-cloud file. Because the supplied metadata has
-no train/validation roles within `dev`, the frozen seed-42 16/5 subdivision is
-drawn solely from those 21 supplied `dev` rows.
+metadata and verifies the complete catalogue of 56 `dev` and 26 `test` rows.
+It then requires every path in the local 21-plot development subset to be an
+exact member of the metadata's `dev` rows at preparation and every downstream
+stage; it reads no held-out test point-cloud file. Because the supplied
+metadata has no train/validation roles within `dev`, the frozen seed-42 16/5
+subdivision is drawn solely from that local development subset.
 
 Tree material follows the shared FOR-instance protocol:
 

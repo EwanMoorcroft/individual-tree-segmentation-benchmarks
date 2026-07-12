@@ -93,33 +93,9 @@ echo "plot=CULS/plot_1_annotated.las"
 echo "success_criteria=imports, checkpoint load, full-forest output, aligned adapted NPZ/LAS, positive predictions"
 echo "failure_indicators=missing env/repo/checkpoint, CUDA/spconv import failure, OOM, missing output, row mismatch, zero positive predictions"
 
-python - "$TREELEARN_REPO" <<'PY'
-from pathlib import Path
-import sys
-import spconv
-import torch
-import tree_learn
-
-repo = Path(sys.argv[1]).resolve()
-package = Path(tree_learn.__file__).resolve()
-print(f"torch={torch.__version__}")
-print(f"python={sys.version.split()[0]}")
-print(f"torch_cuda={torch.version.cuda}")
-print(f"cuda_available={torch.cuda.is_available()}")
-print(f"cuda_device_count={torch.cuda.device_count()}")
-print(f"spconv={getattr(spconv, '__version__', 'unknown')}")
-print(f"tree_learn={package}")
-if not torch.cuda.is_available():
-    raise SystemExit("CUDA is not available in the active TreeLearn environment.")
-if sys.version_info[:2] != (3, 10):
-    raise SystemExit(f"Expected Python 3.10, found {sys.version.split()[0]}")
-if torch.__version__.split("+")[0] != "2.0.0":
-    raise SystemExit(f"Expected PyTorch 2.0.0, found {torch.__version__}")
-if torch.version.cuda != "11.8":
-    raise SystemExit(f"Expected PyTorch CUDA 11.8, found {torch.version.cuda}")
-if not package.is_relative_to(repo):
-    raise SystemExit(f"tree_learn imported from {package}, not pinned repo {repo}")
-PY
+python methods/treelearn/scripts/validate_treelearn_environment.py \
+  --treelearn-repo "$TREELEARN_REPO" \
+  --require-cuda
 
 python methods/treelearn/scripts/run_for_instance_one_plot_smoke.py \
   --config methods/treelearn/configs/for_instance_one_plot_smoke.yml \

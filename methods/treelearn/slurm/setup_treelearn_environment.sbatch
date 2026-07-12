@@ -61,8 +61,16 @@ elif [[ -e "$TREELEARN_ENV" ]]; then
     echo "Set TREELEARN_SETUP_RESUME_PARTIAL=1 to resume the idempotent installation."
     exit 1
   fi
-  INSTALL_ENV=1
-  echo "resuming_partial_treelearn_env=$TREELEARN_ENV"
+  if "$TREELEARN_ENV/bin/python" \
+    methods/treelearn/scripts/validate_treelearn_environment.py \
+    --treelearn-repo "$TREELEARN_REPO" \
+    --require-cuda; then
+    INSTALL_ENV=0
+    echo "reusing_complete_unmarked_treelearn_env=$TREELEARN_ENV"
+  else
+    INSTALL_ENV=1
+    echo "resuming_partial_treelearn_env=$TREELEARN_ENV"
+  fi
 else
   mkdir -p "$(dirname "$TREELEARN_ENV")"
   conda create -p "$TREELEARN_ENV" python=3.10 -y
@@ -94,9 +102,10 @@ fi
 
 echo "$TREELEARN_CHECKPOINT_MD5  $TREELEARN_CHECKPOINT" | md5sum --check --status
 
-"$TREELEARN_ENV/bin/python" -c \
-  'import pathlib, sys, open3d, spconv, torch, tree_learn; repo=pathlib.Path(sys.argv[1]).resolve(); package=pathlib.Path(tree_learn.__file__).resolve(); assert sys.version_info[:2] == (3, 10); assert torch.__version__.split("+")[0] == "2.0.0"; assert torch.version.cuda == "11.8"; assert torch.cuda.is_available(); assert package.is_relative_to(repo); print("python_treelearn={}".format(package)); print("torch={}".format(torch.__version__)); print("cuda={}".format(torch.version.cuda)); print("spconv={}".format(getattr(spconv, "__version__", "unknown"))); print("open3d={}".format(open3d.__version__))' \
-  "$TREELEARN_REPO"
+"$TREELEARN_ENV/bin/python" \
+  methods/treelearn/scripts/validate_treelearn_environment.py \
+  --treelearn-repo "$TREELEARN_REPO" \
+  --require-cuda
 
 test -z "$(git -C "$TREELEARN_REPO" status --porcelain)"
 touch "$ENV_MARKER"

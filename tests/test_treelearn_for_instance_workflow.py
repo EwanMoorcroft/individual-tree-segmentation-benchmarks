@@ -20,6 +20,9 @@ SCRIPT_PATH = (
     ROOT / "methods/treelearn/scripts/evaluate_for_instance_one_plot_smoke.py"
 )
 RUNNER_PATH = ROOT / "methods/treelearn/scripts/run_for_instance_one_plot_smoke.py"
+ENVIRONMENT_VALIDATOR_PATH = (
+    ROOT / "methods/treelearn/scripts/validate_treelearn_environment.py"
+)
 
 
 def load_evaluator():
@@ -33,6 +36,17 @@ def load_evaluator():
 
 def load_runner():
     spec = importlib.util.spec_from_file_location("treelearn_smoke_runner", RUNNER_PATH)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_environment_validator():
+    spec = importlib.util.spec_from_file_location(
+        "treelearn_environment_validator", ENVIRONMENT_VALIDATOR_PATH
+    )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -452,6 +466,24 @@ def test_treelearn_coordinate_alignment_gate_is_strict() -> None:
         runner.validate_row_alignment(0.005001, 0.005)
 
 
+def test_treelearn_namespace_package_location_uses_search_locations(
+    tmp_path: Path,
+) -> None:
+    validator = load_environment_validator()
+    repo = tmp_path / "TreeLearn"
+    package = repo / "tree_learn"
+    package.mkdir(parents=True)
+
+    locations = validator.validate_package_locations(repo, [str(package)])
+
+    assert locations == [package.resolve()]
+    with pytest.raises(ValueError, match="not under pinned repo"):
+        validator.validate_package_locations(
+            repo,
+            [str(tmp_path / "another_checkout/tree_learn")],
+        )
+
+
 def test_treelearn_checkpoint_identity_is_not_self_derived(tmp_path: Path) -> None:
     runner = load_runner()
     checkpoint = tmp_path / "checkpoint.pth"
@@ -626,6 +658,7 @@ def test_treelearn_slurm_chain_is_guarded_and_development_only() -> None:
     setup = (ROOT / scripts["setup"]).read_text(encoding="utf-8")
     inference = (ROOT / scripts["inference"]).read_text(encoding="utf-8")
     runner = RUNNER_PATH.read_text(encoding="utf-8")
+    validator = ENVIRONMENT_VALIDATOR_PATH.read_text(encoding="utf-8")
     evaluation = (ROOT / scripts["evaluation"]).read_text(encoding="utf-8")
     submitter = (ROOT / scripts["submitter"]).read_text(encoding="utf-8")
     monitor = (ROOT / scripts["monitor"]).read_text(encoding="utf-8")
@@ -635,14 +668,18 @@ def test_treelearn_slurm_chain_is_guarded_and_development_only() -> None:
     assert "56a3d78f689ae7f1190906b975700311" in setup
     assert ".treelearn_setup_complete" in setup
     assert "TREELEARN_SETUP_RESUME_PARTIAL" in setup
+    assert "reusing_complete_unmarked_treelearn_env" in setup
+    assert "validate_treelearn_environment.py" in setup
     assert "conda env remove" not in setup
     assert "--untracked-files=no" not in setup
     assert "TREELEARN_RUN_ID" in inference
     assert "TREELEARN_EXPECTED_CHECKPOINT_MD5" in inference
-    assert "package.is_relative_to(repo)" in inference
-    assert "sys.version_info[:2] != (3, 10)" in inference
-    assert 'torch.__version__.split("+")[0] != "2.0.0"' in inference
-    assert 'torch.version.cuda != "11.8"' in inference
+    assert "validate_treelearn_environment.py" in inference
+    assert "tree_learn.__file__" not in inference
+    assert "submodule_search_locations" in validator
+    assert "sys.version_info[:2] != EXPECTED_PYTHON" in validator
+    assert 'torch.__version__.split("+")[0] != EXPECTED_TORCH' in validator
+    assert "torch.version.cuda != EXPECTED_TORCH_CUDA" in validator
     assert "TREELEARN_EXPECTED_BENCHMARK_COMMIT" in inference
     assert 'conda activate "$TREELEARN_ENV"' in inference
     assert '$TREELEARN_ENV/bin/activate' not in inference
@@ -653,6 +690,7 @@ def test_treelearn_slurm_chain_is_guarded_and_development_only() -> None:
     assert "PARTIAL_ROOT" in evaluation
     assert 'mv "$PARTIAL_ROOT" "$TABLE_ROOT"' in evaluation
     assert "afterok:$INFERENCE_JOB" in submitter
+    assert "validate_treelearn_environment.py" in submitter
     assert "--kill-on-invalid-dep=yes" in submitter
     assert "TREELEARN_BENCHMARK_COMMIT" in submitter
     assert "56a3d78f689ae7f1190906b975700311" in submitter

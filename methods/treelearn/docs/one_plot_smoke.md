@@ -68,6 +68,10 @@ TREELEARN_SETUP_RESUME_PARTIAL=1 \
   sbatch methods/treelearn/slurm/setup_treelearn_environment.sbatch
 ```
 
+The resume first validates the existing prefix. If installation had already
+completed, it skips package installation and only finishes checkpoint,
+provenance and marker validation.
+
 Setup is expected to take approximately 30-90 minutes. Check it without
 streaming logs:
 

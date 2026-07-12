@@ -40,17 +40,9 @@ if [[ "$CHECKPOINT_MD5" != "$EXPECTED_CHECKPOINT_MD5" ]]; then
 fi
 CHECKPOINT_SHA256=$(sha256sum "$TREELEARN_CHECKPOINT" | cut -d ' ' -f 1)
 
-"$TREELEARN_ENV/bin/python" - "$TREELEARN_REPO" <<'PY'
-from pathlib import Path
-import sys
-import tree_learn
-
-repo = Path(sys.argv[1]).resolve()
-package = Path(tree_learn.__file__).resolve()
-if not package.is_relative_to(repo):
-    raise SystemExit(f"tree_learn imported from {package}, not pinned repo {repo}")
-print(f"treelearn_package={package}")
-PY
+"$TREELEARN_ENV/bin/python" \
+  methods/treelearn/scripts/validate_treelearn_environment.py \
+  --treelearn-repo "$TREELEARN_REPO"
 
 STAMP=$(date -u +%Y%m%d_%H%M%S)
 RUN_ID="${TREELEARN_RUN_ID:-treelearn_for-instance_published_pretrained_dev_smoke_$STAMP}"

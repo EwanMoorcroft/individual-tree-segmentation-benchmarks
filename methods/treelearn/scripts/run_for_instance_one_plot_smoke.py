@@ -480,7 +480,10 @@ def build_metadata(
         "dataset_split": plot_contract["split"],
         "held_out_test_accessed": False,
         "run_id": args.run_id,
-        "training_mode": config["method"]["checkpoint"]["training_mode"],
+        "training_mode": (
+            getattr(args, "training_mode", None)
+            or config["method"]["checkpoint"]["training_mode"]
+        ),
         "status": status,
         "return_code": return_code,
         "elapsed_seconds": time.perf_counter() - started,
@@ -604,6 +607,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset-root")
     parser.add_argument("--treelearn-repo")
     parser.add_argument("--checkpoint")
+    parser.add_argument(
+        "--training-mode",
+        choices=("published_pretrained", "fine_tuned_on_dev"),
+    )
     parser.add_argument("--runtime-root")
     parser.add_argument("--predictions-root")
     parser.add_argument("--metadata-root")

@@ -73,6 +73,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset-root", required=True)
     parser.add_argument("--treelearn-repo", required=True)
     parser.add_argument("--checkpoint", required=True)
+    parser.add_argument(
+        "--training-mode",
+        choices=("published_pretrained", "fine_tuned_on_dev"),
+        default="published_pretrained",
+    )
     return parser.parse_args()
 
 
@@ -98,6 +103,8 @@ def main() -> int:
             args.treelearn_repo,
             "--checkpoint",
             args.checkpoint,
+            "--training-mode",
+            args.training_mode,
             "--run-id",
             args.run_id,
             "--relative-path",

@@ -64,3 +64,15 @@ def test_finetune_submission_has_smoke_gate_and_no_test_route() -> None:
     assert "TREELEARN_FINETUNE_DEV_CONFIRMED" in submitter
     assert "No held-out test job was submitted" in submitter
     assert "checkpoint_ready" in monitor
+
+
+def test_finetune_validation_is_five_plot_test_locked() -> None:
+    submitter = (ROOT / "methods/treelearn/slurm/submit_for_instance_finetune_validation.sh").read_text()
+    task = (ROOT / "methods/treelearn/slurm/run_for_instance_finetune_validation.sbatch").read_text()
+    summary = (ROOT / "methods/treelearn/scripts/summarise_for_instance_finetune_validation.py").read_text()
+    assert "--array=0,3,7,8,20%2" in submitter
+    assert "--training-mode fine_tuned_on_dev" in task
+    assert "held_out_test_accessed=false" in task
+    assert 'len(rows) != 5' in summary
+    assert '"retention_status": "retention_verified"' in summary
+    assert "No held-out test job was submitted" in submitter

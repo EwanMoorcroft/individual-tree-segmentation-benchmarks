@@ -490,11 +490,18 @@ def main() -> int:
     ):
         raise ValueError("TreeLearn inference metadata does not freeze benchmark code")
     checkpoint = inference_metadata.get("checkpoint", {})
-    if (
-        checkpoint.get("md5") != EXPECTED_CHECKPOINT_MD5
-        or checkpoint.get("source_md5") != EXPECTED_CHECKPOINT_MD5
-    ):
-        raise ValueError("TreeLearn inference metadata checkpoint identity does not match")
+    training_mode = inference_metadata.get("training_mode", "published_pretrained")
+    if checkpoint.get("source_md5") != EXPECTED_CHECKPOINT_MD5:
+        raise ValueError("TreeLearn source checkpoint identity does not match")
+    if training_mode == "published_pretrained":
+        if checkpoint.get("md5") != EXPECTED_CHECKPOINT_MD5:
+            raise ValueError("TreeLearn released checkpoint identity does not match")
+    elif training_mode == "fine_tuned_on_dev":
+        trained_checkpoint = Path(checkpoint.get("path", "")).expanduser().resolve()
+        if not trained_checkpoint.is_file() or sha256(trained_checkpoint) != checkpoint.get("sha256"):
+            raise ValueError("TreeLearn fine-tuned checkpoint identity does not match")
+    else:
+        raise ValueError(f"Unsupported TreeLearn training mode: {training_mode!r}")
     retained_entries = inference_metadata.get("retention", {}).get("files", [])
     matching_entries = [
         entry

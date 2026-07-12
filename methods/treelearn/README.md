@@ -36,6 +36,9 @@ The fine-tuning route starts from the released checkpoint, freezes a seed-42
 runs a one-epoch smoke, then a fixed 100-epoch run. Training is limited to
 23.5 hours. It submits no test, inference or evaluation job; the resulting
 checkpoint requires separate development validation before any test route.
+`slurm/submit_for_instance_finetune_validation.sh` performs that validation on
+the frozen five-plot subset, verifies retained raw and adapted predictions,
+and writes overall and site summaries. It does not submit held-out test work.
 
 ## Input Requirements
 

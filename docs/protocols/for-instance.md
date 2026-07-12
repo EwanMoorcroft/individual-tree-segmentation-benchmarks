@@ -128,6 +128,12 @@ label and one predicted instance label for every source point.
 - Record the Barkla-relative prediction directory and any harmonised prediction
   artefact paths in run metadata. Local copies under `local_outputs/` are
   backups only and must not be the only retained prediction source.
+- A completed run must inventory retained prediction files with byte sizes and
+  SHA-256 values where the method workflow supports hashing. The final gate
+  must fail when an expected prediction artefact is missing or has changed.
+- Add every accepted, rejected or diagnostic result used in reporting to
+  `outputs/sat_treex_benchmark_metrics/for_instance_prediction_retention_registry.csv`.
+  Retries use new run-specific roots and must not delete earlier evidence.
 - Record every ignored or unassigned prediction label.
 
 Methods that naturally output one file per tree must map those predictions
@@ -249,6 +255,8 @@ For each dataset-method combination, publish:
 - evaluator version and metric definition;
 - synthetic tests;
 - public-safe per-plot and aggregate tables after validation;
+- a prediction-retention registry row that identifies the reusable off-Git
+  prediction set;
 - failures, deviations and known limitations.
 
 Raw datasets, checkpoints, predictions, full logs and machine-specific

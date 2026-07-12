@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import csv
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -79,3 +81,64 @@ def test_finetune_validation_is_five_plot_test_locked() -> None:
     assert 'len(rows) != 5' in summary
     assert '"retention_status": "retention_verified"' in summary
     assert "No held-out test job was submitted" in submitter
+
+
+def test_completed_finetune_result_is_rejected_and_retained() -> None:
+    result_path = ROOT / "methods/treelearn/examples/treelearn_finetune_validation_results_20260712.csv"
+    with result_path.open(encoding="utf-8", newline="") as handle:
+        result = next(csv.DictReader(handle))
+    tp = int(result["true_positives"])
+    fp = int(result["false_positives"])
+    fn = int(result["false_negatives"])
+    assert result["evaluation_protocol"] == "for_instance_pointwise_v1"
+    assert result["matching_policy"] == "maximum_cardinality_one_to_one"
+    assert result["dataset_split"] == "dev_validation"
+    assert result["held_out_test_accessed"] == "false"
+    assert result["retention_status"] == "retention_verified"
+    assert result["result_status"] == "rejected_validation_regression"
+    assert int(result["retained_prediction_files"]) == 25
+    assert int(result["retained_prediction_bytes"]) == 2_704_552_488
+    assert math.isclose(float(result["micro_precision"]), tp / (tp + fp))
+    assert math.isclose(float(result["micro_recall"]), tp / (tp + fn))
+    assert math.isclose(float(result["micro_f1"]), 2 * tp / (2 * tp + fp + fn))
+    assert float(result["mean_plot_f1_delta"]) < 0
+    assert float(result["micro_f1_delta"]) < 0
+
+
+def test_cross_method_results_separate_comparable_groups_and_retain_predictions() -> None:
+    results_path = ROOT / "outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_results.csv"
+    with results_path.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 6
+    test_rows = [row for row in rows if row["comparable_group"] == "held_out_test_primary"]
+    assert {(row["method_slug"], row["training_mode"]) for row in test_rows} == {
+        ("segmentanytree", "published_pretrained"),
+        ("segmentanytree", "fine_tuned_on_dev"),
+        ("treex", "external_training_only"),
+    }
+    assert {row["evaluation_split"] for row in test_rows} == {"test"}
+    assert {int(row["plots"]) for row in test_rows} == {11}
+    assert {int(row["reference_instances"]) for row in test_rows} == {323}
+    treelearn_validation = [
+        row for row in rows
+        if row["comparable_group"] == "treelearn_matched_internal_validation"
+    ]
+    assert len(treelearn_validation) == 2
+    assert {row["evaluation_split"] for row in treelearn_validation} == {"dev_validation"}
+    assert {int(row["plots"]) for row in treelearn_validation} == {5}
+    assert {int(row["reference_instances"]) for row in treelearn_validation} == {206}
+    assert all(row["held_out_test_accessed"] == "false" for row in treelearn_validation)
+    assert all(row["evaluation_protocol"] == "for_instance_pointwise_v1" for row in rows)
+
+    retention_path = ROOT / "outputs/sat_treex_benchmark_metrics/for_instance_prediction_retention_registry.csv"
+    with retention_path.open(encoding="utf-8", newline="") as handle:
+        retention = list(csv.DictReader(handle))
+    retained = {(row["method_slug"], row["variant"]): row for row in retention}
+    for key in (
+        ("treex", "external_training_only"),
+        ("segmentanytree", "published_pretrained"),
+        ("segmentanytree", "fine_tuned_on_dev"),
+        ("treelearn", "published_pretrained"),
+        ("treelearn", "fine_tuned_checkpoint_sweep"),
+    ):
+        assert retained[key]["future_metrics_without_inference"] == "true"

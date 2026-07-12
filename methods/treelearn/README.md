@@ -142,7 +142,8 @@ prediction-size filtering or threshold selection is permitted.
 
 ## Known Limitations
 
-- The route does not train, fine-tune or select a checkpoint.
+- The published route and fine-tuned route have development-only results; no
+  TreeLearn held-out test result exists.
 - The accepted smoke score represents one CULS development plot only and is
   not an overall or cross-site estimate.
 - The setup follows upstream dependency pins, but upstream leaves some pip
@@ -167,4 +168,9 @@ recall `0.661710`). CULS has the highest site mean F1 (`0.715010`) and NIBIO
 the lowest (`0.446965`). All 105 raw and aligned prediction artefacts, totalling
 9,645,423,654 bytes, passed retention verification. See the
 [`completed development result`](docs/development_results_20260712.md). No
-held-out test result exists.
+held-out test result exists. The separate fine-tuning run and ten-checkpoint
+validation sweep also completed. The best fine-tuned mean plot F1 was
+`0.490504` at epoch 70, below the matched published baseline `0.558769`; the
+fine-tuned route is rejected. All 250 raw and aligned checkpoint-sweep
+prediction artefacts passed retention verification. See the
+[`fine-tuning validation result`](docs/finetune_validation_results_20260712.md).

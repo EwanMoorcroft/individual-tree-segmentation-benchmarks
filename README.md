@@ -152,8 +152,10 @@ TUWIEN and RMIT as the weakest domain-transfer cases.
 
 The consolidated public workbook is
 [`outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx`](outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx).
-Its source tables and metric definitions are the CSVs and protocol documents
-linked above; raw predictions are not embedded in the workbook.
+It includes TreeX, both completed SegmentAnyTree target variants, the published
+TreeLearn development result and the rejected TreeLearn fine-tuning validation
+result. Its source tables and metric definitions are the CSVs and protocol
+documents linked above; raw predictions are not embedded in the workbook.
 
 ## Barkla environment
 

@@ -1,0 +1,44 @@
+{
+  "benchmark": "for_instance_treelearn",
+  "checkpoint_sweep_epochs": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+  "completed_date_utc": "2026-07-12",
+  "dataset_split": "dev_validation",
+  "evaluation_protocol": "for_instance_pointwise_v1",
+  "fine_tuned_checkpoint_sha256_epoch_100": "fa7aea9142ecdfab383298410986214285c99936b006b829809ee829f0d71acd",
+  "held_out_test_accessed": false,
+  "matched_published_pretrained": {
+    "false_negatives": 62,
+    "false_positives": 176,
+    "mean_plot_f1": 0.558769,
+    "micro_f1": 0.547529,
+    "true_positives": 144
+  },
+  "result_status": "rejected_validation_regression",
+  "selected_for_test": false,
+  "sweep_best_mean_plot_f1": {
+    "checkpoint_sha256": "e5a9e36163998ce7d2e6b30a2e7beb294159b0e3709354c15694c0f8079b7a16",
+    "checkpoint_epoch": 70,
+    "false_negatives": 72,
+    "false_positives": 296,
+    "mean_plot_f1": 0.4905044251328631,
+    "micro_f1": 0.42138364779874216,
+    "micro_precision": 0.3116279069767442,
+    "micro_recall": 0.6504854368932039,
+    "predicted_instances": 430,
+    "reference_instances": 206,
+    "retained_prediction_bytes": 2704552488,
+    "retained_prediction_files": 25,
+    "run_id": "treelearn_for-instance_fine_tuned_on_dev_20260712_164057_epoch_70_validation_20260712_203249",
+    "true_positives": 134
+  },
+  "training_run_id": "treelearn_for-instance_fine_tuned_on_dev_20260712_164057",
+  "prediction_retention": {
+    "artefacts_per_checkpoint": 25,
+    "checkpoints_verified": 10,
+    "minimum_verified_artefacts": 250,
+    "status": "retention_verified",
+    "total_size_bytes": "not_publicly_aggregated"
+  },
+  "source": "Barkla validation summaries supplied after all checkpoint gates completed",
+  "test_result_exists": false
+}

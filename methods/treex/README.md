@@ -105,4 +105,8 @@ The local backup was audited on 6 July 2026 and contains one `.npz` and one
 part of the public repository. Future metrics should be derived from these
 retained aligned predictions without rerunning held-out inference.
 
+Run `scripts/verify_treex_prediction_retention.py` after transfers or storage
+maintenance. It validates and hashes the frozen 64 final prediction files;
+pilot files are ignored and never substituted for a required plot pair.
+
 The current status is recorded in [`../../BENCHMARKS.md`](../../BENCHMARKS.md).

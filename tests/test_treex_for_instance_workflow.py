@@ -73,6 +73,7 @@ def test_treex_required_files_are_present_and_tracked() -> None:
         "methods/treex/scripts/create_treex_split_summary.py",
         "methods/treex/scripts/create_treex_final_summaries.py",
         "methods/treex/scripts/rebuild_treex_public_results.py",
+        "methods/treex/scripts/verify_treex_prediction_retention.py",
         "methods/treex/scripts/rsync_treex_predictions_from_barkla.sh",
         "methods/treex/scripts/rsync_treex_public_results_from_barkla.sh",
         "methods/treex/slurm/run_treex_for_instance_dev_array.sbatch",
@@ -464,3 +465,32 @@ def test_treex_public_examples_exclude_machine_paths_and_intermediates() -> None
     assert "/Users/" not in published
     assert "prediction_npz" not in published
     assert not any("pilot" in path.name for path in examples.iterdir())
+
+
+def test_treex_retention_verifier_hashes_exact_frozen_pairs(tmp_path: Path) -> None:
+    verifier = load_script(
+        "methods/treex/scripts/verify_treex_prediction_retention.py",
+        "treex_retention_verifier",
+    )
+    summary = tmp_path / "runs.csv"
+    with summary.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["plot_id", "split"])
+        writer.writeheader()
+        for index in range(32):
+            split = "dev" if index < 21 else "test"
+            plot_id = f"SITE/plot_{index}"
+            writer.writerow({"plot_id": plot_id, "split": split})
+            split_dir = "for_instance" if split == "dev" else "for_instance_test"
+            plot_dir = tmp_path / "predictions" / split_dir / f"SITE_plot_{index}"
+            plot_dir.mkdir(parents=True)
+            for suffix in (".npz", ".las"):
+                (plot_dir / f"plot_{index}_treex_predictions{suffix}").write_bytes(
+                    f"{plot_id}{suffix}".encode()
+                )
+
+    payload = verifier.verify(summary, tmp_path / "predictions")
+
+    assert payload["status"] == "retention_verified"
+    assert payload["verified_prediction_files"] == 64
+    assert all(len(row["sha256"]) == 64 for row in payload["files"])
+    assert all(not Path(row["relative_path"]).is_absolute() for row in payload["files"])

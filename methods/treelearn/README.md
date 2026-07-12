@@ -4,8 +4,10 @@
 
 TreeLearn is a deep learning method for individual-tree segmentation in forest
 point clouds. The repository has completed released-weight development smoke
-and 21-plot development evaluation routes. It also has a separate guarded,
-development-only fine-tuning route. None can submit held-out test data.
+and 21-plot development evaluation routes. It also has two guarded,
+development-only fine-tuning routes. The second guarded route starts from an
+authors-released checkpoint whose stated training data excludes
+FOR-instance. None can submit held-out test data.
 
 ## Upstream Repository And Citation
 
@@ -18,12 +20,25 @@ trees from ground-based LiDAR forest point clouds.
 
 ## Training Mode Support
 
-Both routes use `published_pretrained`: they load the upstream default
+The completed development routes use `published_pretrained`: they load the upstream default
 `model_weights_20241213.pth` checkpoint and perform inference only. The frozen
 checkpoint has MD5 `56a3d78f689ae7f1190906b975700311` and SHA-256
 `5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb`.
 Each submission rechecks the checkpoint and records its identity in run
 metadata.
+
+The TreeLearn paper and authors' model documentation state that this December
+2024 checkpoint descends from a model fine-tuned with FOR-instance validation
+and test data. Its completed development result therefore remains a published
+checkpoint reproduction with documented training overlap, not a leakage-free
+cross-method baseline.
+
+The new long route instead starts from authors-released
+`model_weights_finetuned.pth`, persistent ID
+`doi:10.25625/VPMPID/8CIIW0`, MD5
+`106a80de2991c5f23484a3f9d03e3b16`. The authors describe this checkpoint as
+fine-tuned on their L1W benchmark after external noisy-label pretraining; its
+stated training data does not include FOR-instance.
 
 The candidate full benchmark modes remain:
 
@@ -31,7 +46,7 @@ The candidate full benchmark modes remain:
 - `fine_tuned_on_dev`
 - `retrained_from_dev`
 
-The fine-tuning route starts from the released checkpoint, freezes a seed-42
+The completed short fine-tuning route starts from the December 2024 checkpoint, freezes a seed-42
 16/5 split of the 21 development plots, generates 512 bounded random crops,
 runs a one-epoch smoke, then a fixed 100-epoch run. Training is limited to
 23.5 hours. It submits no test, inference or evaluation job; the resulting
@@ -40,6 +55,17 @@ checkpoint requires separate development validation before any test route.
 the frozen five-plot subset, verifies retained raw and adapted predictions,
 and writes overall and site summaries. It does not submit held-out test work.
 
+The replacement long route uses the same fixed seed-42 16/5 plot split and
+35-epoch headline used by the completed SegmentAnyTree fine-tune. TreeLearn's
+budget is additionally frozen as 714 examples per epoch, batch size 2, 24,990
+examples and 12,495 optimizer steps. Eight independent one-GPU trials use one
+fixed full-model learning rate (`1e-5`) and eight seeds. Checkpoints at epochs
+7, 14, 21, 28 and 35 are evaluated on the same five validation plots for
+diagnostics. The comparable candidate is preregistered as seed 42 at epoch 35;
+other seeds and earlier checkpoints cannot select it. This checkpoint, trained
+only on the fixed 16 plots, is frozen before any held-out access. See the
+[`long fine-tuning protocol`](docs/long_finetune_protocol_20260712.md).
+
 ## Input Requirements
 
 The accepted smoke uses `CULS/plot_1_annotated.las`. The full development route
@@ -47,7 +73,12 @@ freezes the exact 21 locally available paths identified as `dev` in
 `data_split_metadata.csv`: CULS 2, NIBIO 14, RMIT 1, SCION 3 and TUWIEN 1.
 Every input LAS must contain `treeID` and `classification` dimensions. The
 manifest records each input hash, point count, reference-tree count and split
-metadata hash before the array is submitted.
+metadata hash before the array is submitted. The long route re-hashes that
+metadata and requires exact path equality with all 21 `dev` rows plus an
+unchanged count of 11 `test` rows at preparation and every downstream stage;
+it reads no held-out test point-cloud file. Because the supplied metadata has
+no train/validation roles within `dev`, the frozen seed-42 16/5 subdivision is
+drawn solely from those 21 supplied `dev` rows.
 
 Tree material follows the shared FOR-instance protocol:
 
@@ -131,6 +162,16 @@ See the
 [`full development runbook`](docs/development_evaluation.md). No held-out test
 job is part of the dependency chain.
 
+Submit the guarded clean-checkpoint search and selection through
+[`slurm/submit_for_instance_finetune_long.sh`](slurm/submit_for_instance_finetune_long.sh).
+Its training and validation arrays allow eight concurrent one-GPU tasks on
+`gpu-l40s`, matching four two-GPU nodes. The compact monitor is
+[`slurm/monitor_for_instance_finetune_long.sh`](slurm/monitor_for_instance_finetune_long.sh).
+The chain downloads and verifies the exact clean checkpoint when absent,
+hashes generated crop banks, retains and verifies all 1,025 validation
+prediction artefacts, freezes the selected epoch-35 setting and stops before
+test.
+
 ## Evaluation Route
 
 Evaluation uses `for_instance_pointwise_v1`, the union of reference-tree and
@@ -142,6 +183,8 @@ prediction-size filtering or threshold selection is permitted.
 
 ## Known Limitations
 
+- The completed default-checkpoint route has documented FOR-instance
+  validation/test training overlap and is excluded from leakage-free ranking.
 - The published route and fine-tuned route have development-only results; no
   TreeLearn held-out test result exists.
 - The accepted smoke score represents one CULS development plot only and is

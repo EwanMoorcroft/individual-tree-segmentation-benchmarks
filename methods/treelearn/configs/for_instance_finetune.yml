@@ -28,6 +28,9 @@ split:
 
 training:
   initialization: published_treelearn_checkpoint
+  initialization_checkpoint_md5: "56a3d78f689ae7f1190906b975700311"
+  inherited_test_overlap_status: "documented_for_instance_validation_test_training_overlap"
+  eligible_for_leakage_free_primary_ranking: false
   random_crops: 512
   crop_size_m: 35
   epochs: 100

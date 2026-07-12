@@ -44,6 +44,9 @@ method:
     source_dataset_name: model_weights_20241213
     source_url: "https://data.goettingen-research-online.de/api/access/datafile/:persistentId?persistentId=doi:10.25625/VPMPID/IMHF3G"
     source_md5: "56a3d78f689ae7f1190906b975700311"
+    training_data_provenance: "Authors' diverse-data checkpoint subsequently fine-tuned on manually labelled data including FOR-instance validation/test"
+    released_weight_test_overlap_status: "documented_for_instance_validation_test_training_overlap; exact_plot_manifest_not_bundled"
+    eligible_for_leakage_free_primary_ranking: false
     sha256: "5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb"
     sha256_status: frozen_from_accepted_development_smoke
     note: "The accepted smoke metadata records the same official checkpoint MD5 and frozen SHA-256."

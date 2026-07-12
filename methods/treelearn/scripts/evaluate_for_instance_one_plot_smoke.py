@@ -34,6 +34,7 @@ IGNORED_INSTANCE_LABELS = {-1.0, 0.0}
 IOU_THRESHOLD = 0.5
 EXPECTED_UPSTREAM_COMMIT = "fd240ce7caa4c444fe3418aca454dc578bc557d4"
 EXPECTED_CHECKPOINT_MD5 = "56a3d78f689ae7f1190906b975700311"
+CLEAN_L1W_CHECKPOINT_MD5 = "106a80de2991c5f23484a3f9d03e3b16"
 
 MATCH_FIELDS = [
     "plot_id",
@@ -491,12 +492,20 @@ def main() -> int:
         raise ValueError("TreeLearn inference metadata does not freeze benchmark code")
     checkpoint = inference_metadata.get("checkpoint", {})
     training_mode = inference_metadata.get("training_mode", "published_pretrained")
-    if checkpoint.get("source_md5") != EXPECTED_CHECKPOINT_MD5:
-        raise ValueError("TreeLearn source checkpoint identity does not match")
     if training_mode == "published_pretrained":
-        if checkpoint.get("md5") != EXPECTED_CHECKPOINT_MD5:
+        if checkpoint.get("source_md5") not in {
+            EXPECTED_CHECKPOINT_MD5,
+            CLEAN_L1W_CHECKPOINT_MD5,
+        }:
+            raise ValueError("TreeLearn source checkpoint identity does not match")
+        if checkpoint.get("md5") != checkpoint.get("source_md5"):
             raise ValueError("TreeLearn released checkpoint identity does not match")
     elif training_mode == "fine_tuned_on_dev":
+        if checkpoint.get("source_md5") not in {
+            EXPECTED_CHECKPOINT_MD5,
+            CLEAN_L1W_CHECKPOINT_MD5,
+        }:
+            raise ValueError("TreeLearn fine-tune source checkpoint identity does not match")
         trained_checkpoint = Path(checkpoint.get("path", "")).expanduser().resolve()
         if not trained_checkpoint.is_file() or sha256(trained_checkpoint) != checkpoint.get("sha256"):
             raise ValueError("TreeLearn fine-tuned checkpoint identity does not match")

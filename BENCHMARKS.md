@@ -23,7 +23,7 @@ rows may use `pending` for run-specific fields until a run is scheduled.
 | for-instance | treex | treex_for_instance_exact_path_subset | external_training_only | harmonised_pointwise_test | Completed and frozen deterministic baseline; test mean plot F1 0.3831, micro F1 0.3627 | [`for_instance_benchmark.yml`](methods/treex/configs/for_instance_benchmark.yml); [`treex_split_summary.csv`](methods/treex/examples/treex_split_summary.csv) |
 | for-instance | tls2trees | tls2trees_for_instance_leaf_off_pilot | external_training_only | coordinate_fallback_leaf_off_pilot | Candidate compatibility test | [`for_instance_accuracy.yml`](methods/tls2trees/configs/for_instance_accuracy.yml); [`for_instance_pilot.md`](methods/tls2trees/docs/for_instance_pilot.md) |
 | for-instance | treelearn | treelearn_for-instance_published_pretrained_dev_smoke_20260712_135205 | published_pretrained | development_smoke_harmonised_pointwise | Accepted adapter diagnostic; one CULS development plot F1 0.7059 | [`accepted smoke`](methods/treelearn/examples/accepted_development_smoke_20260712.json); [`runbook`](methods/treelearn/docs/one_plot_smoke.md) |
-| for-instance | treelearn | treelearn_for-instance_published_pretrained_development_20260712_150030 | published_pretrained | full_development_harmonised_pointwise | Completed development diagnostic; mean plot F1 0.5156, micro F1 0.5108 | [`overall results`](methods/treelearn/examples/treelearn_completed_development_results_20260712.csv); [`site results`](methods/treelearn/examples/treelearn_completed_development_site_results_20260712.csv); [`result note`](methods/treelearn/docs/development_results_20260712.md) |
+| for-instance | treelearn | treelearn_for-instance_published_pretrained_development_20260712_150030 | published_pretrained | full_development_harmonised_pointwise | Completed published-checkpoint development diagnostic with documented FOR-instance training overlap; mean plot F1 0.5156, micro F1 0.5108; excluded from leakage-free ranking | [`overall results`](methods/treelearn/examples/treelearn_completed_development_results_20260712.csv); [`site results`](methods/treelearn/examples/treelearn_completed_development_site_results_20260712.csv); [`result note`](methods/treelearn/docs/development_results_20260712.md) |
 | for-instance | treelearn | treelearn_for-instance_fine_tuned_on_dev_20260712_164057 | fine_tuned_on_dev | internal_development_validation | Completed negative result; best checkpoint mean plot F1 0.4905 versus matched published baseline 0.5588; rejected before test | [`validation results`](methods/treelearn/examples/treelearn_finetune_validation_results_20260712.csv); [`result note`](methods/treelearn/docs/finetune_validation_results_20260712.md) |
 | for-instance | randlanet | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
 | for-instance | pointnetpp | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
@@ -56,11 +56,19 @@ authorised only the frozen 21-plot development route. That route subsequently
 completed with mean plot F1 `0.515571` and count-aggregated micro F1 `0.510760`.
 CULS has the highest site mean F1 (`0.715010`) and NIBIO the lowest
 (`0.446965`). All 105 prediction artefacts remain retained for future metrics.
+The December 2024 checkpoint has documented FOR-instance validation/test
+training overlap, so these values are a published-method reproduction and are
+excluded from leakage-free ranking.
 The separate development-only fine-tune evaluated ten retained checkpoints on
 the frozen five-plot validation subset. None exceeded the matched published
 baseline, so the fine-tuned route is rejected and was not submitted to the
 held-out test. Its 250 raw and aligned validation prediction artefacts remain
-hash-verified on Barkla. TreeLearn has no held-out test result.
+hash-verified on Barkla; it inherits the same checkpoint overlap. A guarded
+replacement starts from the authors-released L1W-fine-tuned checkpoint whose
+stated training data excludes FOR-instance, uses the fixed 16/5 development
+split and freezes an epoch-35 checkpoint trained on the 16 training plots.
+TreeLearn has no held-out test
+result.
 
 The permitted training mode values for completed or provisional runs are
 `published_pretrained`, `fine_tuned_on_dev`, `retrained_from_dev` and

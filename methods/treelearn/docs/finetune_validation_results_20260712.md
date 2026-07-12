@@ -5,6 +5,11 @@ the published TreeLearn checkpoint and used only the frozen FOR-instance
 development split. A seed-42 partition assigned 16 plots to training and five
 to internal validation. The held-out test split was not accessed.
 
+The initial December 2024 checkpoint has documented prior FOR-instance
+validation/test training exposure. The local run did not add test access, but
+its weights inherit that upstream overlap; this result is therefore a
+development diagnostic, not a leakage-free candidate.
+
 The fixed epoch-100 checkpoint obtained mean plot F1 `0.462298` and micro F1
 `0.421384` on the five validation plots. A retained checkpoint sweep evaluated
 epochs 10 through 100 on the same plots. Epoch 70 had the highest mean plot F1

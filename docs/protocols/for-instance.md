@@ -94,6 +94,15 @@ harmonised evaluator apply to every later method. Method-specific
 augmentations, architectures and optimisation schedules remain part of each
 method's documented reproduction rather than being forced to be identical.
 
+For the current SegmentAnyTree and TreeLearn development fine-tunes, the
+headline schedule is 35 epochs. Each method must also record examples per
+epoch, batch size, total examples and optimizer steps because an epoch does not
+represent equal work across architectures. TreeX is deterministic and has no
+optimizer or epoch count. Cross-method comparability is defined by the frozen
+development/test boundary, validation-only selection, one-time 11-plot test,
+point-aligned prediction contract and identical evaluator—not by hiding
+method-specific training exposure.
+
 ## Reference Definition
 
 The reference instance field is `treeID`.

@@ -2,9 +2,12 @@
   "benchmark": "for_instance_treelearn",
   "benchmark_commit": "1a66696be033816d7f776d7e1293340356b34452",
   "checkpoint": {
-    "filename": "model_weights_20241213.pth",
-    "md5": "56a3d78f689ae7f1190906b975700311",
-    "sha256": "5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb",
+        "filename": "model_weights_20241213.pth",
+        "md5": "56a3d78f689ae7f1190906b975700311",
+        "checkpoint_training_data_provenance": "Authors' diverse-data checkpoint subsequently fine-tuned on the same manually labelled data",
+        "released_weight_test_overlap_status": "documented_for_instance_validation_test_training_overlap; exact_plot_manifest_not_bundled",
+        "eligible_for_leakage_free_primary_ranking": false,
+        "sha256": "5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb",
     "training_mode": "published_pretrained"
   },
   "completed_date_utc": "2026-07-12",
@@ -32,7 +35,8 @@
     "expected": 21
   },
   "repeat_development_for_setting_selection_permitted": false,
-  "result_status": "completed_aligned_pointwise_development",
+    "result_status": "completed_aligned_pointwise_development",
+    "result_role": "published_method_reproduction_with_training_overlap",
   "result_table": "methods/treelearn/examples/treelearn_completed_development_results_20260712.csv",
   "retention": {
     "complete_development_prediction_set_retained": true,

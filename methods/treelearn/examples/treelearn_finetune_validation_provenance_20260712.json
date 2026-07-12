@@ -5,7 +5,10 @@
   "dataset_split": "dev_validation",
   "evaluation_protocol": "for_instance_pointwise_v1",
   "fine_tuned_checkpoint_sha256_epoch_100": "fa7aea9142ecdfab383298410986214285c99936b006b829809ee829f0d71acd",
-  "held_out_test_accessed": false,
+    "held_out_test_accessed": false,
+    "initial_checkpoint_md5": "56a3d78f689ae7f1190906b975700311",
+    "initial_checkpoint_overlap_status": "documented_for_instance_validation_test_training_overlap_inherited_by_local_finetune",
+    "eligible_for_leakage_free_primary_ranking": false,
   "matched_published_pretrained": {
     "false_negatives": 62,
     "false_positives": 176,

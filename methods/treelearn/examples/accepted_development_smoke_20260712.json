@@ -8,7 +8,9 @@
   "benchmark_commit": "6fda72efb311873bb2beb0d4360109682710eeaa",
   "checkpoint": {
     "filename": "model_weights_20241213.pth",
+    "eligible_for_leakage_free_primary_ranking": false,
     "md5": "56a3d78f689ae7f1190906b975700311",
+    "released_weight_test_overlap_status": "documented_for_instance_validation_test_training_overlap; exact_plot_manifest_not_bundled",
     "sha256": "5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb",
     "training_mode": "published_pretrained"
   },

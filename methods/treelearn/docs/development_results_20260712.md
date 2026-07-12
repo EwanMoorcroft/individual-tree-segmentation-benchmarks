@@ -8,6 +8,11 @@ All 21 plots completed fixed aligned point-wise evaluation, the final gate
 passed, and there were no documented failures. This is a development-only
 diagnostic result, not a held-out test result.
 
+Subsequent provenance review found that the authors' December 2024 checkpoint
+descends from a model fine-tuned with FOR-instance validation and test data.
+This result remains valid as a published-checkpoint reproduction, but is
+excluded from leakage-free cross-method ranking.
+
 The run used:
 
 - training mode `published_pretrained`;

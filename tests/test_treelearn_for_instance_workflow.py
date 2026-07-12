@@ -669,6 +669,7 @@ def test_treelearn_slurm_chain_is_guarded_and_development_only() -> None:
     assert ".treelearn_setup_complete" in setup
     assert "TREELEARN_SETUP_RESUME_PARTIAL" in setup
     assert "reusing_complete_unmarked_treelearn_env" in setup
+    assert '"setuptools==80.9.0"' in setup
     assert "validate_treelearn_environment.py" in setup
     assert "conda env remove" not in setup
     assert "--untracked-files=no" not in setup
@@ -677,6 +678,8 @@ def test_treelearn_slurm_chain_is_guarded_and_development_only() -> None:
     assert "validate_treelearn_environment.py" in inference
     assert "tree_learn.__file__" not in inference
     assert "submodule_search_locations" in validator
+    assert 'EXPECTED_SETUPTOOLS = "80.9.0"' in validator
+    assert "import pkg_resources" in validator
     assert "sys.version_info[:2] != EXPECTED_PYTHON" in validator
     assert 'torch.__version__.split("+")[0] != EXPECTED_TORCH' in validator
     assert "torch.version.cuda != EXPECTED_TORCH_CUDA" in validator

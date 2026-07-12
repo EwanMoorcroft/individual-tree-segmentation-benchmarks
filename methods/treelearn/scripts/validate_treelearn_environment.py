@@ -6,11 +6,13 @@ import argparse
 import importlib.util
 import json
 import sys
+from importlib.metadata import version
 from pathlib import Path
 from typing import Iterable
 
 
 EXPECTED_PYTHON = (3, 10)
+EXPECTED_SETUPTOOLS = "80.9.0"
 EXPECTED_TORCH = "2.0.0"
 EXPECTED_TORCH_CUDA = "11.8"
 
@@ -35,6 +37,12 @@ def treelearn_package_locations(repo: Path) -> list[Path]:
 
 
 def validate_environment(repo: Path, require_cuda: bool) -> dict[str, object]:
+    setuptools_version = version("setuptools")
+    if setuptools_version != EXPECTED_SETUPTOOLS:
+        raise RuntimeError(
+            f"Expected setuptools 80.9.0, found {setuptools_version}"
+        )
+    import pkg_resources  # noqa: F401
     import open3d
     import spconv
     import torch
@@ -55,6 +63,7 @@ def validate_environment(repo: Path, require_cuda: bool) -> dict[str, object]:
         raise RuntimeError("CUDA is not available in the active TreeLearn environment")
     return {
         "python": sys.version.split()[0],
+        "setuptools": setuptools_version,
         "torch": torch.__version__,
         "torch_cuda": torch.version.cuda,
         "cuda_available": bool(torch.cuda.is_available()),

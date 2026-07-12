@@ -90,6 +90,9 @@ if [[ "$INSTALL_ENV" = "1" ]]; then
   "$TREELEARN_ENV/bin/pip" install -e "$TREELEARN_REPO"
 fi
 
+"$TREELEARN_ENV/bin/pip" install --disable-pip-version-check \
+  "setuptools==80.9.0"
+
 if [[ -e "$TREELEARN_CHECKPOINT" ]]; then
   test -f "$TREELEARN_CHECKPOINT"
   echo "reusing_treelearn_checkpoint=$TREELEARN_CHECKPOINT"

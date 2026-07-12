@@ -53,7 +53,8 @@ TREELEARN_SETUP_CONFIRMED=1 \
 ```
 
 The official environment uses Python 3.10, PyTorch 2.0.0, CUDA 11.8 and
-`spconv-cu118`. The setup output ends with
+`spconv-cu118`. It also pins `setuptools==80.9.0` because TreeLearn's `munch`
+dependency still imports `pkg_resources`. The setup output ends with
 `status=treelearn-setup-verified` and prints the downloaded checkpoint SHA-256.
 It retains the explicit Conda package list, pip freeze, upstream commit and
 checkpoint hash under

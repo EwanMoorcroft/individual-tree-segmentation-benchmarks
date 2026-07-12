@@ -7,6 +7,8 @@ import csv
 import hashlib
 import json
 import random
+import re
+from decimal import Decimal
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,6 +33,9 @@ SEEDS = (42, 31415, 2022, 2026, 2718, 1618, 1729, 123456)
 PROFILES = (
     {"config_id": "full_lr_1e-5", "learning_rate": 1e-5, "fixed_modules": []},
 )
+EXPONENT_VALUE = re.compile(
+    r'(:\s*)(-?(?:0|[1-9]\d*)(?:\.\d+)?[eE][+-]?\d+)(?=[,\n])'
+)
 
 
 def file_hash(path: Path, algorithm: str = "sha256") -> str:
@@ -44,6 +49,18 @@ def file_hash(path: Path, algorithm: str = "sha256") -> str:
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+def write_training_config(path: Path, payload: dict) -> None:
+    """Write JSON whose numeric values also parse numerically under YAML 1.1."""
+
+    text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    text = EXPONENT_VALUE.sub(
+        lambda match: match.group(1) + format(Decimal(match.group(2)), "f"),
+        text,
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
 
 
 def canonical_metadata_path(value: object) -> str:
@@ -258,7 +275,7 @@ def prepare(
                 / "work_dirs" / "finetune_long"
             )
             config_path = run_root / "configs" / "trials" / f"config_{config_id}_seed_{seed}.yaml"
-            write_json(config_path, training_config(
+            write_training_config(config_path, training_config(
                 treelearn_repo=treelearn_repo.resolve(), checkpoint=checkpoint,
                 data_root=tuning_root.resolve(), work_dir=checkpoint_root.resolve(),
                 profile=profile, seed=seed,

@@ -9,6 +9,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -153,10 +154,20 @@ def test_long_freeze_has_fixed_split_matrix_budget_and_clean_checkpoint(
         for trial in freeze["trials"]
     )
     configs = [json.loads(Path(trial["training_config"]).read_text()) for trial in freeze["trials"]]
+    yaml_configs = [yaml.safe_load(Path(trial["training_config"]).read_text()) for trial in freeze["trials"]]
     assert all(config["epochs"] == 35 for config in configs)
     assert all(config["examples_per_epoch"] == 714 for config in configs)
     assert all(config["save_frequency"] == 7 for config in configs)
     assert all(config["optimizer"]["lr"] == 1e-5 for config in configs)
+    assert all(
+        isinstance(config["optimizer"]["lr"], float)
+        and config["optimizer"]["lr"] == 1e-5
+        for config in yaml_configs
+    )
+    assert all(
+        '"lr": 0.00001' in Path(trial["training_config"]).read_text()
+        for trial in freeze["trials"]
+    )
     assert all(config["model"]["fixed_modules"] == [] for config in configs)
     evaluation = Path(freeze["evaluation_config"]).read_text()
     assert "model_weights_finetuned.pth" in evaluation

@@ -5,7 +5,7 @@
     "row_count_match": true,
     "row_order_preserved": true
   },
-  "benchmark_commit": "2beb6ab456efcf21105409e6988b9cd3b8b5e7ec",
+  "benchmark_commit": "6fda72efb311873bb2beb0d4360109682710eeaa",
   "checkpoint": {
     "filename": "model_weights_20241213.pth",
     "md5": "56a3d78f689ae7f1190906b975700311",

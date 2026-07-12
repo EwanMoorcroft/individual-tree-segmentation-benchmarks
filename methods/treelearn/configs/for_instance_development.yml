@@ -59,7 +59,7 @@ method:
 
 accepted_smoke:
   run_id: treelearn_for-instance_published_pretrained_dev_smoke_20260712_135205
-  benchmark_commit: "2beb6ab456efcf21105409e6988b9cd3b8b5e7ec"
+  benchmark_commit: "6fda72efb311873bb2beb0d4360109682710eeaa"
   status: accepted
   split: dev
   relative_path: CULS/plot_1_annotated.las

@@ -1053,6 +1053,9 @@ def test_development_config_freezes_inventory_and_forbids_test_or_training() -> 
 
     assert config["project"]["status"] == "development_full_route_ready_not_run"
     assert config["accepted_smoke"]["status"] == "accepted"
+    assert config["accepted_smoke"]["benchmark_commit"] == (
+        "6fda72efb311873bb2beb0d4360109682710eeaa"
+    )
     assert config["accepted_smoke"]["split"] == "dev"
     assert config["accepted_smoke"]["row_count_match"] is True
     assert config["accepted_smoke"]["row_order_preserved"] is True

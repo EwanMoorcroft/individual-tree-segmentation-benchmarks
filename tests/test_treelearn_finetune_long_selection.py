@@ -100,6 +100,7 @@ def test_long_jobs_lock_test_and_use_expected_resources() -> None:
     assert "No held-out test job was submitted" in gate
     assert "--array=0-7%8" in submit
     assert "--array=0-40%8" in submit
+    assert "TREELEARN_LONG_CROPS_PER_PLOT=32" in submit
     assert "106a80de2991c5f23484a3f9d03e3b16" in submit
     assert "TREELEARN_DEV_MANIFEST_JSON=$TREELEARN_LONG_DEV_MANIFEST" in submit
     assert "No held-out test job was submitted" in submit

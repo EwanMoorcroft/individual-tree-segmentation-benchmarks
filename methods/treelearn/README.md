@@ -57,8 +57,8 @@ and writes overall and site summaries. It does not submit held-out test work.
 
 The replacement long route uses the same fixed seed-42 16/5 plot split and
 35-epoch headline used by the completed SegmentAnyTree fine-tune. TreeLearn's
-budget is additionally frozen as 714 examples per epoch, batch size 2, 24,990
-examples and 12,495 optimizer steps. Eight independent one-GPU trials use one
+budget is additionally frozen as a balanced 512-crop bank, 714 examples per
+epoch, batch size 2, 24,990 examples and 12,495 optimizer steps. Eight independent one-GPU trials use one
 fixed full-model learning rate (`1e-5`) and eight seeds. Checkpoints at epochs
 7, 14, 21, 28 and 35 are evaluated on the same five validation plots for
 diagnostics. The comparable candidate is preregistered as seed 42 at epoch 35;

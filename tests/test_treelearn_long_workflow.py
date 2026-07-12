@@ -119,8 +119,8 @@ def test_long_freeze_has_fixed_split_matrix_budget_and_clean_checkpoint(
     metadata.write_text(metadata.read_text().replace(",dev\n", ",test\n", 1))
     with pytest.raises(ValueError, match="split metadata changed"):
         verifier.verify_supplied_split(freeze, manifest)
-    assert freeze["crops_per_plot"] == 1500
-    assert freeze["tuning_crop_count"] == 24_000
+    assert freeze["crops_per_plot"] == 32
+    assert freeze["tuning_crop_count"] == 512
     assert freeze["training_budget"]["epochs"] == 35
     assert freeze["training_budget"]["examples_per_epoch"] == 714
     assert freeze["training_budget"]["examples_seen"] == 24_990
@@ -219,6 +219,7 @@ def test_long_slurm_training_half_is_guarded_and_uses_eight_gpus() -> None:
     train = (ROOT / paths[3]).read_text()
     assert "#SBATCH --partition=nodes" in crop
     assert "#SBATCH --gres=gpu:1" not in crop
+    assert 'EXPECTED_CROPS="${TREELEARN_LONG_CROPS_PER_PLOT:-32}"' in crop
     assert "#SBATCH --partition=gpu-l40s" in train
     assert "#SBATCH --time=36:00:00" in train
     assert "run_treelearn_training_seeded.py" in train

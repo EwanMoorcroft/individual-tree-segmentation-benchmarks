@@ -46,7 +46,8 @@ python "$HOME/scratch/tree-seg-benchmark/methods/treelearn/scripts/run_treelearn
   --treelearn-repo "$TREELEARN_REPO" \
   --config "$CROP_CONFIG" \
   --seed "$CROP_SEED"
-test "$(find "$CROP_ROOT" -maxdepth 1 -type f -name '*.npz' | wc -l)" -eq 1500
+EXPECTED_CROPS="${TREELEARN_LONG_CROPS_PER_PLOT:-32}"
+test "$(find "$CROP_ROOT" -maxdepth 1 -type f -name '*.npz' | wc -l)" -eq "$EXPECTED_CROPS"
 cd "$HOME/scratch/tree-seg-benchmark"
 python methods/treelearn/scripts/inventory_for_instance_finetune_long_crops.py \
   --freeze "$TREELEARN_LONG_FREEZE" \

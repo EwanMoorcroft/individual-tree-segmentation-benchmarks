@@ -25,8 +25,9 @@ pretraining followed by fine-tuning on their L1W benchmark.
 - split-metadata SHA-256 rechecked at preparation and every downstream stage;
 - held-out test point-cloud files are not opened by this route;
 - seed-42 split: 16 tuning-training and five validation plots;
-- 1,500 deterministic, SHA-256-inventoried crops per training plot;
-- tuning view: 24,000 crops from the 16 training plots;
+- 32 deterministic, SHA-256-inventoried crops per training plot;
+- tuning view: 512 crops from the 16 training plots, matching the completed
+  short route's proven total crop-bank size while balancing plots exactly;
 - 35 epochs, 714 examples per epoch, batch size 2;
 - 24,990 examples and 12,495 optimizer steps per trial;
 - checkpoints at epochs 7, 14, 21, 28 and 35.
@@ -37,7 +38,9 @@ available development paths must be an exact member of the 56 metadata rows
 marked `dev`. The seed-42 16/5 subdivision is made only within those 21 paths;
 no metadata row marked `test` can enter tuning or validation.
 
-The 35-epoch headline matches the completed SegmentAnyTree fine-tune. Epochs
+The 512 stored crops are resampled across epochs with the frozen TreeLearn
+augmentations; training exposure remains 24,990 examples and 12,495 optimizer
+steps. The 35-epoch headline matches the completed SegmentAnyTree fine-tune. Epochs
 are not treated as equal compute across architectures, so examples, batch size
 and optimizer steps are also retained. TreeX has no optimizer or epochs.
 

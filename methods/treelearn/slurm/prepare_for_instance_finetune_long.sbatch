@@ -23,7 +23,7 @@ python methods/treelearn/scripts/prepare_for_instance_finetune_long.py \
   --treelearn-repo "$TREELEARN_REPO" \
   --checkpoint "$TREELEARN_LONG_INITIAL_CHECKPOINT" \
   --evaluation-template methods/treelearn/configs/for_instance_development.yml \
-  --crops-per-plot "${TREELEARN_LONG_CROPS_PER_PLOT:-1500}"
+  --crops-per-plot "${TREELEARN_LONG_CROPS_PER_PLOT:-32}"
 test -f "$TREELEARN_LONG_FREEZE"
 echo status=treelearn-long-development-prepared
 echo held_out_test_accessed=false

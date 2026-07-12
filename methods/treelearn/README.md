@@ -3,10 +3,11 @@
 ## Method Summary
 
 TreeLearn is a deep learning method for individual-tree segmentation in forest
-point clouds. The current repository route is limited to a guarded, run-scoped
-one-plot FOR-instance development smoke using released TreeLearn weights. It
-performs inference and fixed harmonised evaluation, but does not train or
-fine-tune weights and cannot submit held-out test data.
+point clouds. The repository now has two guarded FOR-instance routes using the
+released TreeLearn weights: the completed one-plot development smoke and a
+full 21-plot development-only evaluation route. Both perform inference and
+fixed harmonised evaluation without training or fine-tuning. Neither route can
+submit held-out test data.
 
 ## Upstream Repository And Citation
 
@@ -19,9 +20,12 @@ trees from ground-based LiDAR forest point clouds.
 
 ## Training Mode Support
 
-The one-plot smoke route is `published_pretrained`: it loads the upstream
-default `model_weights_20241213.pth` checkpoint and performs inference only.
-The checkpoint SHA-256 is frozen at submission and recorded in run metadata.
+Both routes use `published_pretrained`: they load the upstream default
+`model_weights_20241213.pth` checkpoint and perform inference only. The frozen
+checkpoint has MD5 `56a3d78f689ae7f1190906b975700311` and SHA-256
+`5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb`.
+Each submission rechecks the checkpoint and records its identity in run
+metadata.
 
 The candidate full benchmark modes remain:
 
@@ -33,9 +37,12 @@ Fine-tuning and retraining are not implemented in this first route.
 
 ## Input Requirements
 
-The smoke test uses one FOR-instance LAS file with `treeID` and
-`classification` dimensions. The configured plot is `CULS/plot_1_annotated.las`
-from the development split.
+The accepted smoke uses `CULS/plot_1_annotated.las`. The full development route
+freezes the exact 21 locally available paths identified as `dev` in
+`data_split_metadata.csv`: CULS 2, NIBIO 14, RMIT 1, SCION 3 and TUWIEN 1.
+Every input LAS must contain `treeID` and `classification` dimensions. The
+manifest records each input hash, point count, reference-tree count and split
+metadata hash before the array is submitted.
 
 Tree material follows the shared FOR-instance protocol:
 
@@ -49,7 +56,7 @@ Tree material follows the shared FOR-instance protocol:
 TreeLearn raw outputs stay under `data/interim/treelearn/...` and full
 prediction outputs stay under `data/predictions/treelearn/...`.
 
-Each smoke run uses a new run ID and writes:
+Each run uses a new run ID. For every plot it writes:
 
 - an aligned compressed prediction file with `pred_tree_id`,
   `target_tree_id`, `classification`, `pred_classification` and
@@ -68,10 +75,12 @@ input.
 
 ## FOR-instance Compatibility
 
-The smoke test checks installation, checkpoint loading, one-plot inference,
-row preservation, prediction adaptation and evaluator compatibility. Its
-development score is diagnostic evidence only and must not be used to alter
-the frozen checkpoint, IoU threshold or post-processing.
+The smoke checked installation, checkpoint loading, one-plot inference, row
+preservation, prediction adaptation and evaluator compatibility. Run
+`treelearn_for-instance_published_pretrained_dev_smoke_20260712_135205` passed
+those checks and was manually accepted for full development-only evaluation.
+Its F1 is diagnostic evidence only and was not used to alter the checkpoint,
+IoU threshold or post-processing.
 
 ## Barkla Environment
 
@@ -107,25 +116,42 @@ Expected runtime: 30-90 minutes after the environment and checkpoint exist.
 Resources: one L40S GPU, 12 CPUs, 128 GB RAM and two hours wall time on
 `gpu-l40s-low`.
 
+After the accepted smoke evidence and its five retained artefacts pass the
+preparation gate, the guarded full route is submitted through
+[`slurm/submit_for_instance_development.sh`](slurm/submit_for_instance_development.sh).
+Its dependency chain freezes the exact 21-plot development manifest, runs at
+most two concurrent combined inference/evaluation GPU tasks, accounts for
+every task, then builds per-plot, per-site and whole-development summaries.
+See the
+[`full development runbook`](docs/development_evaluation.md). No held-out test
+job is part of the dependency chain.
+
 ## Evaluation Route
 
-The dependent evaluation job uses `for_instance_pointwise_v1`, the union of
-reference-tree and predicted-tree points, maximum-cardinality one-to-one
-matching and IoU `>= 0.5`. It writes matched and unmatched instance tables.
-No prediction-size filtering or threshold selection is permitted.
+Evaluation uses `for_instance_pointwise_v1`, the union of reference-tree and
+predicted-tree points, maximum-cardinality one-to-one matching and IoU
+`>= 0.5`. It writes matched and unmatched instance tables. The full
+development summary aggregates TP, FP and FN counts before computing micro
+metrics and reports CULS, NIBIO, RMIT, SCION and TUWIEN separately. No
+prediction-size filtering or threshold selection is permitted.
 
 ## Known Limitations
 
 - The route does not train, fine-tune or select a checkpoint.
-- The first smoke uses one development plot only.
+- The accepted smoke score represents one CULS development plot only and is
+  not an overall or cross-site estimate.
 - The setup follows upstream dependency pins, but upstream leaves some pip
   packages only partially pinned; the resolved Barkla environment must be
-  retained before a full benchmark.
-- A manual alignment review is still required after the smoke passes.
-- The smoke cannot establish cross-site performance.
+  retained with the run evidence.
+- The full development route is ready but has not yet produced results.
+- The held-out test split remains locked and no TreeLearn test route exists.
 
 ## Current Benchmark Status
 
-TreeLearn is pending. The guarded one-plot published-checkpoint development
-smoke and shared evaluation route are ready but have not yet been run. Full
-development and held-out test arrays are intentionally absent.
+The guarded one-plot published-checkpoint development smoke is complete and
+accepted. It evaluated 1,816,672 source-aligned points with F1 `0.705882`,
+precision `0.545455`, recall `1.000000`, TP `6`, FP `5` and FN `0`. Row count
+and order were preserved, the maximum coordinate delta was
+`0.00027683842927217484` m and all five raw/aligned prediction artefacts were
+retained. The exact 21-plot full development route is ready but not run. No
+held-out test result exists.

@@ -402,7 +402,10 @@ def test_treelearn_config_freezes_development_smoke_contract() -> None:
         ).read_text(encoding="utf-8")
     )
 
-    assert config["project"]["status"] == "development_smoke_route_ready_not_run"
+    assert (
+        config["project"]["status"]
+        == "completed_and_accepted_for_full_development_only"
+    )
     assert config["method"]["upstream_commit"] == (
         "fd240ce7caa4c444fe3418aca454dc578bc557d4"
     )
@@ -414,6 +417,9 @@ def test_treelearn_config_freezes_development_smoke_contract() -> None:
     )
     assert config["method"]["checkpoint"]["source_md5"] == (
         "56a3d78f689ae7f1190906b975700311"
+    )
+    assert config["method"]["checkpoint"]["sha256"] == (
+        "5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb"
     )
     assert config["smoke"]["split"] == "dev"
     assert config["smoke"]["allow_test_split"] is False

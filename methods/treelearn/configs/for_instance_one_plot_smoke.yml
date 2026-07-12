@@ -4,7 +4,7 @@ project:
   dataset_slug: for-instance
   method_slug: treelearn
   mode: labelled_accuracy_candidate
-  status: development_smoke_route_ready_not_run
+  status: completed_and_accepted_for_full_development_only
   protocol_id: for_instance_pointwise_v1
   barkla_root: "~/scratch/tree-seg-benchmark"
 
@@ -44,9 +44,9 @@ method:
     source_dataset_name: model_weights_20241213
     source_url: "https://data.goettingen-research-online.de/api/access/datafile/:persistentId?persistentId=doi:10.25625/VPMPID/IMHF3G"
     source_md5: "56a3d78f689ae7f1190906b975700311"
-    sha256: null
-    sha256_status: captured_by_setup_and_required_before_full_evaluation
-    note: "The default upstream checkpoint is frozen before the smoke; setup and inference metadata record its SHA-256."
+    sha256: "5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb"
+    sha256_status: frozen_from_accepted_development_smoke
+    note: "The accepted smoke metadata records the same official checkpoint MD5 and frozen SHA-256."
   upstream_pipeline:
     entrypoint: tools/pipeline/pipeline.py
     return_type: original
@@ -58,6 +58,7 @@ method:
     use_hdbscan: true
 
 smoke:
+  accepted_run_id: treelearn_for-instance_published_pretrained_dev_smoke_20260712_135205
   relative_path: CULS/plot_1_annotated.las
   plot_id: CULS/plot_1_annotated
   safe_plot_id: CULS_plot_1_annotated
@@ -68,6 +69,20 @@ smoke:
   run_training: false
   run_evaluation: true
   allow_test_split: false
+  result:
+    status: accepted_for_full_development_only
+    prediction_instance_count: 11
+    reference_instance_count: 6
+    true_positives: 6
+    false_positives: 5
+    false_negatives: 0
+    precision: 0.5454545454545454
+    recall: 1.0
+    f1: 0.7058823529411764
+    row_count_match: true
+    row_order_preserved: true
+    max_abs_coordinate_delta_m: 0.00027683842927217484
+    retained_artifact_count: 5
 
 runtime:
   setup_script: methods/treelearn/slurm/setup_treelearn_environment.sbatch

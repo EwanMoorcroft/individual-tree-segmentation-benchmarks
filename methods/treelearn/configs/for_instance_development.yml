@@ -1,0 +1,207 @@
+project:
+  name: tree-seg-benchmark
+  benchmark_name: for_instance_treelearn_development
+  dataset_slug: for-instance
+  method_slug: treelearn
+  mode: labelled_accuracy_candidate
+  status: development_full_route_ready_not_run
+  protocol_id: for_instance_pointwise_v1
+  acceptance_protocol_id: for_instance_method_adapter_acceptance_v1
+  barkla_root: "~/scratch/tree-seg-benchmark"
+
+dataset:
+  slug: for-instance
+  name: FOR-instance
+  root: "~/data/datasets/for_instance/FORinstance_dataset"
+  split_metadata_file: data_split_metadata.csv
+  reference_instance_field: treeID
+  semantic_field: classification
+  reference_classes:
+    - 4
+    - 5
+    - 6
+  ignored_classes:
+    - 0
+    - 1
+    - 2
+    - 3
+  ignored_tree_ids:
+    - 0
+    - -1
+
+method:
+  slug: treelearn
+  name: TreeLearn
+  repo_url: "https://github.com/ecker-lab/TreeLearn"
+  repo_path: "~/fastscratch/external/TreeLearn"
+  upstream_commit: "fd240ce7caa4c444fe3418aca454dc578bc557d4"
+  execution_mode: external_checkout_slurm
+  treelearn_env: "~/fastscratch/venvs/treelearn"
+  checkpoint:
+    training_mode: published_pretrained
+    filename: model_weights_20241213.pth
+    default_path: "~/fastscratch/treelearn_checkpoints/model_weights_20241213.pth"
+    source: "TreeLearn upstream default December 2024 model weights"
+    source_dataset_name: model_weights_20241213
+    source_url: "https://data.goettingen-research-online.de/api/access/datafile/:persistentId?persistentId=doi:10.25625/VPMPID/IMHF3G"
+    source_md5: "56a3d78f689ae7f1190906b975700311"
+    sha256: "5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb"
+    sha256_status: frozen_from_accepted_development_smoke
+  upstream_pipeline:
+    entrypoint: tools/pipeline/pipeline.py
+    return_type: original
+    save_formats:
+      - laz
+      - npz
+    save_treewise: false
+    save_pointwise: true
+    use_hdbscan: true
+
+accepted_smoke:
+  run_id: treelearn_for-instance_published_pretrained_dev_smoke_20260712_135205
+  benchmark_commit: "2beb6ab456efcf21105409e6988b9cd3b8b5e7ec"
+  status: accepted
+  split: dev
+  relative_path: CULS/plot_1_annotated.las
+  point_count: 1816672
+  row_count_match: true
+  row_order_preserved: true
+  max_abs_coordinate_delta_m: 0.00027683842927217484
+  reference_instances: 6
+  predicted_instances: 11
+  true_positives: 6
+  false_positives: 5
+  false_negatives: 0
+  f1: 0.7058823529411764
+  retained_artifacts:
+    raw_prediction_laz:
+      size_bytes: 5581320
+      sha256: f2880772b4b33c634b7b7089f1962d8b219dd62c4c6ec58ea869c42d8a2d21e3
+    raw_prediction_npz:
+      size_bytes: 13714276
+      sha256: e0c65c9c0b5a129961c519646414933a73c4aeae137c8445abcc96fa549ff84a
+    raw_pointwise_npz:
+      size_bytes: 50673978
+      sha256: da1b93405e2a66d2a5ee2e8d6618cfaf27caa02d74a077ef0f3093dcf1bfb833
+    adapted_npz:
+      size_bytes: 2825238
+      sha256: 7a3da12995aad7e65917c338452c37c54a3f608ea6398ded68464f15956dcb4d
+    adapted_las:
+      size_bytes: 70851327
+      sha256: 3dde19cfb436b6618a208787d6e594d40b062be988c1407940cd7698e0e1de26
+  next_gate: full_development_only
+
+development:
+  split: dev
+  expected_available_plots: 21
+  expected_relative_paths:
+    - CULS/plot_1_annotated.las
+    - CULS/plot_3_annotated.las
+    - NIBIO/plot_10_annotated.las
+    - NIBIO/plot_11_annotated.las
+    - NIBIO/plot_12_annotated.las
+    - NIBIO/plot_13_annotated.las
+    - NIBIO/plot_16_annotated.las
+    - NIBIO/plot_19_annotated.las
+    - NIBIO/plot_21_annotated.las
+    - NIBIO/plot_2_annotated.las
+    - NIBIO/plot_3_annotated.las
+    - NIBIO/plot_4_annotated.las
+    - NIBIO/plot_6_annotated.las
+    - NIBIO/plot_7_annotated.las
+    - NIBIO/plot_8_annotated.las
+    - NIBIO/plot_9_annotated.las
+    - RMIT/train.las
+    - SCION/plot_35_annotated.las
+    - SCION/plot_39_annotated.las
+    - SCION/plot_87_annotated.las
+    - TUWIEN/train.las
+  expected_total_points: 101769037
+  expected_reference_trees: 807
+  expected_site_counts:
+    CULS: 2
+    NIBIO: 14
+    RMIT: 1
+    SCION: 3
+    TUWIEN: 1
+  expected_site_points:
+    CULS: 4901588
+    NIBIO: 79435164
+    RMIT: 1483208
+    SCION: 8380233
+    TUWIEN: 7568844
+  expected_site_reference_trees:
+    CULS: 27
+    NIBIO: 414
+    RMIT: 159
+    SCION: 92
+    TUWIEN: 115
+  allow_test_split: false
+  run_training: false
+  tune_checkpoint: false
+  tune_postprocessing: false
+  inference_concurrency: 2
+  evaluation_concurrency: 2
+
+plot_defaults:
+  split: dev
+  row_coordinate_tolerance_m: 0.005
+
+runtime:
+  preparation_script: methods/treelearn/slurm/prepare_for_instance_development.sbatch
+  inference_script: methods/treelearn/slurm/run_for_instance_development.sbatch
+  evaluation_mode: immediately_after_inference_in_each_array_task
+  summary_script: methods/treelearn/slurm/summarise_for_instance_development.sbatch
+  gate_script: methods/treelearn/slurm/gate_for_instance_development.sbatch
+  submit_script: methods/treelearn/slurm/submit_for_instance_development.sh
+  monitor_script: methods/treelearn/slurm/monitor_for_instance_development.sh
+  expected_runtime: "approximately 1-4 hours with two concurrent inference tasks; plot size and queueing may extend this"
+  partition: gpu-l40s-low
+  time_limit: "02:00:00 per plot"
+  cpus_per_task: 12
+  memory: 128G
+  gres: "gpu:1"
+
+paths:
+  runtime_root: data/interim/treelearn/for_instance/development_runs
+  predictions_root: data/predictions/treelearn/for_instance_development
+  metadata_root: results/metadata/treelearn_for_instance/development_runs
+  tables_root: results/tables/treelearn_for_instance/development_runs
+  logs_root: logs/treelearn_for_instance
+
+evaluation:
+  protocol_id: for_instance_pointwise_v1
+  iou_threshold: 0.5
+  matching_policy: maximum_cardinality_one_to_one
+  evaluation_mask: union_of_reference_tree_and_predicted_tree_points
+  reference_tree_classes:
+    - 4
+    - 5
+    - 6
+  prediction_tree_class: 4
+  ignored_reference_instance_labels:
+    - 0
+    - -1
+  ignored_prediction_instance_labels:
+    - 0
+    - -1
+  postprocessing_selection_permitted: false
+
+success_criteria:
+  - The accepted one-plot development smoke evidence is validated before submission.
+  - The exact-path manifest contains 21 locally available development plots and no test plots.
+  - Each manifest row freezes its source and split-metadata hashes and expected reference inventory.
+  - The clean benchmark and TreeLearn commits and exact checkpoint hashes are verified for every task.
+  - Every completed plot retains raw full-forest, raw pointwise and aligned prediction artefacts with hashes and sizes.
+  - Every expected plot has completed metrics or a documented failure record.
+  - Per-plot, per-site and development summaries aggregate counts before micro metrics.
+  - No training, tuning or held-out test job is submitted.
+
+failure_indicators:
+  - The smoke evidence is missing, changed or not development-only.
+  - The exact-path development inventory or expected site counts differ from the frozen contract.
+  - Any manifest or metric row is not split dev.
+  - A source, split metadata, checkpoint, benchmark commit or upstream commit hash changes.
+  - Prediction rows, coordinates, semantics or retained hashes fail validation.
+  - An expected plot lacks both completed metrics and a documented failure.
+  - Any held-out test path or test job is accessed.

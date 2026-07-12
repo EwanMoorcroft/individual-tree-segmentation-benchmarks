@@ -8,8 +8,8 @@ adapts the original-resolution output to source-row labels and evaluates it
 with `for_instance_pointwise_v1`.
 
 It does not train, fine-tune, run a full development array or access the
-held-out test split. Passing the smoke leads to a manual alignment review, not
-automatically to a larger submission.
+held-out test split. Its accepted evidence is now the prerequisite for the
+separate guarded full development-only route.
 
 ## Frozen inputs
 
@@ -21,12 +21,35 @@ automatically to a larger submission.
 - Checkpoint: `model_weights_20241213.pth`
 - Official checkpoint persistent ID: `IMHF3G`
 - Official checkpoint MD5: `56a3d78f689ae7f1190906b975700311`
+- Checkpoint SHA-256:
+  `5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb`
 - IoU threshold: `>= 0.5`
 - Matching: maximum-cardinality one-to-one
 - Tuned prediction filtering: disabled
 
 The default checkpoint follows the upstream segmentation guide. The alternate
 small-tree checkpoint is not part of this run.
+
+## Accepted result
+
+The accepted run is
+`treelearn_for-instance_published_pretrained_dev_smoke_20260712_135205`.
+Inference and evaluation completed with:
+
+- 1,816,672 source points and 6 reference trees;
+- 11 predicted trees, TP 6, FP 5 and FN 0;
+- precision `0.545455`, recall `1.000000` and F1 `0.705882`;
+- matching source and prediction row counts and preserved row order; and
+- maximum absolute coordinate delta `0.00027683842927217484` m, below the
+  frozen 0.005 m tolerance.
+
+The upstream full-forest LAZ and NPZ, upstream pointwise NPZ, aligned
+prediction NPZ and aligned prediction LAS were all retained with file sizes
+and SHA-256 hashes. The result was manually reviewed and accepted only as the
+adapter/alignment gate for full development evaluation. It is a one-plot
+diagnostic result, not a cross-site or held-out benchmark result. A public-safe
+record is stored in
+[`../examples/accepted_development_smoke_20260712.json`](../examples/accepted_development_smoke_20260712.json).
 
 ## Barkla setup
 
@@ -184,5 +207,8 @@ The route passes only when:
 - fixed shared evaluation completes; and
 - matched and unmatched tables are present.
 
-The next gate is a manual development-plot alignment review. Full development
-or held-out evaluation must not be submitted from this smoke route.
+These gates passed for the accepted run above, including the manual
+development-plot alignment review and five-file retention check. The next
+permitted action is the separate guarded full development-only route described
+in [`development_evaluation.md`](development_evaluation.md). Held-out
+evaluation must not be submitted from this smoke route.

@@ -353,6 +353,9 @@ def evaluate_arrays(
         "point_correspondence": "source_row_index",
         "prediction_semantic_mapping": "pred_tree_id > 0 -> class 4; else 0",
         "reference_tree_classes": sorted(int(value) for value in REFERENCE_TREE_CLASSES),
+        "prediction_tree_classes": sorted(
+            int(value) for value in PREDICTION_TREE_CLASSES
+        ),
         "ignored_instance_labels": sorted(
             int(value) for value in IGNORED_INSTANCE_LABELS
         ),
@@ -417,6 +420,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--unmatched-predictions-csv", required=True)
     parser.add_argument("--unmatched-references-csv", required=True)
+    parser.add_argument(
+        "--evaluation-scope",
+        choices=("development_smoke", "development_full"),
+        default="development_smoke",
+    )
     return parser.parse_args()
 
 
@@ -503,14 +511,24 @@ def main() -> int:
 
     summary.update(
         {
-            "status": "completed_development_smoke_evaluation",
+            "status": (
+                "completed_development_smoke_evaluation"
+                if args.evaluation_scope == "development_smoke"
+                else "completed_aligned_pointwise_development_plot"
+            ),
+            "evaluation_scope": args.evaluation_scope,
+            "held_out_test_accessed": False,
             "run_id": args.run_id,
             "relative_path": args.relative_path,
             "prediction_npz": str(prediction_path),
             "prediction_npz_sha256": actual_prediction_sha256,
             "prediction_npz_size_bytes": prediction_path.stat().st_size,
             "inference_metadata": str(metadata_path),
-            "next_gate": "manual_alignment_review_before_full_development_evaluation",
+            "next_gate": (
+                "manual_alignment_review_before_full_development_evaluation"
+                if args.evaluation_scope == "development_smoke"
+                else "aggregate_full_development_results_before_any_test_route"
+            ),
         }
     )
     metrics_path = Path(args.metrics_json).expanduser().resolve()

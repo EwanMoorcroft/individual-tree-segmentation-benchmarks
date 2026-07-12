@@ -144,7 +144,10 @@ def benchmark_repository_state(
 
 
 def validate_dataset_source(
-    config: dict[str, Any], dataset_root: Path, source_las: Path
+    config: dict[str, Any],
+    dataset_root: Path,
+    source_las: Path,
+    plot_contract: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     import laspy
     import numpy as np
@@ -227,10 +230,11 @@ def validate_dataset_source(
             f"Expected exactly one split record for {relative_path}, found {len(matches)}"
         )
     observed_split = matches[0].casefold()
-    expected_split = str(config["smoke"]["split"]).casefold()
+    contract = plot_contract or config["smoke"]
+    expected_split = str(contract["split"]).casefold()
     if observed_split != expected_split or expected_split != "dev":
         raise ValueError(
-            f"Smoke plot split is {matches[0]!r}; expected development split 'dev'"
+            f"Configured plot split is {matches[0]!r}; expected development split 'dev'"
         )
 
     cloud = laspy.read(source_las)
@@ -245,8 +249,8 @@ def validate_dataset_source(
         classification, config["dataset"]["reference_classes"]
     ) & ~np.isin(tree_id, config["dataset"]["ignored_tree_ids"])
     reference_tree_count = int(len(np.unique(tree_id[tree_mask])))
-    expected_points = int(config["smoke"]["expected_point_count"])
-    expected_trees = int(config["smoke"]["expected_reference_tree_count"])
+    expected_points = int(contract["expected_point_count"])
+    expected_trees = int(contract["expected_reference_tree_count"])
     if point_count != expected_points:
         raise ValueError(
             f"Source point count {point_count} does not match expected {expected_points}"
@@ -462,6 +466,8 @@ def build_metadata(
     dataset_validation: dict[str, Any],
     repo_state: dict[str, Any],
     benchmark_repo_state: dict[str, Any],
+    plot_contract: dict[str, Any],
+    evaluation_scope: str,
     status: str = "completed",
     return_code: int = 0,
     error: dict[str, str] | None = None,
@@ -471,16 +477,22 @@ def build_metadata(
     return {
         "method": config["method"]["slug"],
         "dataset": config["dataset"]["slug"],
+        "dataset_split": plot_contract["split"],
+        "held_out_test_accessed": False,
         "run_id": args.run_id,
         "training_mode": config["method"]["checkpoint"]["training_mode"],
         "status": status,
         "return_code": return_code,
         "elapsed_seconds": time.perf_counter() - started,
+        "evaluation_scope": evaluation_scope,
         "plot": {
-            "relative_path": config["smoke"]["relative_path"],
-            "split": config["smoke"]["split"],
-            "expected_point_count": config["smoke"]["expected_point_count"],
-            "expected_reference_tree_count": config["smoke"][
+            "plot_id": plot_contract["plot_id"],
+            "safe_plot_id": plot_contract["safe_plot_id"],
+            "relative_path": plot_contract["relative_path"],
+            "collection": plot_contract["collection"],
+            "split": plot_contract["split"],
+            "expected_point_count": plot_contract["expected_point_count"],
+            "expected_reference_tree_count": plot_contract[
                 "expected_reference_tree_count"
             ],
         },
@@ -573,7 +585,11 @@ def build_metadata(
         "success_criteria": config["success_criteria"],
         "failure_indicators": config["failure_indicators"],
         "error": error,
-        "next_gate": "shared_smoke_evaluation_then_manual_alignment_review",
+        "next_gate": (
+            "shared_smoke_evaluation_then_manual_alignment_review"
+            if evaluation_scope == "development_smoke"
+            else "aggregate_full_development_results_before_any_test_route"
+        ),
     }
 
 
@@ -593,6 +609,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--metadata-root")
     parser.add_argument("--tables-root")
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--relative-path")
+    parser.add_argument("--plot-id")
+    parser.add_argument("--safe-plot-id")
+    parser.add_argument("--expected-split", default="dev")
+    parser.add_argument("--expected-point-count", type=int)
+    parser.add_argument("--expected-reference-tree-count", type=int)
+    parser.add_argument("--expected-input-sha256")
+    parser.add_argument("--expected-split-metadata-sha256")
+    parser.add_argument(
+        "--evaluation-scope",
+        choices=("development_smoke", "development_full"),
+        default="development_smoke",
+    )
     return parser.parse_args()
 
 
@@ -603,8 +632,42 @@ def main() -> int:
 
     if not RUN_ID_PATTERN.fullmatch(args.run_id):
         raise ValueError(f"Unsafe TreeLearn run ID: {args.run_id!r}")
-    if config["smoke"]["split"] != "dev":
-        raise ValueError("The one-plot smoke route must use a development plot.")
+    defaults = config.get("plot_defaults") or config.get("smoke") or {}
+    relative_path = args.relative_path or defaults.get("relative_path")
+    if not relative_path:
+        raise ValueError("A development --relative-path is required")
+    relative = Path(relative_path)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError(f"Unsafe TreeLearn relative path: {relative_path!r}")
+    plot_id = args.plot_id or defaults.get("plot_id") or relative.with_suffix("").as_posix()
+    safe_plot_id = (
+        args.safe_plot_id
+        or defaults.get("safe_plot_id")
+        or re.sub(r"[^A-Za-z0-9._-]+", "_", plot_id)
+    )
+    expected_point_count = args.expected_point_count or defaults.get(
+        "expected_point_count"
+    )
+    expected_reference_tree_count = args.expected_reference_tree_count or defaults.get(
+        "expected_reference_tree_count"
+    )
+    if expected_point_count is None or expected_reference_tree_count is None:
+        raise ValueError("Frozen expected point and reference-tree counts are required")
+    split = args.expected_split or defaults.get("split")
+    if split != "dev":
+        raise ValueError("The TreeLearn route must use a development plot")
+    plot_contract = {
+        "relative_path": relative.as_posix(),
+        "plot_id": plot_id,
+        "safe_plot_id": safe_plot_id,
+        "collection": relative.parts[0] if len(relative.parts) > 1 else "",
+        "split": split,
+        "expected_point_count": int(expected_point_count),
+        "expected_reference_tree_count": int(expected_reference_tree_count),
+        "row_coordinate_tolerance_m": float(
+            defaults.get("row_coordinate_tolerance_m", 0.005)
+        ),
+    }
 
     dataset_root = resolve_path(args.dataset_root or config["dataset"]["root"])
     treelearn_repo = resolve_path(args.treelearn_repo or config["method"]["repo_path"])
@@ -618,12 +681,11 @@ def main() -> int:
     metadata_base = resolve_path(args.metadata_root or config["paths"]["metadata_root"])
     tables_base = resolve_path(args.tables_root or config["paths"]["tables_root"])
 
-    safe_plot_id = config["smoke"]["safe_plot_id"]
     runtime_root = runtime_base / args.run_id / safe_plot_id
     predictions_root = predictions_base / args.run_id / safe_plot_id
     metadata_root = metadata_base / args.run_id
     tables_root = tables_base / args.run_id
-    source_las = (dataset_root / config["smoke"]["relative_path"]).resolve()
+    source_las = (dataset_root / plot_contract["relative_path"]).resolve()
     staged_las = runtime_root / "forest" / f"{safe_plot_id}.las"
     pipeline_config = runtime_root / "treelearn_pipeline_config.yml"
     raw_prediction_laz = runtime_root / "results" / "full_forest" / f"{safe_plot_id}.laz"
@@ -631,8 +693,15 @@ def main() -> int:
     raw_pointwise_npz = (
         runtime_root / "results" / "pointwise_results" / "pointwise_results.npz"
     )
-    adapted_npz = predictions_root / f"{safe_plot_id}_treelearn_smoke_predictions.npz"
-    adapted_las = predictions_root / f"{safe_plot_id}_treelearn_smoke_predictions.las"
+    artifact_label = (
+        "smoke" if args.evaluation_scope == "development_smoke" else "development"
+    )
+    adapted_npz = (
+        predictions_root / f"{safe_plot_id}_treelearn_{artifact_label}_predictions.npz"
+    )
+    adapted_las = (
+        predictions_root / f"{safe_plot_id}_treelearn_{artifact_label}_predictions.las"
+    )
     metadata_json = metadata_root / f"{safe_plot_id}_inference.json"
 
     paths = {
@@ -654,7 +723,9 @@ def main() -> int:
         "tables_root": tables_root,
     }
 
-    collision_paths = (runtime_root, predictions_root, metadata_json, tables_root)
+    collision_paths = (runtime_root, predictions_root, metadata_json)
+    if args.evaluation_scope == "development_smoke":
+        collision_paths = (*collision_paths, tables_root)
     collisions = [path for path in collision_paths if path.exists()]
     if collisions:
         raise FileExistsError(
@@ -682,7 +753,20 @@ def main() -> int:
             str(config["method"]["checkpoint"]["source_md5"]),
         )
 
-        dataset_validation = validate_dataset_source(config, dataset_root, source_las)
+        dataset_validation = validate_dataset_source(
+            config, dataset_root, source_las, plot_contract
+        )
+        if (
+            args.expected_input_sha256
+            and dataset_validation["input_sha256"] != args.expected_input_sha256
+        ):
+            raise ValueError("Source LAS SHA-256 differs from the frozen manifest")
+        if (
+            args.expected_split_metadata_sha256
+            and dataset_validation["split_metadata_sha256"]
+            != args.expected_split_metadata_sha256
+        ):
+            raise ValueError("Split metadata SHA-256 differs from the frozen manifest")
         prepare_staged_input(source_las, staged_las)
         write_yaml(
             pipeline_config,
@@ -705,7 +789,7 @@ def main() -> int:
             )
 
         arrays = load_prediction_arrays(source_las, raw_prediction_laz)
-        row_tolerance = float(config["smoke"]["row_coordinate_tolerance_m"])
+        row_tolerance = float(plot_contract["row_coordinate_tolerance_m"])
         validate_row_alignment(
             arrays["max_abs_coordinate_delta"], row_tolerance
         )
@@ -714,7 +798,10 @@ def main() -> int:
         prediction_summary = write_adapted_outputs(
             arrays, adapted_npz, adapted_las
         )
-        if prediction_summary["positive_prediction_count"] <= 0:
+        if (
+            args.evaluation_scope == "development_smoke"
+            and prediction_summary["positive_prediction_count"] <= 0
+        ):
             raise ValueError(
                 "Prediction contains no positive TreeLearn instance labels."
             )
@@ -738,6 +825,8 @@ def main() -> int:
             dataset_validation,
             repo_state,
             benchmark_repo_state,
+            plot_contract,
+            args.evaluation_scope,
         )
         ensure_parent(metadata_json)
         metadata_json.write_text(
@@ -756,6 +845,8 @@ def main() -> int:
             dataset_validation,
             repo_state,
             benchmark_repo_state,
+            plot_contract,
+            args.evaluation_scope,
             status="failed",
             return_code=1,
             error={"type": type(exc).__name__, "message": str(exc)},

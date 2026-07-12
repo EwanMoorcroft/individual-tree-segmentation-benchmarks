@@ -28,6 +28,9 @@ pretraining followed by fine-tuning on their L1W benchmark.
 - 32 deterministic, SHA-256-inventoried crops per training plot;
 - tuning view: 512 crops from the 16 training plots, matching the completed
   short route's proven total crop-bank size while balancing plots exactly;
+- 48 deterministic generation attempts per plot absorb upstream rejection of
+  invalid chunks; the lexicographically first 32 valid NPZ files are retained
+  and every discarded filename is recorded in the crop inventory;
 - 35 epochs, 714 examples per epoch, batch size 2;
 - 24,990 examples and 12,495 optimizer steps per trial;
 - checkpoints at epochs 7, 14, 21, 28 and 35.
@@ -43,6 +46,11 @@ augmentations; training exposure remains 24,990 examples and 12,495 optimizer
 steps. The 35-epoch headline matches the completed SegmentAnyTree fine-tune. Epochs
 are not treated as equal compute across architectures, so examples, batch size
 and optimizer steps are also retained. TreeX has no optimizer or epochs.
+
+Some FOR-instance LAS files store integer-valued `treeID` labels in a floating
+extra dimension. Normalisation accepts numeric storage only after checking that
+every value is finite and integral and that the mapped labels round-trip
+losslessly through the original LAS dtype.
 
 ## Search and selection
 

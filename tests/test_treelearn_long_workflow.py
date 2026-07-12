@@ -29,9 +29,21 @@ def test_long_label_normalisation_is_explicit() -> None:
         "methods/treelearn/scripts/normalise_for_instance_finetune_long_plot.py",
     )
     classification = np.array([1, 2, 3, 4, 5, 6, 4, 0])
-    tree_id = np.array([91, 0, 7, 11, 12, -1, 0, 13])
+    tree_id = np.array([91, 0, 7, 11, 12, -1, 0, 13], dtype=np.float64)
     result = module.normalise_instance_labels(classification, tree_id)
     assert result.tolist() == [0, 0, -1, 11, 12, -1, -1, -1]
+    assert module.encode_tree_ids(result, np.dtype("float32")).dtype == np.float32
+
+
+def test_long_label_normalisation_rejects_non_integral_tree_ids() -> None:
+    module = load(
+        "treelearn_long_normalise_invalid",
+        "methods/treelearn/scripts/normalise_for_instance_finetune_long_plot.py",
+    )
+    with pytest.raises(ValueError, match="non-integral"):
+        module.normalise_instance_labels(
+            np.array([4, 4]), np.array([1.0, 2.5], dtype=np.float64)
+        )
 
 
 def test_long_freeze_has_fixed_split_matrix_budget_and_clean_checkpoint(
@@ -120,7 +132,9 @@ def test_long_freeze_has_fixed_split_matrix_budget_and_clean_checkpoint(
     with pytest.raises(ValueError, match="split metadata changed"):
         verifier.verify_supplied_split(freeze, manifest)
     assert freeze["crops_per_plot"] == 32
+    assert freeze["crop_generation_attempts_per_plot"] == 48
     assert freeze["tuning_crop_count"] == 512
+    assert all(row["crops_generate_requested"] == 48 for row in freeze["plots"])
     assert freeze["training_budget"]["epochs"] == 35
     assert freeze["training_budget"]["examples_per_epoch"] == 714
     assert freeze["training_budget"]["examples_seen"] == 24_990
@@ -198,6 +212,44 @@ def test_long_crop_views_keep_validation_out_of_tuning(tmp_path: Path) -> None:
     assert not any(path.name.startswith("plot_20__") for path in tuning.iterdir())
     assert not all_dev.exists()
     assert result["plot_crop_inventory_count"] == 16
+
+
+def test_long_crop_inventory_deterministically_prunes_excess(tmp_path: Path) -> None:
+    module = load(
+        "treelearn_long_crop_inventory",
+        "methods/treelearn/scripts/inventory_for_instance_finetune_long_crops.py",
+    )
+    crop_root = tmp_path / "crops"
+    crop_root.mkdir()
+    for index in range(35):
+        (crop_root / f"{index:04d}.npz").write_bytes(f"crop-{index}".encode())
+    normalised = tmp_path / "normalised.las"
+    normalised.write_bytes(b"las")
+    config = tmp_path / "crops.json"
+    config.write_text("{}")
+    inventory = tmp_path / "crop_inventory.json"
+    freeze = tmp_path / "freeze.json"
+    freeze.write_text(json.dumps({
+        "held_out_test_accessed": False,
+        "plots": [{
+            "task_index": 1,
+            "split": "dev",
+            "safe_plot_id": "plot_1",
+            "crop_inventory": str(inventory),
+            "crop_root": str(crop_root),
+            "crops_expected": 32,
+            "crops_generate_requested": 48,
+            "crop_seed": 42001,
+            "normalised_las": str(normalised),
+            "crop_config": str(config),
+        }],
+    }))
+    result = module.inventory(freeze, 1)
+    assert result["crop_generation_outputs_created"] == 35
+    assert result["pruned_crop_count"] == 3
+    assert result["pruned_crop_names"] == ["0032.npz", "0033.npz", "0034.npz"]
+    assert result["crop_count"] == 32
+    assert len(list(crop_root.glob("*.npz"))) == 32
 
 
 def test_long_slurm_training_half_is_guarded_and_uses_eight_gpus() -> None:

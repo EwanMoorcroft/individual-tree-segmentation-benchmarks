@@ -32,13 +32,24 @@ def inventory(freeze_path: Path, task_index: int) -> dict:
         raise FileExistsError(output)
     files = sorted(Path(row["crop_root"]).glob("*.npz"))
     expected = int(row["crops_expected"])
-    if len(files) != expected:
-        raise ValueError(f"Expected {expected} crops, found {len(files)}")
+    requested = int(row["crops_generate_requested"])
+    generated_count = len(files)
+    if requested < expected or generated_count < expected:
+        raise ValueError(
+            f"Expected at least {expected} crops from {requested} attempts, "
+            f"found {generated_count}"
+        )
+    pruned = files[expected:]
+    for path in pruned:
+        path.unlink()
+    files = files[:expected]
     entries = []
     total_bytes = 0
     aggregate = hashlib.sha256()
     for path in files:
         size = path.stat().st_size
+        if size <= 0:
+            raise ValueError(f"Generated crop is empty: {path}")
         digest = sha256(path)
         entry = {"name": path.name, "size_bytes": size, "sha256": digest}
         entries.append(entry)
@@ -53,6 +64,11 @@ def inventory(freeze_path: Path, task_index: int) -> dict:
         "safe_plot_id": row["safe_plot_id"],
         "task_index": task_index,
         "crop_seed": int(row["crop_seed"]),
+        "crop_generation_attempts_requested": requested,
+        "crop_generation_outputs_created": generated_count,
+        "crop_pruning_rule": "retain_lexicographically_first_expected_npz",
+        "pruned_crop_count": len(pruned),
+        "pruned_crop_names": [path.name for path in pruned],
         "crop_count": len(entries),
         "total_size_bytes": total_bytes,
         "crop_root": str(Path(row["crop_root"]).resolve()),

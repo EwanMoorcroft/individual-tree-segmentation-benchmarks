@@ -22,6 +22,7 @@ CLEAN_CHECKPOINT_SOURCE = (
 )
 SPLIT_SEED = 42
 CROPS_PER_PLOT = 32
+CROP_GENERATION_ATTEMPTS_PER_PLOT = 48
 TRAINING_EPOCHS = 35
 EXAMPLES_PER_EPOCH = 714
 BATCH_SIZE = 2
@@ -243,6 +244,7 @@ def prepare(
             "crop_root": str(plot_root / "random_crops" / "npz"),
             "crop_inventory": str(plot_root / "crop_inventory.json"),
             "crops_expected": crops_per_plot,
+            "crops_generate_requested": CROP_GENERATION_ATTEMPTS_PER_PLOT,
             "crop_seed": 42000 + index,
         })
 
@@ -301,6 +303,7 @@ def prepare(
         "validation_plots": 5,
         "all_development_plots": 21,
         "crops_per_plot": crops_per_plot,
+        "crop_generation_attempts_per_plot": CROP_GENERATION_ATTEMPTS_PER_PLOT,
         "tuning_crop_count": 16 * crops_per_plot,
         "tuning_data_root": str(tuning_root.resolve()),
         "label_normalisation": {

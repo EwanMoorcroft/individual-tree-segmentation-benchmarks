@@ -22,9 +22,37 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def validated_integer_tree_ids(tree_id: np.ndarray) -> np.ndarray:
+    tree_id = np.asarray(tree_id)
+    if not np.issubdtype(tree_id.dtype, np.number):
+        raise TypeError("treeID must use a numeric type")
+    if not np.all(np.isfinite(tree_id)):
+        raise ValueError("treeID contains non-finite values")
+    rounded = np.rint(tree_id)
+    if not np.array_equal(tree_id, rounded):
+        raise ValueError("treeID contains non-integral values")
+    limits = np.iinfo(np.int64)
+    if np.any(rounded < limits.min) or np.any(rounded > limits.max):
+        raise OverflowError("treeID exceeds the int64 range")
+    return rounded.astype(np.int64)
+
+
+def encode_tree_ids(tree_id: np.ndarray, target_dtype: np.dtype) -> np.ndarray:
+    tree_id = np.asarray(tree_id, dtype=np.int64)
+    target_dtype = np.dtype(target_dtype)
+    if not np.issubdtype(target_dtype, np.number):
+        raise TypeError("LAS treeID target must use a numeric type")
+    encoded = tree_id.astype(target_dtype)
+    if not np.all(np.isfinite(encoded)) or not np.array_equal(
+        encoded.astype(np.int64), tree_id
+    ):
+        raise OverflowError(f"treeID cannot be represented losslessly as {target_dtype}")
+    return encoded
+
+
 def normalise_instance_labels(classification: np.ndarray, tree_id: np.ndarray) -> np.ndarray:
     classification = np.asarray(classification)
-    tree_id = np.asarray(tree_id)
+    tree_id = validated_integer_tree_ids(tree_id)
     if classification.ndim != 1 or tree_id.ndim != 1 or classification.shape != tree_id.shape:
         raise ValueError("classification and treeID must be equal-length one-dimensional arrays")
     result = np.full(tree_id.shape, -1, dtype=np.int64)
@@ -72,13 +100,11 @@ def normalise_las(
     if reference_tree_count != expected_reference_tree_count:
         raise ValueError(f"Frozen development reference-tree count changed: {source}")
     target_dtype = source_tree_id.dtype
-    if not np.issubdtype(target_dtype, np.integer):
-        raise TypeError("treeID must use an integer type")
     # TreeLearn's LAS loader derives ignored labels from treeID == 0 combined
     # with a classification outside [1, 2]. Keeping ignored LAS treeID values
     # at zero also supports FOR-instance files whose extra dimension is unsigned.
     output_tree_id = np.where(normalised > 0, normalised, 0)
-    las[tree_name] = output_tree_id.astype(target_dtype)
+    las[tree_name] = encode_tree_ids(output_tree_id, target_dtype)
     output.parent.mkdir(parents=True, exist_ok=False)
     las.write(output)
     record = {
@@ -91,6 +117,9 @@ def normalise_las(
         "point_count": int(normalised.size),
         "positive_tree_points": int(np.count_nonzero(tree_mask)),
         "positive_tree_instances": reference_tree_count,
+        "source_tree_id_dtype": str(target_dtype),
+        "tree_id_integer_values_validated": True,
+        "tree_id_lossless_storage_validated": True,
         "non_tree_points": int(np.count_nonzero(normalised == 0)),
         "ignored_points": int(np.count_nonzero(normalised == -1)),
         "held_out_test_accessed": False,
@@ -138,7 +167,7 @@ def main() -> int:
         "min_percent_occupied_fill": 0.9,
         "how_far_fill": 9,
         "min_percent_occupied_choose": 0.45,
-        "n_samples_total": int(row["crops_expected"]),
+        "n_samples_total": int(row["crops_generate_requested"]),
         "chunk_size": 35,
     }
     config_path = Path(row["crop_config"])

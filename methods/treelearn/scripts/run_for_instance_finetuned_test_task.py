@@ -1,0 +1,132 @@
+"""Run one authorized frozen TreeLearn held-out test task."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+import run_for_instance_one_plot_smoke as runner
+from for_instance_test_common import load_test_manifest
+
+
+CLEAN_SOURCE_MD5 = "106a80de2991c5f23484a3f9d03e3b16"
+CLEAN_SOURCE_URL = (
+    "https://data.goettingen-research-online.de/api/access/datafile/"
+    ":persistentId?persistentId=doi:10.25625/VPMPID/8CIIW0"
+)
+
+
+def read_row(path: Path, task_index: int, run_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    rows, manifest = load_test_manifest(path)
+    if manifest.get("source_long_run_id") != run_id:
+        raise ValueError("Test manifest belongs to a different long run")
+    matches = [row for row in rows if int(row["task_index"]) == task_index]
+    if len(matches) != 1:
+        raise ValueError(f"Expected one test row for task {task_index}")
+    return matches[0], manifest
+
+
+def write_preflight_failure(
+    metadata_root: Path,
+    run_id: str,
+    task_index: int,
+    row: dict[str, Any] | None,
+    error: Exception,
+) -> None:
+    safe_id = (row or {}).get("safe_plot_id", f"task_{task_index:03d}")
+    output = metadata_root / run_id / f"{safe_id}_inference.json"
+    if output.exists():
+        return
+    output.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "method": "treelearn",
+        "dataset": "for-instance",
+        "run_id": run_id,
+        "training_mode": "fine_tuned_on_dev",
+        "evaluation_scope": "held_out_test",
+        "status": "failed_preflight",
+        "return_code": 1,
+        "held_out_test_accessed": True,
+        "task_index": task_index,
+        "plot": {
+            "plot_id": (row or {}).get("plot_id"),
+            "safe_plot_id": safe_id,
+            "relative_path": (row or {}).get("relative_path"),
+            "collection": (row or {}).get("collection"),
+            "split": "test",
+        },
+        "error": {"type": type(error).__name__, "message": str(error)},
+    }
+    output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--manifest", required=True)
+    parser.add_argument("--task-index", type=int, required=True)
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--dataset-root", required=True)
+    parser.add_argument("--treelearn-repo", required=True)
+    parser.add_argument("--checkpoint", required=True)
+    parser.add_argument("--runtime-root", required=True)
+    parser.add_argument("--predictions-root", required=True)
+    parser.add_argument("--metadata-root", required=True)
+    parser.add_argument("--tables-root", required=True)
+    args = parser.parse_args()
+    row: dict[str, Any] | None = None
+    metadata_root = Path(args.metadata_root).expanduser().resolve()
+    try:
+        row, manifest = read_row(
+            Path(args.manifest).expanduser().resolve(), args.task_index, args.run_id
+        )
+        dataset_root = Path(args.dataset_root).expanduser().resolve()
+        checkpoint = Path(args.checkpoint).expanduser().resolve()
+        if (dataset_root / row["relative_path"]).resolve() != Path(
+            row["input_las"]
+        ).resolve():
+            raise ValueError("Test manifest input path differs from dataset root")
+        if checkpoint != Path(manifest["checkpoint"]).resolve():
+            raise ValueError("Submitted checkpoint differs from frozen selection")
+        command = [
+            sys.executable,
+            str(runner.ROOT / "methods/treelearn/scripts/run_for_instance_one_plot_smoke.py"),
+            "--config", args.config,
+            "--dataset-root", str(dataset_root),
+            "--treelearn-repo", args.treelearn_repo,
+            "--checkpoint", str(checkpoint),
+            "--checkpoint-source-md5", CLEAN_SOURCE_MD5,
+            "--checkpoint-source-url", CLEAN_SOURCE_URL,
+            "--checkpoint-source-dataset-name", "model_weights_finetuned",
+            "--training-mode", "fine_tuned_on_dev",
+            "--runtime-root", args.runtime_root,
+            "--predictions-root", args.predictions_root,
+            "--metadata-root", args.metadata_root,
+            "--tables-root", args.tables_root,
+            "--run-id", args.run_id,
+            "--relative-path", row["relative_path"],
+            "--plot-id", row["plot_id"],
+            "--safe-plot-id", row["safe_plot_id"],
+            "--expected-split", "test",
+            "--held-out-test-authorized",
+            "--expected-point-count", str(row["point_count"]),
+            "--expected-reference-tree-count", str(row["reference_tree_count"]),
+            "--expected-input-sha256", row["input_sha256"],
+            "--expected-split-metadata-sha256", row["split_metadata_sha256"],
+            "--evaluation-scope", "held_out_test",
+        ]
+        subprocess.run(command, cwd=runner.ROOT, check=True)
+        return 0
+    except Exception as exc:
+        write_preflight_failure(
+            metadata_root, args.run_id, args.task_index, row, exc
+        )
+        raise
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

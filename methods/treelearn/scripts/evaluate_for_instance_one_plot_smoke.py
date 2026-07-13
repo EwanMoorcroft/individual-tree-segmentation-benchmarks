@@ -283,8 +283,8 @@ def evaluate_arrays(
 ]:
     """Evaluate a TreeLearn adapter output with the frozen shared protocol."""
 
-    if split != "dev":
-        raise ValueError("The one-plot TreeLearn smoke evaluator requires --split dev")
+    if split not in {"dev", "test"}:
+        raise ValueError("The TreeLearn evaluator requires split dev or test")
     pred, target, classes, pred_classes, _ = validate_arrays(
         pred_tree_id,
         target_tree_id,
@@ -423,7 +423,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--unmatched-references-csv", required=True)
     parser.add_argument(
         "--evaluation-scope",
-        choices=("development_smoke", "development_full"),
+        choices=("development_smoke", "development_full", "held_out_test"),
         default="development_smoke",
     )
     return parser.parse_args()
@@ -431,8 +431,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    if args.split != "dev":
-        raise ValueError("The one-plot TreeLearn smoke evaluator requires --split dev")
+    if args.split not in {"dev", "test"}:
+        raise ValueError("The TreeLearn evaluator requires split dev or test")
+    if (args.split == "test") != (args.evaluation_scope == "held_out_test"):
+        raise ValueError("Test split and held_out_test scope must be used together")
 
     prediction_path = Path(args.prediction_npz).expanduser().resolve()
     if not prediction_path.is_file():
@@ -473,8 +475,11 @@ def main() -> int:
     ).resolve()
     if recorded_prediction != prediction_path:
         raise ValueError("TreeLearn prediction path does not match inference metadata")
-    if inference_metadata.get("plot", {}).get("split") != "dev":
-        raise ValueError("TreeLearn inference metadata is not development-only")
+    if inference_metadata.get("plot", {}).get("split") != args.split:
+        raise ValueError("TreeLearn inference metadata split does not match")
+    held_out_accessed = inference_metadata.get("held_out_test_accessed", False)
+    if held_out_accessed is not (args.split == "test"):
+        raise ValueError("TreeLearn held-out access provenance does not match")
     repository = inference_metadata.get("environment", {}).get(
         "treelearn_repository", {}
     )
@@ -527,24 +532,24 @@ def main() -> int:
 
     summary.update(
         {
-            "status": (
-                "completed_development_smoke_evaluation"
-                if args.evaluation_scope == "development_smoke"
-                else "completed_aligned_pointwise_development_plot"
-            ),
+            "status": {
+                "development_smoke": "completed_development_smoke_evaluation",
+                "development_full": "completed_aligned_pointwise_development_plot",
+                "held_out_test": "completed_aligned_pointwise_held_out_test_plot",
+            }[args.evaluation_scope],
             "evaluation_scope": args.evaluation_scope,
-            "held_out_test_accessed": False,
+            "held_out_test_accessed": args.split == "test",
             "run_id": args.run_id,
             "relative_path": args.relative_path,
             "prediction_npz": str(prediction_path),
             "prediction_npz_sha256": actual_prediction_sha256,
             "prediction_npz_size_bytes": prediction_path.stat().st_size,
             "inference_metadata": str(metadata_path),
-            "next_gate": (
-                "manual_alignment_review_before_full_development_evaluation"
-                if args.evaluation_scope == "development_smoke"
-                else "aggregate_full_development_results_before_any_test_route"
-            ),
+            "next_gate": {
+                "development_smoke": "manual_alignment_review_before_full_development_evaluation",
+                "development_full": "aggregate_full_development_results_before_any_test_route",
+                "held_out_test": "aggregate_one_time_held_out_test_results",
+            }[args.evaluation_scope],
         }
     )
     metrics_path = Path(args.metrics_json).expanduser().resolve()

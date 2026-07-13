@@ -93,6 +93,8 @@ remain separate for CULS, NIBIO, RMIT, SCION and TUWIEN. Development scores
 cannot be pooled with test scores.
 
 The long chain ends at a hashed selected checkpoint with
-`held_out_test_accessed=false`. A separate manual authorization is required
-before one frozen evaluation of the clean unchanged checkpoint and one frozen
-evaluation of the selected fine-tuned checkpoint on all 11 test plots.
+`held_out_test_accessed=false`. After separate manual authorization, the
+fine-tuned test route permits one frozen evaluation of that selected
+checkpoint on all 11 local test plots. The clean unchanged checkpoint requires
+its own separately authorized route; authorization for one does not authorize
+the other.

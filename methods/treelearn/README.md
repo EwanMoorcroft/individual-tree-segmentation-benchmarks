@@ -174,6 +174,17 @@ prediction artefacts, freezes the selected epoch-35 setting and stops before
 test. Validation uses 41 checkpoint-level jobs, each processing five plots
 sequentially, so the chain remains below the Barkla submitted-job QOS limit.
 
+After explicit manual authorization, submit the selected epoch-35 checkpoint
+once through
+[`slurm/submit_for_instance_finetuned_test.sh`](slurm/submit_for_instance_finetuned_test.sh).
+The route freezes the exact local 11-plot official test subset, runs at most
+two inference tasks concurrently, retains five raw/aligned prediction
+artefacts per plot, writes per-plot, per-site and overall test summaries, and
+refuses any repeated or colliding submission. Use
+[`slurm/monitor_for_instance_finetuned_test.sh`](slurm/monitor_for_instance_finetuned_test.sh)
+for queue and result status without reading logs. See the
+[`fine-tuned test runbook`](docs/finetuned_test_evaluation.md).
+
 ## Evaluation Route
 
 Evaluation uses `for_instance_pointwise_v1`, the union of reference-tree and
@@ -187,8 +198,9 @@ prediction-size filtering or threshold selection is permitted.
 
 - The completed default-checkpoint route has documented FOR-instance
   validation/test training overlap and is excluded from leakage-free ranking.
-- The published route and fine-tuned route have development-only results; no
-  TreeLearn held-out test result exists.
+- The published route remains development-only. The selected fine-tuned route
+  has a guarded one-time test workflow, but it is not a completed benchmark
+  result until its final retention gate passes.
 - The accepted smoke score represents one CULS development plot only and is
   not an overall or cross-site estimate.
 - The setup follows upstream dependency pins, but upstream leaves some pip
@@ -196,7 +208,8 @@ prediction-size filtering or threshold selection is permitted.
   retained with the run evidence.
 - The completed result is development-only and must not be presented as a
   held-out benchmark score.
-- The held-out test split remains locked and no TreeLearn test route exists.
+- The test route is restricted to the frozen selected checkpoint and refuses
+  reruns that could turn the test split into a model-selection signal.
 
 ## Current Benchmark Status
 

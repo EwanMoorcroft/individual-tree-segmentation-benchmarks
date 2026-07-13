@@ -237,9 +237,10 @@ def validate_dataset_source(
     observed_split = matches[0].casefold()
     contract = plot_contract or config["smoke"]
     expected_split = str(contract["split"]).casefold()
-    if observed_split != expected_split or expected_split != "dev":
+    if expected_split not in {"dev", "test"} or observed_split != expected_split:
+        label = "development split 'dev'" if expected_split == "dev" else "test split 'test'"
         raise ValueError(
-            f"Configured plot split is {matches[0]!r}; expected development split 'dev'"
+            f"Configured plot split is {matches[0]!r}; expected {label}"
         )
 
     cloud = laspy.read(source_las)
@@ -479,11 +480,25 @@ def build_metadata(
 ) -> dict[str, Any]:
     checkpoint = paths["checkpoint"]
     checkpoint_exists = checkpoint.is_file()
+    success_criteria = config["success_criteria"]
+    failure_indicators = config["failure_indicators"]
+    if evaluation_scope == "held_out_test":
+        success_criteria = [
+            "The manually authorized frozen test manifest selects this exact plot.",
+            "The frozen epoch-35 checkpoint identity is unchanged.",
+            "Source rows and coordinates remain aligned in the adapted output.",
+            "Raw full-forest, raw pointwise and adapted predictions are retained.",
+        ]
+        failure_indicators = [
+            "The test manifest, checkpoint, source file or split metadata changed.",
+            "The output row count, order, coordinates, semantics or retained hashes differ.",
+            "A pre-existing run-scoped output indicates a repeated test attempt.",
+        ]
     return {
         "method": config["method"]["slug"],
         "dataset": config["dataset"]["slug"],
         "dataset_split": plot_contract["split"],
-        "held_out_test_accessed": False,
+        "held_out_test_accessed": plot_contract["split"] == "test",
         "run_id": args.run_id,
         "training_mode": (
             getattr(args, "training_mode", None)
@@ -509,11 +524,18 @@ def build_metadata(
             "exists": checkpoint_exists,
             "sha256": sha256(checkpoint) if checkpoint_exists else None,
             "md5": md5(checkpoint) if checkpoint_exists else None,
-            "source_url": config["method"]["checkpoint"]["source_url"],
-            "source_dataset_name": config["method"]["checkpoint"][
-                "source_dataset_name"
-            ],
-            "source_md5": config["method"]["checkpoint"]["source_md5"],
+            "source_url": (
+                getattr(args, "checkpoint_source_url", None)
+                or config["method"]["checkpoint"]["source_url"]
+            ),
+            "source_dataset_name": (
+                getattr(args, "checkpoint_source_dataset_name", None)
+                or config["method"]["checkpoint"]["source_dataset_name"]
+            ),
+            "source_md5": (
+                getattr(args, "checkpoint_source_md5", None)
+                or config["method"]["checkpoint"]["source_md5"]
+            ),
         },
         "environment": {
             "treelearn_repo": str(paths["treelearn_repo"]),
@@ -590,14 +612,14 @@ def build_metadata(
             ],
         },
         "validation": validation,
-        "success_criteria": config["success_criteria"],
-        "failure_indicators": config["failure_indicators"],
+        "success_criteria": success_criteria,
+        "failure_indicators": failure_indicators,
         "error": error,
-        "next_gate": (
-            "shared_smoke_evaluation_then_manual_alignment_review"
-            if evaluation_scope == "development_smoke"
-            else "aggregate_full_development_results_before_any_test_route"
-        ),
+        "next_gate": {
+            "development_smoke": "shared_smoke_evaluation_then_manual_alignment_review",
+            "development_full": "aggregate_full_development_results_before_any_test_route",
+            "held_out_test": "aggregate_one_time_held_out_test_results",
+        }[evaluation_scope],
     }
 
 
@@ -612,6 +634,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset-root")
     parser.add_argument("--treelearn-repo")
     parser.add_argument("--checkpoint")
+    parser.add_argument("--checkpoint-source-md5")
+    parser.add_argument("--checkpoint-source-url")
+    parser.add_argument("--checkpoint-source-dataset-name")
     parser.add_argument(
         "--training-mode",
         choices=("published_pretrained", "fine_tuned_on_dev"),
@@ -625,13 +650,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--plot-id")
     parser.add_argument("--safe-plot-id")
     parser.add_argument("--expected-split", default="dev")
+    parser.add_argument("--held-out-test-authorized", action="store_true")
     parser.add_argument("--expected-point-count", type=int)
     parser.add_argument("--expected-reference-tree-count", type=int)
     parser.add_argument("--expected-input-sha256")
     parser.add_argument("--expected-split-metadata-sha256")
     parser.add_argument(
         "--evaluation-scope",
-        choices=("development_smoke", "development_full"),
+        choices=("development_smoke", "development_full", "held_out_test"),
         default="development_smoke",
     )
     return parser.parse_args()
@@ -647,7 +673,7 @@ def main() -> int:
     defaults = config.get("plot_defaults") or config.get("smoke") or {}
     relative_path = args.relative_path or defaults.get("relative_path")
     if not relative_path:
-        raise ValueError("A development --relative-path is required")
+        raise ValueError("A --relative-path is required")
     relative = Path(relative_path)
     if relative.is_absolute() or ".." in relative.parts:
         raise ValueError(f"Unsafe TreeLearn relative path: {relative_path!r}")
@@ -666,8 +692,15 @@ def main() -> int:
     if expected_point_count is None or expected_reference_tree_count is None:
         raise ValueError("Frozen expected point and reference-tree counts are required")
     split = args.expected_split or defaults.get("split")
-    if split != "dev":
-        raise ValueError("The TreeLearn route must use a development plot")
+    if split not in {"dev", "test"}:
+        raise ValueError("The TreeLearn route requires split dev or test")
+    if split == "test":
+        if not args.held_out_test_authorized:
+            raise ValueError("Held-out test access requires explicit authorization")
+        if args.evaluation_scope != "held_out_test":
+            raise ValueError("Test plots require evaluation scope held_out_test")
+    elif args.evaluation_scope == "held_out_test":
+        raise ValueError("Held-out test scope requires a test plot")
     plot_contract = {
         "relative_path": relative.as_posix(),
         "plot_id": plot_id,
@@ -705,9 +738,11 @@ def main() -> int:
     raw_pointwise_npz = (
         runtime_root / "results" / "pointwise_results" / "pointwise_results.npz"
     )
-    artifact_label = (
-        "smoke" if args.evaluation_scope == "development_smoke" else "development"
-    )
+    artifact_label = {
+        "development_smoke": "smoke",
+        "development_full": "development",
+        "held_out_test": "test",
+    }[args.evaluation_scope]
     adapted_npz = (
         predictions_root / f"{safe_plot_id}_treelearn_{artifact_label}_predictions.npz"
     )
@@ -762,7 +797,10 @@ def main() -> int:
 
         validate_checkpoint_identity(
             checkpoint,
-            str(config["method"]["checkpoint"]["source_md5"]),
+            str(
+                args.checkpoint_source_md5
+                or config["method"]["checkpoint"]["source_md5"]
+            ),
             allow_derived=args.training_mode == "fine_tuned_on_dev",
         )
 

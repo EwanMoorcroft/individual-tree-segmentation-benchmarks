@@ -45,3 +45,13 @@ Completion requires all 11 test tasks, the summary job and the final gate to
 complete. The gate re-hashes 55 retained prediction files and writes a
 completion record. A failed task is documented, but the result is not accepted
 as complete and the test outputs must not be used to select another model.
+
+## Completed run
+
+The authorised route completed on 13 July 2026 for
+`treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227`. All 11 plots
+and the final gate completed. Mean plot F1 is `0.364685`, micro F1 is
+`0.331924`, and all 55 prediction artefacts passed SHA-256 verification. The
+route refuses resubmission. See the
+[`frozen result`](finetuned_test_results_20260713.md) and its public-safe CSV
+and provenance files.

@@ -9,7 +9,7 @@ outside this repository.
 | Dataset | Inspection status | Instance labels | Accuracy status | Recommended role |
 | --- | --- | --- | --- | --- |
 | FRDR treeiso TLS | Downloaded; 16-plot TLS2trees run completed | Not present in the benchmark LAZ inputs | F1/IoU unavailable from `woods` | Completed prediction and operational benchmark |
-| FOR-instance | Downloaded and inventoried; SegmentAnyTree and TreeX runs evaluated | `treeID` in annotated LAS files | SegmentAnyTree released-checkpoint metrics provisional; retrained SegmentAnyTree and TreeX have documented held-out test results | Primary cross-method accuracy benchmark |
+| FOR-instance | Downloaded and inventoried; SegmentAnyTree, TreeX and TreeLearn runs evaluated | `treeID` in annotated LAS files | SegmentAnyTree, TreeX and leakage-controlled fine-tuned TreeLearn have documented held-out test results; the published TreeLearn checkpoint remains overlap-affected | Primary cross-method accuracy benchmark |
 | Wytham Woods | Downloaded, unpacked and inventoried | One segmented tree per file | F1/IoU feasible after scene reconstruction | TLS accuracy benchmark candidate |
 
 ## FRDR Treeiso TLS
@@ -70,9 +70,12 @@ new model fine-tuned from those released weights. The protocol is in
 [`for-instance.md`](protocols/for-instance.md)
 and the provisional values are documented in
 [`provisional_released_checkpoint_results.md`](../methods/segmentanytree/docs/provisional_released_checkpoint_results.md).
-The TreeX deterministic baseline has also been evaluated on the exact-path
-local FOR-instance subset. The separate TLS2trees compatibility pilot retains
-its leaf-off `4` and `6` filter.
+The TreeX deterministic baseline and the frozen fine-tuned TreeLearn epoch-35
+checkpoint have also been evaluated once on the exact-path 11-plot test
+subset. TreeLearn retained and hash-verified all 55 raw and aligned prediction
+artefacts. Its December 2024 published checkpoint remains a development-only
+diagnostic because of documented FOR-instance training overlap. The separate
+TLS2trees compatibility pilot retains its leaf-off `4` and `6` filter.
 
 ## Wytham Woods
 

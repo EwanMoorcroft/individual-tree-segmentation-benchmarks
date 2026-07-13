@@ -1,0 +1,61 @@
+{
+  "benchmark": "for_instance_treelearn",
+  "checkpoint": {
+    "filename": "epoch_35.pth",
+    "selected_config_id": "full_lr_1e-5",
+    "selected_epoch": 35,
+    "selected_seed": 42,
+    "sha256": "dcc02bb9fdd81cfbdb94454bb7a744c17eee7fa2c4a53096d529b21eb64fc590",
+    "source_checkpoint": {
+      "filename": "model_weights_finetuned.pth",
+      "md5": "106a80de2991c5f23484a3f9d03e3b16",
+      "persistent_id": "doi:10.25625/VPMPID/8CIIW0",
+      "stated_for_instance_training_overlap": false
+    },
+    "training_mode": "fine_tuned_on_dev",
+    "training_plots": 16
+  },
+  "completed_date_utc": "2026-07-13",
+  "completion": {
+    "status": "completed_treelearn_finetuned_held_out_test",
+    "validated_at_utc": "2026-07-13T09:23:52.783491+00:00"
+  },
+  "dataset_split": "test",
+  "evaluation_mask": "union_of_reference_tree_and_predicted_tree_points",
+  "evaluation_protocol": "for_instance_pointwise_v1",
+  "held_out_test_accessed": true,
+  "jobs": {
+    "final_gate": "9765972",
+    "inference_evaluation_array": "9765970",
+    "preparation": "9765969",
+    "summary": "9765971"
+  },
+  "matching_policy": "maximum_cardinality_one_to_one",
+  "next_gate": "treelearn_benchmark_complete",
+  "output_roots": {
+    "checkpoint": "data/checkpoints/treelearn/treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227/epoch_35.pth",
+    "tables": "results/tables/treelearn_for_instance/finetuned_test/treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227"
+  },
+  "plots": {
+    "completed": 11,
+    "expected": 11,
+    "failed": 0
+  },
+  "repeat_test_for_setting_selection_permitted": false,
+  "result_role": "completed_primary_result",
+  "result_status": "completed_aligned_pointwise_test",
+  "result_table": "methods/treelearn/examples/treelearn_finetuned_test_results_20260713.csv",
+  "retention": {
+    "complete_test_prediction_set_retained": true,
+    "manifest_sha256": "972ad17ba103b151095d2925862e76e7186594b549d659cea2ca781d62600b0b",
+    "status": "retention_verified",
+    "verified_prediction_file_count": 55
+  },
+  "run_id": "treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227",
+  "run_summary_sha256": "a612e3f1b8a51aaf3b86ba977262ee45941721a50f693573cec01324dbdfce8b",
+  "site_result_table": "methods/treelearn/examples/treelearn_finetuned_test_site_results_20260713.csv",
+  "source": "Barkla Slurm completion records and frozen aggregate summaries supplied after the one-time held-out test gate completed",
+  "summary_sha256": "f6ba94aae5e6307d57967b6153b40ebbacb743d17d74cf5a565631e01448e689",
+  "upstream_commit": "fd240ce7caa4c444fe3418aca454dc578bc557d4",
+  "variant": "fine_tuned_on_dev_long_epoch_35"
+}

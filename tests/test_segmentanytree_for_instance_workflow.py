@@ -2737,7 +2737,9 @@ def test_cross_method_workbook_has_comparable_target_values() -> None:
     assert "TreeLearn" in text
     assert "published pretrained matched validation baseline" in text
     assert "fine-tuned on development epoch 70" in text
+    assert "fine-tuned on development long epoch 35" in text
     assert "treelearn_matched_internal_validation" in text
+    assert "Preregistered seed-42 epoch-35 checkpoint" in text
     assert "Prediction Retention" in text
     assert "TreeLearn development diagnostics are shown separately" in text
     assert "Pending aligned evaluation" not in text

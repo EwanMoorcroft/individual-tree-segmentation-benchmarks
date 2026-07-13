@@ -19,12 +19,16 @@ sources are:
 - `methods/treex/examples/treex_site_summary.csv`;
 - `methods/treelearn/examples/treelearn_completed_development_results_20260712.csv`;
 - `methods/treelearn/examples/treelearn_completed_development_site_results_20260712.csv`; and
-- `methods/treelearn/examples/treelearn_finetune_validation_results_20260712.csv`.
+- `methods/treelearn/examples/treelearn_finetune_validation_results_20260712.csv`;
+- `methods/treelearn/examples/treelearn_finetuned_test_results_20260713.csv`;
+- `methods/treelearn/examples/treelearn_finetuned_test_site_results_20260713.csv`; and
+- `methods/treelearn/examples/treelearn_finetuned_test_provenance_20260713.json`.
 
 The workbook distinguishes mean plot metrics from count-aggregated micro
-metrics. It includes the completed SegmentAnyTree target site rows for CULS,
-NIBIO, RMIT, SCION and TUWIEN, alongside the historical SAT and TreeX site
-comparisons.
+metrics. It includes completed SegmentAnyTree, TreeX and leakage-controlled
+TreeLearn fine-tuned test rows for CULS, NIBIO, RMIT, SCION and TUWIEN. The
+overlap-affected TreeLearn published-checkpoint development diagnostic remains
+in a separate comparable group.
 
 [`sat_treex_benchmark_metrics/for_instance_prediction_retention_registry.csv`](sat_treex_benchmark_metrics/for_instance_prediction_retention_registry.csv)
 records the off-Git prediction sets required for future metrics. A completed

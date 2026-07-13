@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import csv
 import importlib.util
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -138,3 +140,85 @@ def test_test_route_is_explicit_one_time_and_retains_predictions() -> None:
     assert "EXPECTED_TEST_PLOTS * 5" in gate
     assert "tail " not in monitor
     assert "squeue" in monitor and "sacct" in monitor
+
+
+def test_completed_test_public_evidence_reconciles_and_is_retained() -> None:
+    examples = ROOT / "methods/treelearn/examples"
+    with (
+        examples / "treelearn_finetuned_test_results_20260713.csv"
+    ).open(encoding="utf-8", newline="") as handle:
+        overall_rows = list(csv.DictReader(handle))
+    with (
+        examples / "treelearn_finetuned_test_site_results_20260713.csv"
+    ).open(encoding="utf-8", newline="") as handle:
+        sites = list(csv.DictReader(handle))
+    provenance = json.loads(
+        (
+            examples / "treelearn_finetuned_test_provenance_20260713.json"
+        ).read_text(encoding="utf-8")
+    )
+
+    assert len(overall_rows) == 1
+    overall = overall_rows[0]
+    assert overall["run_id"] == (
+        "treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227"
+    )
+    assert overall["dataset_split"] == "test"
+    assert overall["evaluation_protocol"] == "for_instance_pointwise_v1"
+    assert overall["matching_policy"] == "maximum_cardinality_one_to_one"
+    assert overall["evaluation_mask"] == (
+        "union_of_reference_tree_and_predicted_tree_points"
+    )
+    assert overall["held_out_test_accessed"] == "true"
+    assert overall["retention_status"] == "retention_verified"
+    assert int(overall["retained_prediction_files"]) == 55
+    assert int(overall["plots"]) == 11
+    assert int(overall["reference_instances"]) == 323
+    assert {row["site"] for row in sites} == {
+        "CULS", "NIBIO", "RMIT", "SCION", "TUWIEN"
+    }
+    assert all(row["dataset_split"] == "test" for row in sites)
+    assert all(row["held_out_test_accessed"] == "true" for row in sites)
+
+    for overall_field, site_field in (
+        ("plots", "completed_plots"),
+        ("point_count", "point_count"),
+        ("evaluated_point_count", "evaluated_point_count"),
+        ("predicted_instances", "predicted_instances"),
+        ("reference_instances", "reference_instances"),
+        ("true_positives", "true_positives"),
+        ("false_positives", "false_positives"),
+        ("false_negatives", "false_negatives"),
+    ):
+        assert int(overall[overall_field]) == sum(
+            int(row[site_field]) for row in sites
+        )
+
+    tp = int(overall["true_positives"])
+    fp = int(overall["false_positives"])
+    fn = int(overall["false_negatives"])
+    assert math.isclose(float(overall["micro_precision"]), tp / (tp + fp))
+    assert math.isclose(float(overall["micro_recall"]), tp / (tp + fn))
+    assert math.isclose(float(overall["micro_f1"]), 2 * tp / (2 * tp + fp + fn))
+    assert math.isclose(
+        float(overall["mean_plot_f1"]),
+        sum(
+            float(row["mean_plot_f1"]) * int(row["completed_plots"])
+            for row in sites
+        ) / 11,
+    )
+
+    assert provenance["run_id"] == overall["run_id"]
+    assert provenance["result_status"] == overall["result_status"]
+    assert provenance["held_out_test_accessed"] is True
+    assert provenance["repeat_test_for_setting_selection_permitted"] is False
+    assert provenance["checkpoint"]["sha256"] == (
+        "dcc02bb9fdd81cfbdb94454bb7a744c17eee7fa2c4a53096d529b21eb64fc590"
+    )
+    assert provenance["retention"]["verified_prediction_file_count"] == 55
+    assert provenance["retention"]["manifest_sha256"] == (
+        "972ad17ba103b151095d2925862e76e7186594b549d659cea2ca781d62600b0b"
+    )
+    assert provenance["run_summary_sha256"] == (
+        "a612e3f1b8a51aaf3b86ba977262ee45941721a50f693573cec01324dbdfce8b"
+    )

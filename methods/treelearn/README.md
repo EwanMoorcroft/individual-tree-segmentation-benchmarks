@@ -4,10 +4,11 @@
 
 TreeLearn is a deep learning method for individual-tree segmentation in forest
 point clouds. The repository has completed released-weight development smoke
-and 21-plot development evaluation routes. It also has two guarded,
-development-only fine-tuning routes. The second guarded route starts from an
-authors-released checkpoint whose stated training data excludes
-FOR-instance. None can submit held-out test data.
+and 21-plot development evaluation routes. It also has two guarded fine-tuning
+routes. The second route starts from an authors-released checkpoint whose
+stated training data excludes FOR-instance, freezes a seed-42 epoch-35
+checkpoint from development-only training, and has completed its authorised
+one-time 11-plot held-out test evaluation.
 
 ## Upstream Repository And Citation
 
@@ -184,6 +185,9 @@ refuses any repeated or colliding submission. Use
 [`slurm/monitor_for_instance_finetuned_test.sh`](slurm/monitor_for_instance_finetuned_test.sh)
 for queue and result status without reading logs. See the
 [`fine-tuned test runbook`](docs/finetuned_test_evaluation.md).
+The completed frozen result is documented in the
+[`fine-tuned test result`](docs/finetuned_test_results_20260713.md); the route
+now refuses any repeated or colliding submission.
 
 ## Evaluation Route
 
@@ -198,16 +202,16 @@ prediction-size filtering or threshold selection is permitted.
 
 - The completed default-checkpoint route has documented FOR-instance
   validation/test training overlap and is excluded from leakage-free ranking.
-- The published route remains development-only. The selected fine-tuned route
-  has a guarded one-time test workflow, but it is not a completed benchmark
-  result until its final retention gate passes.
+- The published route remains development-only. It must not be compared as a
+  leakage-free test baseline with the completed fine-tuned checkpoint.
 - The accepted smoke score represents one CULS development plot only and is
   not an overall or cross-site estimate.
 - The setup follows upstream dependency pins, but upstream leaves some pip
   packages only partially pinned; the resolved Barkla environment must be
   retained with the run evidence.
-- The completed result is development-only and must not be presented as a
-  held-out benchmark score.
+- The completed published-checkpoint result is development-only and must not
+  be presented as a held-out benchmark score. The separate frozen epoch-35
+  result is the completed TreeLearn held-out benchmark score.
 - The test route is restricted to the frozen selected checkpoint and refuses
   reruns that could turn the test split into a model-selection signal.
 
@@ -225,10 +229,20 @@ count-aggregated micro F1 is `0.510760` (micro precision `0.415888`, micro
 recall `0.661710`). CULS has the highest site mean F1 (`0.715010`) and NIBIO
 the lowest (`0.446965`). All 105 raw and aligned prediction artefacts, totalling
 9,645,423,654 bytes, passed retention verification. See the
-[`completed development result`](docs/development_results_20260712.md). No
-held-out test result exists. The separate fine-tuning run and ten-checkpoint
-validation sweep also completed. The best fine-tuned mean plot F1 was
+[`completed development result`](docs/development_results_20260712.md). The
+separate inherited-overlap fine-tuning run and ten-checkpoint validation sweep
+also completed. The best fine-tuned mean plot F1 was
 `0.490504` at epoch 70, below the matched published baseline `0.558769`; the
 fine-tuned route is rejected. All 250 raw and aligned checkpoint-sweep
 prediction artefacts passed retention verification. See the
 [`fine-tuning validation result`](docs/finetune_validation_results_20260712.md).
+
+The replacement clean-checkpoint long route completed eight seed trials and
+froze its preregistered seed-42 epoch-35 checkpoint before test access. Its
+one-time 11-plot test run
+`treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227` completed with
+mean plot F1 `0.364685` and micro F1 `0.331924` (micro precision `0.252006`,
+micro recall `0.486068`, TP `157`, FP `466`, FN `166`). SCION has the highest
+site mean F1 (`0.620663`) and RMIT the lowest (`0.162162`). The final gate
+hash-verified all 55 retained raw and aligned prediction artefacts. See the
+[`completed fine-tuned test result`](docs/finetuned_test_results_20260713.md).

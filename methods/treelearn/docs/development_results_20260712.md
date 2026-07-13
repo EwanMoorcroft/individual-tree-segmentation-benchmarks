@@ -69,6 +69,10 @@ Public-safe aggregate evidence is stored in:
 - [`treelearn_completed_development_site_results_20260712.csv`](../examples/treelearn_completed_development_site_results_20260712.csv); and
 - [`treelearn_completed_development_provenance_20260712.json`](../examples/treelearn_completed_development_provenance_20260712.json).
 
-No held-out test data were accessed, no TreeLearn test result exists, and no
-test submission route is present. The next gate remains manual review before
-any separately authorised held-out route.
+No held-out test data were accessed by this published-checkpoint development
+run, and it has no leakage-free test result. A later, separately frozen
+fine-tuned checkpoint starting from the clean authors-released L1W weights has
+completed an authorised one-time test; see the
+[`fine-tuned test result`](finetuned_test_results_20260713.md). The two rows
+remain separate because this December 2024 checkpoint has documented
+FOR-instance training overlap.

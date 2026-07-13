@@ -109,12 +109,13 @@ def test_cross_method_results_separate_comparable_groups_and_retain_predictions(
     results_path = ROOT / "outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_results.csv"
     with results_path.open(encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
-    assert len(rows) == 6
+    assert len(rows) == 7
     test_rows = [row for row in rows if row["comparable_group"] == "held_out_test_primary"]
     assert {(row["method_slug"], row["training_mode"]) for row in test_rows} == {
         ("segmentanytree", "published_pretrained"),
         ("segmentanytree", "fine_tuned_on_dev"),
         ("treex", "external_training_only"),
+        ("treelearn", "fine_tuned_on_dev"),
     }
     assert {row["evaluation_split"] for row in test_rows} == {"test"}
     assert {int(row["plots"]) for row in test_rows} == {11}
@@ -140,5 +141,6 @@ def test_cross_method_results_separate_comparable_groups_and_retain_predictions(
         ("segmentanytree", "fine_tuned_on_dev"),
         ("treelearn", "published_pretrained"),
         ("treelearn", "fine_tuned_checkpoint_sweep"),
+        ("treelearn", "fine_tuned_on_dev_long_epoch_35"),
     ):
         assert retained[key]["future_metrics_without_inference"] == "true"

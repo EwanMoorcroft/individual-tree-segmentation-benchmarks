@@ -84,7 +84,7 @@ evaluation/training/crop configs, per-plot crop inventories and selection
 tables from fastscratch into ignored run-scoped project scratch paths. Every
 retained control file is size- and SHA-256-inventoried.
 
-## Evaluation contract
+## Evaluation contract and completion
 
 Future primary comparison uses all 11 locally available held-out test plots under
 `for_instance_pointwise_v1`: source-row-aligned labels, union evaluation mask,
@@ -98,3 +98,12 @@ fine-tuned test route permits one frozen evaluation of that selected
 checkpoint on all 11 local test plots. The clean unchanged checkpoint requires
 its own separately authorized route; authorization for one does not authorize
 the other.
+
+The authorised selected-checkpoint route subsequently completed on 13 July
+2026. Run
+`treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227` obtained mean
+plot F1 `0.364685` and micro F1 `0.331924`; all 55 retained test prediction
+artefacts passed the final hash gate. See the
+[`completed test result`](finetuned_test_results_20260713.md). The completed
+test is frozen evidence and cannot be used to select another seed, epoch,
+learning rate, threshold or post-processing setting.

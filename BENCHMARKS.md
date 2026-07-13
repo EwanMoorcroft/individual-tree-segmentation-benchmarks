@@ -49,6 +49,15 @@ No candidate accuracy row indicates a completed method run or a reported
 accuracy result. Dataset readiness and remaining preprocessing are documented
 in [`docs/dataset_feasibility.md`](docs/dataset_feasibility.md).
 
+The FOR-instance headline tracker contains four completed comparable rows:
+SegmentAnyTree published pretrained, SegmentAnyTree fine-tuned on development,
+TreeX deterministic and TreeLearn fine-tuned on development. All four use the
+same supplied 11-plot test split, 323 reference instances and harmonised
+point-aligned evaluator. TreeX has no fine-tuning stage. A leakage-controlled
+TreeLearn published-checkpoint test has not been run, so that variant is a
+documented coverage gap. TreeLearn development and checkpoint-sweep results
+remain in the separate diagnostics table and are not headline rankings.
+
 The accepted TreeLearn smoke is adapter evidence from one CULS development
 plot, not a headline benchmark result. It preserved the source row count and
 order across 1,816,672 points, retained all five raw and aligned prediction

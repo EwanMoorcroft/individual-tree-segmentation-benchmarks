@@ -106,6 +106,14 @@ development/test boundary, validation-only selection, one-time 11-plot test,
 point-aligned prediction contract and identical evaluator—not by hiding
 method-specific training exposure.
 
+The public headline result table must contain only `held_out_test_primary`
+rows. Each such row must use the supplied 11-plot test split, all 323 reference
+instances and `for_instance_pointwise_v1` with maximum-cardinality one-to-one
+matching. Development, smoke, checkpoint-sweep and overlap-affected results
+must be stored in a separate diagnostics table and must never occupy headline
+ranking rows. Missing method variants are reported as gaps rather than being
+filled with a differently scoped result.
+
 ## Reference Definition
 
 The reference instance field is `treeID`.

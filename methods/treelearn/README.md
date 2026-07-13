@@ -217,6 +217,13 @@ prediction-size filtering or threshold selection is permitted.
 
 ## Current Benchmark Status
 
+Only the leakage-controlled epoch-35 held-out-test result is included in the
+cross-method headline tracker. The 21-plot published-checkpoint development
+run, five-plot validation baseline and checkpoint sweep remain diagnostics.
+They use different scopes and must not be presented as additional comparable
+TreeLearn benchmark rows. A clean published-checkpoint result on the frozen
+11-plot test remains unevaluated.
+
 The guarded one-plot published-checkpoint development smoke is complete and
 accepted. It evaluated 1,816,672 source-aligned points with F1 `0.705882`,
 precision `0.545455`, recall `1.000000`, TP `6`, FP `5` and FN `0`. Row count

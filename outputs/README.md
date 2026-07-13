@@ -7,7 +7,9 @@ checkpoints, containers, logs or machine-specific paths.
 ## FOR-instance Method Tracker
 
 [`sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx`](sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx)
-summarises the completed SegmentAnyTree, TreeX and TreeLearn results. Its canonical
+contains only the completed primary held-out-test results for SegmentAnyTree,
+TreeX and TreeLearn. Every result row uses the supplied 11-plot test split, 323
+reference instances and the same point-aligned evaluator. Its canonical
 sources are:
 
 - `methods/segmentanytree/examples/sat_final_test_aligned_summary_*.csv`;
@@ -17,18 +19,21 @@ sources are:
 - `methods/segmentanytree/examples/sat_completed_target_provenance_20260711.json`;
 - `methods/treex/examples/treex_split_summary.csv`; and
 - `methods/treex/examples/treex_site_summary.csv`;
-- `methods/treelearn/examples/treelearn_completed_development_results_20260712.csv`;
-- `methods/treelearn/examples/treelearn_completed_development_site_results_20260712.csv`; and
-- `methods/treelearn/examples/treelearn_finetune_validation_results_20260712.csv`;
 - `methods/treelearn/examples/treelearn_finetuned_test_results_20260713.csv`;
 - `methods/treelearn/examples/treelearn_finetuned_test_site_results_20260713.csv`; and
 - `methods/treelearn/examples/treelearn_finetuned_test_provenance_20260713.json`.
 
 The workbook distinguishes mean plot metrics from count-aggregated micro
-metrics. It includes completed SegmentAnyTree, TreeX and leakage-controlled
-TreeLearn fine-tuned test rows for CULS, NIBIO, RMIT, SCION and TUWIEN. The
-overlap-affected TreeLearn published-checkpoint development diagnostic remains
-in a separate comparable group.
+metrics. It includes completed SegmentAnyTree published and fine-tuned rows,
+the deterministic TreeX row and the leakage-controlled TreeLearn fine-tuned
+row for CULS, NIBIO, RMIT, SCION and TUWIEN. TreeX has no fine-tuning stage.
+A leakage-controlled TreeLearn published-checkpoint test result has not been
+run and is shown as a coverage gap, not as a fabricated result.
+
+[`sat_treex_benchmark_metrics/for_instance_method_development_diagnostics.csv`](sat_treex_benchmark_metrics/for_instance_method_development_diagnostics.csv)
+preserves the three TreeLearn development-only diagnostics that were formerly
+mixed into the headline table. Their 21-plot and 5-plot scopes are not directly
+comparable with the primary 11-plot test results.
 
 [`sat_treex_benchmark_metrics/for_instance_prediction_retention_registry.csv`](sat_treex_benchmark_metrics/for_instance_prediction_retention_registry.csv)
 records the off-Git prediction sets required for future metrics. A completed

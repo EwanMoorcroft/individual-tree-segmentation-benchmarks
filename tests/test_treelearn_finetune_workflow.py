@@ -109,27 +109,31 @@ def test_cross_method_results_separate_comparable_groups_and_retain_predictions(
     results_path = ROOT / "outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_results.csv"
     with results_path.open(encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
-    assert len(rows) == 7
-    test_rows = [row for row in rows if row["comparable_group"] == "held_out_test_primary"]
-    assert {(row["method_slug"], row["training_mode"]) for row in test_rows} == {
+    assert len(rows) == 4
+    assert {row["comparable_group"] for row in rows} == {"held_out_test_primary"}
+    assert {(row["method_slug"], row["training_mode"]) for row in rows} == {
         ("segmentanytree", "published_pretrained"),
         ("segmentanytree", "fine_tuned_on_dev"),
         ("treex", "external_training_only"),
         ("treelearn", "fine_tuned_on_dev"),
     }
-    assert {row["evaluation_split"] for row in test_rows} == {"test"}
-    assert {int(row["plots"]) for row in test_rows} == {11}
-    assert {int(row["reference_instances"]) for row in test_rows} == {323}
-    treelearn_validation = [
-        row for row in rows
-        if row["comparable_group"] == "treelearn_matched_internal_validation"
-    ]
-    assert len(treelearn_validation) == 2
-    assert {row["evaluation_split"] for row in treelearn_validation} == {"dev_validation"}
-    assert {int(row["plots"]) for row in treelearn_validation} == {5}
-    assert {int(row["reference_instances"]) for row in treelearn_validation} == {206}
-    assert all(row["held_out_test_accessed"] == "false" for row in treelearn_validation)
+    assert {row["evaluation_split"] for row in rows} == {"test"}
+    assert {int(row["plots"]) for row in rows} == {11}
+    assert {int(row["reference_instances"]) for row in rows} == {323}
     assert all(row["evaluation_protocol"] == "for_instance_pointwise_v1" for row in rows)
+
+    diagnostics_path = (
+        ROOT
+        / "outputs/sat_treex_benchmark_metrics/for_instance_method_development_diagnostics.csv"
+    )
+    with diagnostics_path.open(encoding="utf-8", newline="") as handle:
+        diagnostics = list(csv.DictReader(handle))
+    assert len(diagnostics) == 3
+    assert {row["method_slug"] for row in diagnostics} == {"treelearn"}
+    assert {row["evaluation_split"] for row in diagnostics} == {"dev", "dev_validation"}
+    assert {int(row["plots"]) for row in diagnostics} == {5, 21}
+    assert all(row["held_out_test_accessed"] == "false" for row in diagnostics)
+    assert not any(row["comparable_group"] == "held_out_test_primary" for row in diagnostics)
 
     retention_path = ROOT / "outputs/sat_treex_benchmark_metrics/for_instance_prediction_retention_registry.csv"
     with retention_path.open(encoding="utf-8", newline="") as handle:

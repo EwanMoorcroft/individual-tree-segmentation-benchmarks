@@ -1,0 +1,521 @@
+{
+  "expected_plots": 32,
+  "files": [
+    {
+      "format": "npz",
+      "plot_id": "CULS/plot_1_annotated",
+      "relative_path": "for_instance/CULS_plot_1_annotated/plot_1_annotated_treex_predictions.npz",
+      "sha256": "68005666a21ca7c70bf034d2a39309fdae1de6c4c4c349c29dcb7de954ddd9ef",
+      "size_bytes": 3860759,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "CULS/plot_1_annotated",
+      "relative_path": "for_instance/CULS_plot_1_annotated/plot_1_annotated_treex_predictions.las",
+      "sha256": "d6dd19bf87b3720e611418ee8e472416b12243937271c6b1bd0a1e2a86950233",
+      "size_bytes": 69034463,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "CULS/plot_3_annotated",
+      "relative_path": "for_instance/CULS_plot_3_annotated/plot_3_annotated_treex_predictions.npz",
+      "sha256": "7e92b392fdf6a75ec3163f040c3670f58fb1f8402453260a6d7b9fc652c3073a",
+      "size_bytes": 6554679,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "CULS/plot_3_annotated",
+      "relative_path": "for_instance/CULS_plot_3_annotated/plot_3_annotated_treex_predictions.las",
+      "sha256": "2697697e18eef673bd043f6ee96cf1adcaa661305429b2163838f6b96d049be7",
+      "size_bytes": 117227735,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_10_annotated",
+      "relative_path": "for_instance/NIBIO_plot_10_annotated/plot_10_annotated_treex_predictions.npz",
+      "sha256": "6f1e471563187ab41ea63d5cf6d33a01c3fdcab33d24d619aafbdb9c86ee6c2f",
+      "size_bytes": 10855959,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_10_annotated",
+      "relative_path": "for_instance/NIBIO_plot_10_annotated/plot_10_annotated_treex_predictions.las",
+      "sha256": "f41e8a605aedfb6519923b33a04128b92def97b03499fbf094807a9d6834d2ac",
+      "size_bytes": 187054177,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_11_annotated",
+      "relative_path": "for_instance/NIBIO_plot_11_annotated/plot_11_annotated_treex_predictions.npz",
+      "sha256": "f569b607ead29e718b3f7c78aade7037e7491ffe82c9a920e9eebec7eca4b033",
+      "size_bytes": 16855331,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_11_annotated",
+      "relative_path": "for_instance/NIBIO_plot_11_annotated/plot_11_annotated_treex_predictions.las",
+      "sha256": "b75184f86bbf76e33b32e8a997fd1d67cfe363c81a4ed2e89083630c370b842f",
+      "size_bytes": 255000847,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_12_annotated",
+      "relative_path": "for_instance/NIBIO_plot_12_annotated/plot_12_annotated_treex_predictions.npz",
+      "sha256": "c9b3c64f9c7325009f9b096e68383139582bd9dd4204c9e9860e8f3a3d40c840",
+      "size_bytes": 21205204,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_12_annotated",
+      "relative_path": "for_instance/NIBIO_plot_12_annotated/plot_12_annotated_treex_predictions.las",
+      "sha256": "48ab6e1cfcd0d73cb5a776f63f61e561d537bd6f963f537544e78d5202b196b7",
+      "size_bytes": 314648167,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_13_annotated",
+      "relative_path": "for_instance/NIBIO_plot_13_annotated/plot_13_annotated_treex_predictions.npz",
+      "sha256": "9e1feadf05886422843dc623dd601a91783c9f04424419f7f85239b85dad9159",
+      "size_bytes": 17985117,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_13_annotated",
+      "relative_path": "for_instance/NIBIO_plot_13_annotated/plot_13_annotated_treex_predictions.las",
+      "sha256": "aae61770c3347f119118c465c06727e397b8311f7de48cbf4a47256e1077d9e8",
+      "size_bytes": 268223607,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_16_annotated",
+      "relative_path": "for_instance/NIBIO_plot_16_annotated/plot_16_annotated_treex_predictions.npz",
+      "sha256": "033967c512ecd9a7e59487f280ea774089bcd45cdbfc5d5bc2f2ef7dcfa82f76",
+      "size_bytes": 14637059,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_16_annotated",
+      "relative_path": "for_instance/NIBIO_plot_16_annotated/plot_16_annotated_treex_predictions.las",
+      "sha256": "3c5fff510566b34585e28cd5eb12c713c0aef4683452dd0912c0bbe348074723",
+      "size_bytes": 218413207,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_19_annotated",
+      "relative_path": "for_instance/NIBIO_plot_19_annotated/plot_19_annotated_treex_predictions.npz",
+      "sha256": "c58d092e945d0e42cda04b2c4435b823f040399d906edf4a5037d2186ee2874f",
+      "size_bytes": 18976634,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_19_annotated",
+      "relative_path": "for_instance/NIBIO_plot_19_annotated/plot_19_annotated_treex_predictions.las",
+      "sha256": "a746f1aa2f2dcf9c17c9dfaefbb1d246f6b29b05fe36ee0416706f0b9955a2b8",
+      "size_bytes": 282477127,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_21_annotated",
+      "relative_path": "for_instance/NIBIO_plot_21_annotated/plot_21_annotated_treex_predictions.npz",
+      "sha256": "961c610e1d1168de1eaaf3b15f4ad4993e0f786737d5c19767cc7c0060aac23f",
+      "size_bytes": 15575547,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_21_annotated",
+      "relative_path": "for_instance/NIBIO_plot_21_annotated/plot_21_annotated_treex_predictions.las",
+      "sha256": "4816d9b740df167133cfc0fced122dc6f577d211310538650e1cd184a4fb1721",
+      "size_bytes": 233875447,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_2_annotated",
+      "relative_path": "for_instance/NIBIO_plot_2_annotated/plot_2_annotated_treex_predictions.npz",
+      "sha256": "9df500633ee14e8bd4f40dc3d5adc93d7f463ad70d82b9b1e5373dfa2986bfd4",
+      "size_bytes": 13299932,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_2_annotated",
+      "relative_path": "for_instance/NIBIO_plot_2_annotated/plot_2_annotated_treex_predictions.las",
+      "sha256": "e9fe30fc96da0f04c5253aaed02bb7e8f51c2eefb7825303482ea516922824d4",
+      "size_bytes": 231269147,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_3_annotated",
+      "relative_path": "for_instance/NIBIO_plot_3_annotated/plot_3_annotated_treex_predictions.npz",
+      "sha256": "2a7a71b0c0400ba5e8da35c0fa0b37425cf6721b33ec4452d15bd04406a03a4f",
+      "size_bytes": 14086211,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_3_annotated",
+      "relative_path": "for_instance/NIBIO_plot_3_annotated/plot_3_annotated_treex_predictions.las",
+      "sha256": "65291f1ab9cc991c9c097f07f14bb5e05f8a7b412acf1d5678585ac48c81220f",
+      "size_bytes": 243912339,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_4_annotated",
+      "relative_path": "for_instance/NIBIO_plot_4_annotated/plot_4_annotated_treex_predictions.npz",
+      "sha256": "e6e930a394813f256c999b7e1414bd8694ad9b21c3cbfd629a4e84bf20081c36",
+      "size_bytes": 15281863,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_4_annotated",
+      "relative_path": "for_instance/NIBIO_plot_4_annotated/plot_4_annotated_treex_predictions.las",
+      "sha256": "bac0c723a5c6493a16fbae6b8f49cbdb7a2a855ed68ca246a9cd7abe47a36baf",
+      "size_bytes": 265074409,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_6_annotated",
+      "relative_path": "for_instance/NIBIO_plot_6_annotated/plot_6_annotated_treex_predictions.npz",
+      "sha256": "a89fa6b422d328f3056f61376d07aa622e160c680855aeec0f2ea6ef2dce43b4",
+      "size_bytes": 12395337,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_6_annotated",
+      "relative_path": "for_instance/NIBIO_plot_6_annotated/plot_6_annotated_treex_predictions.las",
+      "sha256": "9857adacdd353d0bb065c2e501aeca774e74e3194f565adc3cd2a7dc9ac0fd99",
+      "size_bytes": 209363395,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_7_annotated",
+      "relative_path": "for_instance/NIBIO_plot_7_annotated/plot_7_annotated_treex_predictions.npz",
+      "sha256": "d59b00b6ed215632e79c5a1ec60ab132857cbc473575ff3e78638605502f0e3f",
+      "size_bytes": 13344755,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_7_annotated",
+      "relative_path": "for_instance/NIBIO_plot_7_annotated/plot_7_annotated_treex_predictions.las",
+      "sha256": "d38f7b6c27f278505d0e7d6314fc4afce6ad78cd43a6b42f825fab3ca875da51",
+      "size_bytes": 227416555,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_8_annotated",
+      "relative_path": "for_instance/NIBIO_plot_8_annotated/plot_8_annotated_treex_predictions.npz",
+      "sha256": "6f48dcd45ed0e1f77645bb444dc05a46229f3c24d72a43958857b7f92cb0c5f5",
+      "size_bytes": 14036341,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_8_annotated",
+      "relative_path": "for_instance/NIBIO_plot_8_annotated/plot_8_annotated_treex_predictions.las",
+      "sha256": "f1e3ce2c6bdbd191b385ba86ddcae6cc695c17c20d6ecbac7d61932da7c5187e",
+      "size_bytes": 242418259,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_9_annotated",
+      "relative_path": "for_instance/NIBIO_plot_9_annotated/plot_9_annotated_treex_predictions.npz",
+      "sha256": "38a3eadb505e7c3917089d57104d28a27682b950cb977a0d6493ab23f081044d",
+      "size_bytes": 14137706,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_9_annotated",
+      "relative_path": "for_instance/NIBIO_plot_9_annotated/plot_9_annotated_treex_predictions.las",
+      "sha256": "f931f995bb602dc0f49f158605549364a6185b651b5ab84165b2d9766d2b5624",
+      "size_bytes": 238988913,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "RMIT/train",
+      "relative_path": "for_instance/RMIT_train/train_treex_predictions.npz",
+      "sha256": "6ad2ad5839452082168589a8471c65acf7bb1a5aeb29a234afbe42053674fa0c",
+      "size_bytes": 3270087,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "RMIT/train",
+      "relative_path": "for_instance/RMIT_train/train_treex_predictions.las",
+      "sha256": "ff129724c3cb977dc922e7d8349213d18c38f4d2f781cdd8c8b7300599801ca0",
+      "size_bytes": 56362569,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "SCION/plot_35_annotated",
+      "relative_path": "for_instance/SCION_plot_35_annotated/plot_35_annotated_treex_predictions.npz",
+      "sha256": "fea3e47980536eee9b2fee6985e74d5787b084b38776bca6b0d7754834739e4e",
+      "size_bytes": 4978212,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "SCION/plot_35_annotated",
+      "relative_path": "for_instance/SCION_plot_35_annotated/plot_35_annotated_treex_predictions.las",
+      "sha256": "aa52456daca580c13fc9b7139036d7977433c5f1f409557183a9c01eeed24a8e",
+      "size_bytes": 121002731,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "SCION/plot_39_annotated",
+      "relative_path": "for_instance/SCION_plot_39_annotated/plot_39_annotated_treex_predictions.npz",
+      "sha256": "cf5a36ba5f4f28e4439e30545d97b7c7dfac340649249b7922c8b6369e716185",
+      "size_bytes": 2983688,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "SCION/plot_39_annotated",
+      "relative_path": "for_instance/SCION_plot_39_annotated/plot_39_annotated_treex_predictions.las",
+      "sha256": "1e3e42cabf45f59286619626d021baaf11bcb8689fa10623ee49ebaedd0d0bb8",
+      "size_bytes": 71618691,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "SCION/plot_87_annotated",
+      "relative_path": "for_instance/SCION_plot_87_annotated/plot_87_annotated_treex_predictions.npz",
+      "sha256": "e915acbd05f6ef675c3aa0bcda87bc6511d631889f6094015848af075b5382d9",
+      "size_bytes": 5488077,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "SCION/plot_87_annotated",
+      "relative_path": "for_instance/SCION_plot_87_annotated/plot_87_annotated_treex_predictions.las",
+      "sha256": "fa7a57ed488c6c4defdade503fade29903298167a07c837626d56e834d955f18",
+      "size_bytes": 125830213,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "TUWIEN/train",
+      "relative_path": "for_instance/TUWIEN_train/train_treex_predictions.npz",
+      "sha256": "37050717fd99b2122948cb31474e2770a470f2336ee593749e7406587ca61ccc",
+      "size_bytes": 14764727,
+      "split": "dev"
+    },
+    {
+      "format": "las",
+      "plot_id": "TUWIEN/train",
+      "relative_path": "for_instance/TUWIEN_train/train_treex_predictions.las",
+      "sha256": "d6a43033503731a4eb1a429b5574bb5a5369595171d95275f52fb9dcf3d3daa6",
+      "size_bytes": 348167489,
+      "split": "dev"
+    },
+    {
+      "format": "npz",
+      "plot_id": "CULS/plot_2_annotated",
+      "relative_path": "for_instance_test/CULS_plot_2_annotated/plot_2_annotated_treex_predictions.npz",
+      "sha256": "ae2f2d342664bc2bc6fcb6a4641666edaef6cf9c100564f99b4a9d83da9c351a",
+      "size_bytes": 8389052,
+      "split": "test"
+    },
+    {
+      "format": "las",
+      "plot_id": "CULS/plot_2_annotated",
+      "relative_path": "for_instance_test/CULS_plot_2_annotated/plot_2_annotated_treex_predictions.las",
+      "sha256": "e1c0e6b51137bea51d6b39c2c51c3b2dd95a9d91c00e47aed110b3ac812cd5bd",
+      "size_bytes": 149952651,
+      "split": "test"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_17_annotated",
+      "relative_path": "for_instance_test/NIBIO_plot_17_annotated/plot_17_annotated_treex_predictions.npz",
+      "sha256": "00ccff3ae32b028ddc5bb943276a5d2747c4f20c3a60a7f1d46df65769de6d99",
+      "size_bytes": 18467798,
+      "split": "test"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_17_annotated",
+      "relative_path": "for_instance_test/NIBIO_plot_17_annotated/plot_17_annotated_treex_predictions.las",
+      "sha256": "861d80d6032d56655cffef920b76bc666e21541f7c8ab6fad7d751e23aa01ac7",
+      "size_bytes": 275605647,
+      "split": "test"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_18_annotated",
+      "relative_path": "for_instance_test/NIBIO_plot_18_annotated/plot_18_annotated_treex_predictions.npz",
+      "sha256": "be816898744d23db887dbbe4189486519c82020a84eb8468426df0ff4a411f41",
+      "size_bytes": 18480948,
+      "split": "test"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_18_annotated",
+      "relative_path": "for_instance_test/NIBIO_plot_18_annotated/plot_18_annotated_treex_predictions.las",
+      "sha256": "728b632a05f820f734e195b998259feaa31c2dfbf04b44f14dfc84b27d1e53a9",
+      "size_bytes": 276605647,
+      "split": "test"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_1_annotated",
+      "relative_path": "for_instance_test/NIBIO_plot_1_annotated/plot_1_annotated_treex_predictions.npz",
+      "sha256": "d4484979bf081a8acf893a196dfa7402d24d9f635c9688887c673da824dc491b",
+      "size_bytes": 13219760,
+      "split": "test"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_1_annotated",
+      "relative_path": "for_instance_test/NIBIO_plot_1_annotated/plot_1_annotated_treex_predictions.las",
+      "sha256": "57b06833746a9b61bcbfdb8420997031ae36e37267b2af1c719c8b34f52a0b22",
+      "size_bytes": 230033035,
+      "split": "test"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_22_annotated",
+      "relative_path": "for_instance_test/NIBIO_plot_22_annotated/plot_22_annotated_treex_predictions.npz",
+      "sha256": "1424faf4b9f6fa6598dcc65688376e43619785770701bf18ed0dcc95e502489a",
+      "size_bytes": 16990434,
+      "split": "test"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_22_annotated",
+      "relative_path": "for_instance_test/NIBIO_plot_22_annotated/plot_22_annotated_treex_predictions.las",
+      "sha256": "fe6b69ccb5012bced4ed688fdda388383a718ec6fd742264941cb84e7c9270fa",
+      "size_bytes": 254665207,
+      "split": "test"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_23_annotated",
+      "relative_path": "for_instance_test/NIBIO_plot_23_annotated/plot_23_annotated_treex_predictions.npz",
+      "sha256": "32f07d556ed789364d244f2df858e46af4372de29b6b51206e0dd02035267bde",
+      "size_bytes": 16478665,
+      "split": "test"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_23_annotated",
+      "relative_path": "for_instance_test/NIBIO_plot_23_annotated/plot_23_annotated_treex_predictions.las",
+      "sha256": "f67bf9e4371c203a01e747eccdbb64fbcff968e3b560b48c6db15ffde7fb32c6",
+      "size_bytes": 246536007,
+      "split": "test"
+    },
+    {
+      "format": "npz",
+      "plot_id": "NIBIO/plot_5_annotated",
+      "relative_path": "for_instance_test/NIBIO_plot_5_annotated/plot_5_annotated_treex_predictions.npz",
+      "sha256": "9191296cf4a6f210e60022172f7769f25f1f600a098e9780b512e69b39a99100",
+      "size_bytes": 13967563,
+      "split": "test"
+    },
+    {
+      "format": "las",
+      "plot_id": "NIBIO/plot_5_annotated",
+      "relative_path": "for_instance_test/NIBIO_plot_5_annotated/plot_5_annotated_treex_predictions.las",
+      "sha256": "617276b2c941245767c4d8b071931120b99f11d9467bef5b4a2782624f1b0425",
+      "size_bytes": 240287953,
+      "split": "test"
+    },
+    {
+      "format": "npz",
+      "plot_id": "RMIT/test",
+      "relative_path": "for_instance_test/RMIT_test/test_treex_predictions.npz",
+      "sha256": "9117c6561b4d6d3f5948c1616cae4b7464850fe687d6e0126ac7d6811db9b0f0",
+      "size_bytes": 798045,
+      "split": "test"
+    },
+    {
+      "format": "las",
+      "plot_id": "RMIT/test",
+      "relative_path": "for_instance_test/RMIT_test/test_treex_predictions.las",
+      "sha256": "6d03dc8e934a22894747c6770253ad64a0ba9aac636bbdaf48172f9b458d0706",
+      "size_bytes": 13583195,
+      "split": "test"
+    },
+    {
+      "format": "npz",
+      "plot_id": "SCION/plot_31_annotated",
+      "relative_path": "for_instance_test/SCION_plot_31_annotated/plot_31_annotated_treex_predictions.npz",
+      "sha256": "d64ada4bfc2e1ae6b9cf5b897f00b7aa6185a184596216001c13b2f7d3c5a0f1",
+      "size_bytes": 4814091,
+      "split": "test"
+    },
+    {
+      "format": "las",
+      "plot_id": "SCION/plot_31_annotated",
+      "relative_path": "for_instance_test/SCION_plot_31_annotated/plot_31_annotated_treex_predictions.las",
+      "sha256": "a4b3107532de7c004604a470c8770811729aa330f625012168c97fa171ac290d",
+      "size_bytes": 113147333,
+      "split": "test"
+    },
+    {
+      "format": "npz",
+      "plot_id": "SCION/plot_61_annotated",
+      "relative_path": "for_instance_test/SCION_plot_61_annotated/plot_61_annotated_treex_predictions.npz",
+      "sha256": "b312ed0b6a0427d28dcb06f988439a495d1ff58ba7e661c6f5e8dccd9f087b10",
+      "size_bytes": 5849010,
+      "split": "test"
+    },
+    {
+      "format": "las",
+      "plot_id": "SCION/plot_61_annotated",
+      "relative_path": "for_instance_test/SCION_plot_61_annotated/plot_61_annotated_treex_predictions.las",
+      "sha256": "8d29494c09203f5eb9c3ec41dd03a77589344fb47d77f77d5edc92f702b48067",
+      "size_bytes": 136392579,
+      "split": "test"
+    },
+    {
+      "format": "npz",
+      "plot_id": "TUWIEN/test",
+      "relative_path": "for_instance_test/TUWIEN_test/test_treex_predictions.npz",
+      "sha256": "fe77de39026e3d731eeb582cdd14eed497de4c9ccaec51aaedb051597f1ca16c",
+      "size_bytes": 4572930,
+      "split": "test"
+    },
+    {
+      "format": "las",
+      "plot_id": "TUWIEN/test",
+      "relative_path": "for_instance_test/TUWIEN_test/test_treex_predictions.las",
+      "sha256": "0ab991c78250c309e62beb3dc6bce5e7a6ab76b5053ca9e7b5f20f59e860582f",
+      "size_bytes": 104882919,
+      "split": "test"
+    }
+  ],
+  "method": "TreeX",
+  "status": "retention_verified",
+  "verified_prediction_files": 64,
+  "verified_prediction_size_bytes": 6745673181
+}

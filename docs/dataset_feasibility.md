@@ -9,7 +9,7 @@ outside this repository.
 | Dataset | Inspection status | Instance labels | Accuracy status | Recommended role |
 | --- | --- | --- | --- | --- |
 | FRDR treeiso TLS | Downloaded; 16-plot TLS2trees run completed | Not present in the benchmark LAZ inputs | F1/IoU unavailable from `woods` | Completed prediction and operational benchmark |
-| FOR-instance | Downloaded and inventoried; SegmentAnyTree and TreeX runs evaluated | `treeID` in annotated LAS files | SegmentAnyTree released-checkpoint metrics provisional; retrained SegmentAnyTree and TreeX have documented held-out test results | Primary cross-method accuracy benchmark |
+| FOR-instance | Downloaded and inventoried; SegmentAnyTree, TreeX and TreeLearn runs evaluated | `treeID` in annotated LAS files | Five comparable held-out rows are complete: two SegmentAnyTree, one TreeX and two TreeLearn variants | Primary cross-method accuracy benchmark |
 | Wytham Woods | Downloaded, unpacked and inventoried | One segmented tree per file | F1/IoU feasible after scene reconstruction | TLS accuracy benchmark candidate |
 
 ## FRDR Treeiso TLS
@@ -57,22 +57,25 @@ positive reference tree IDs. Semantic classes are:
 | 6 | Woody branches |
 
 The SegmentAnyTree workflow uses tree-material classes `4`, `5` and `6`, with
-classes `0`, `1`, `2` and `3` ignored. Released-checkpoint inference completed
-for all 32 plots, but all 11 test exports failed point-correspondence checks.
-That run also did not train a model under the local development/test protocol.
-The corrected retrained experiment used 16 development plots for training, 5
-for internal validation and the 11 supplied test plots only after the
-checkpoint was frozen. The completed historical checkpoint is
-`sat_for_quicktune_to49_20260706_140730`; the `to55` continuation is rejected
-because development-validation performance regressed. The current plan keeps
-that evidence and instead compares the released pretrained checkpoint with a
-new model fine-tuned from those released weights. The protocol is in
+classes `0`, `1`, `2` and `3` ignored. An early released-checkpoint route
+completed inference for all 32 plots, but its 11 test exports failed
+point-correspondence checks and remain provisional. The historical checkpoint
+`sat_for_quicktune_to49_20260706_140730` and rejected `to55` continuation are
+also retained outside the headline comparison. The completed target comparison
+instead evaluates the released checkpoint unchanged and a separate checkpoint
+fine-tuned on 16 development plots and selected on five development-validation
+plots before one held-out evaluation. The protocol is in
 [`for-instance.md`](protocols/for-instance.md)
 and the provisional values are documented in
 [`provisional_released_checkpoint_results.md`](../methods/segmentanytree/docs/provisional_released_checkpoint_results.md).
-The TreeX deterministic baseline has also been evaluated on the exact-path
-local FOR-instance subset. The separate TLS2trees compatibility pilot retains
-its leaf-off `4` and `6` filter.
+The TreeX deterministic baseline and both TreeLearn headline variants have
+completed the same exact-path 11-plot test subset. Each TreeLearn variant retained and
+hash-verified 55 raw and aligned prediction artefacts. The clean authors'
+released L1W checkpoint is the comparable TreeLearn published-pretrained row;
+the separate December 2024 default checkpoint remains development-only because
+of documented FOR-instance training overlap. The TLS2trees compatibility pilot
+retains its leaf-off `4` and `6` filter and is not a completed FOR-instance
+accuracy benchmark.
 
 ## Wytham Woods
 

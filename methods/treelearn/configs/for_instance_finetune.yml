@@ -1,0 +1,68 @@
+project:
+  name: tree-seg-benchmark
+  benchmark_name: for_instance_treelearn_finetune
+  dataset_slug: for-instance
+  method_slug: treelearn
+  mode: fine_tuned_on_dev
+  status: completed_rejected_validation_regression
+
+dataset:
+  slug: for-instance
+  name: FOR-instance
+  split_metadata_file: data_split_metadata.csv
+
+method:
+  slug: treelearn
+  name: TreeLearn
+  upstream_commit: fd240ce7caa4c444fe3418aca454dc578bc557d4
+  training_mode: fine_tuned_on_dev
+
+split:
+  source: frozen_completed_development_manifest
+  seed: 42
+  validation_fraction: 0.25
+  expected_development_plots: 21
+  expected_training_plots: 16
+  expected_validation_plots: 5
+  held_out_test_accessed: false
+
+training:
+  initialization: published_treelearn_checkpoint
+  initialization_checkpoint_md5: "56a3d78f689ae7f1190906b975700311"
+  inherited_test_overlap_status: "documented_for_instance_validation_test_training_overlap"
+  eligible_for_leakage_free_primary_ranking: false
+  random_crops: 512
+  crop_size_m: 35
+  epochs: 100
+  examples_per_epoch: 256
+  batch_size: 2
+  learning_rate: 0.0003
+  wall_time: "23:30:00"
+  smoke_epochs: 1
+  smoke_examples: 16
+
+completed_validation:
+  training_run_id: treelearn_for-instance_fine_tuned_on_dev_20260712_164057
+  evaluated_checkpoint_epochs:
+    - 10
+    - 20
+    - 30
+    - 40
+    - 50
+    - 60
+    - 70
+    - 80
+    - 90
+    - 100
+  best_mean_f1_checkpoint_epoch: 70
+  best_mean_plot_f1: 0.4905044251328631
+  best_micro_f1: 0.42138364779874216
+  matched_published_mean_plot_f1: 0.558769
+  matched_published_micro_f1: 0.547529
+  selection_decision: rejected_use_published_pretrained
+  held_out_test_accessed: false
+  prediction_retention:
+    status: retention_verified
+    artefacts_per_checkpoint: 25
+    verified_checkpoints: 10
+    minimum_verified_artefacts: 250

@@ -2719,7 +2719,7 @@ def test_completed_segmentanytree_public_site_results_reconcile() -> None:
     )
 
 
-def test_completed_segmentanytree_workbook_has_final_target_values() -> None:
+def test_cross_method_workbook_has_comparable_target_values() -> None:
     workbook = (
         ROOT
         / "outputs/sat_treex_benchmark_metrics/"
@@ -2731,12 +2731,22 @@ def test_completed_segmentanytree_workbook_has_final_target_values() -> None:
             for name in archive.namelist()
             if name.endswith(".xml")
         )
-    assert "published pretrained (completed baseline)" in text
-    assert "fine-tuned on development (primary)" in text
-    assert "SegmentAnyTree published pretrained (completed baseline)" in text
-    assert "SegmentAnyTree fine-tuned on development (primary)" in text
-    assert "Completed SAT target, historical SAT and TreeX site metrics" in text
-    assert "Final SAT target aggregates are in Results Summary" not in text
+    assert "FOR-instance Comparable Held-out Results" in text
+    assert "SegmentAnyTree" in text
+    assert "TreeX" in text
+    assert "TreeLearn" in text
+    assert "Published pretrained" in text
+    assert "Fine-tuned" in text
+    assert "Five completed headline results" in text
+    assert "Prediction Retention" in text
+    assert "same supplied 11-plot test split" in text
+    assert "Completed comparable" in text
+    assert "treelearn_for-instance_published_pretrained_20260714_134109" in text
+    assert "trees above 10 m" in text
+    assert "Not evaluated comparably" not in text
+    assert "published pretrained matched validation baseline" not in text
+    assert "fine-tuned on development epoch 70" not in text
+    assert "treelearn_matched_internal_validation" not in text
     assert "Pending aligned evaluation" not in text
     assert "Pending released-weight fine-tuning" not in text
 

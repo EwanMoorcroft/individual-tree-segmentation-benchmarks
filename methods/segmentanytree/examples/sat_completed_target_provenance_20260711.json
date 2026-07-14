@@ -18,6 +18,9 @@
       "9755843"
     ],
     "held_out_summary": "results/tables/segmentanytree_for_instance/trained_test/segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931/final_summary.csv",
+    "held_out_summary_sha256": "5beced54ca191141905ee53c49243a4f51ae9fabfb81b8546e10c5b444e8c0bc",
+    "metrics_root": "results/metadata/segmentanytree_for_instance/trained_test/segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931",
+    "prediction_root": "data/predictions/segmentanytree/for_instance_trained_test/segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931",
     "run_id": "segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931",
     "test_freeze": "results/metadata/segmentanytree_for_instance/finetuned_test_freezes/segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931.json",
     "training_metadata": "results/metadata/segmentanytree_for_instance/training_runs/segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931.json"
@@ -31,15 +34,20 @@
       "9753338"
     ],
     "held_out_summary": "results/tables/segmentanytree_for_instance/variants/segmentanytree_for-instance_published_pretrained_20260710_231601/held_out_test/final_summary.csv",
+    "held_out_summary_sha256": "675ddc81c40430d7530fc21d8dd97c450dfcf4be814ba6d57902dafae727c95a",
+    "metrics_root": "results/metadata/segmentanytree_for_instance/variants/segmentanytree_for-instance_published_pretrained_20260710_231601/held_out_test",
+    "prediction_root": "data/predictions/segmentanytree/for_instance_variants/segmentanytree_for-instance_published_pretrained_20260710_231601/held_out_test",
     "run_id": "segmentanytree_for-instance_published_pretrained_20260710_231601",
     "test_freeze": "results/metadata/segmentanytree_for_instance/test_freezes/segmentanytree_for-instance_published_pretrained_20260710_231601.json"
   },
   "retention_verification": {
     "manifest": "results/metadata/segmentanytree_for_instance/retention_manifests/segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931.json",
+    "manifest_sha256": "3ec96c6ec3fcecabd0fdc133a87e3cd8541e1bb745cb5e10cd1b4af491d52a28",
     "status": "retention-verified",
     "verified_date_utc": "2026-07-11"
   },
   "repeat_test_for_setting_selection_permitted": false,
+  "plot_result_table": "methods/segmentanytree/examples/sat_completed_target_plot_results_20260711.csv",
   "result_table": "methods/segmentanytree/examples/sat_completed_target_results_20260711.csv",
   "site_result_table": "methods/segmentanytree/examples/sat_completed_target_site_results_20260711.csv",
   "source": "Barkla Slurm completion records and frozen aggregate summaries supplied after each final gate completed"

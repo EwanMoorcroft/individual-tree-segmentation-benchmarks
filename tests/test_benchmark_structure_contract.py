@@ -59,7 +59,11 @@ def test_registry_uses_explicit_method_agnostic_schema() -> None:
     assert REGISTRY_COLUMNS in registry
     assert "for-instance | segmentanytree" in registry
     assert "for-instance | treex" in registry
-    assert "for-instance | treelearn | pending" in registry
+    assert (
+        "for-instance | treelearn | "
+        "treelearn_for-instance_published_pretrained_development_20260712_150030"
+        in registry
+    )
     assert "Candidate accuracy benchmark" in registry
     assert "Prediction benchmark completed" in registry
 

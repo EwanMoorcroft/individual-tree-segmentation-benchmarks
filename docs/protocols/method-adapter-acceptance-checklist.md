@@ -46,7 +46,10 @@ note, but it must include:
 - [ ] **Prediction retention on Barkla.** Every full prediction artefact is
   retained under `data/predictions/<method>/for_instance...` on Barkla, or under
   an explicitly recorded run-specific prediction root. Local copies under
-  `local_outputs/` are backups only.
+  `local_outputs/` are backups only. The run gate inventories expected files,
+  byte sizes and SHA-256 values where supported; retries use new roots rather
+  than deleting earlier evidence. The public retention registry records whether
+  future metrics can be calculated without inference.
 - [ ] **Prediction metadata.** Run metadata records the Barkla-relative prediction
   directory, harmonised prediction artefact paths, command, return code, runtime,
   peak memory, method version, checkpoint checksum and status for every plot.

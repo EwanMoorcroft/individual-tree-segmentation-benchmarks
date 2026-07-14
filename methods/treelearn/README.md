@@ -3,9 +3,12 @@
 ## Method Summary
 
 TreeLearn is a deep learning method for individual-tree segmentation in forest
-point clouds. The current repository route is limited to a one-plot
-FOR-instance smoke test using released TreeLearn weights. It does not train or
-fine-tune weights.
+point clouds. The repository has completed released-weight development smoke
+and 21-plot development evaluation routes. It also has two guarded fine-tuning
+routes. The second route starts from an authors-released checkpoint whose
+stated training data excludes FOR-instance, freezes a seed-42 epoch-35
+checkpoint from development-only training, and has completed its authorised
+one-time 11-plot held-out test evaluation.
 
 ## Upstream Repository And Citation
 
@@ -18,8 +21,30 @@ trees from ground-based LiDAR forest point clouds.
 
 ## Training Mode Support
 
-The one-plot smoke route is `published_pretrained`: it loads an upstream
-checkpoint and performs inference only.
+The completed development routes use `published_pretrained`: they load the upstream default
+`model_weights_20241213.pth` checkpoint and perform inference only. The frozen
+checkpoint has MD5 `56a3d78f689ae7f1190906b975700311` and SHA-256
+`5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb`.
+Each submission rechecks the checkpoint and records its identity in run
+metadata.
+
+The TreeLearn paper and authors' model documentation state that this December
+2024 checkpoint descends from a model fine-tuned with FOR-instance validation
+and test data. Its completed development result therefore remains a published
+checkpoint reproduction with documented training overlap, not a leakage-free
+cross-method baseline.
+
+The new long route instead starts from authors-released
+`model_weights_finetuned.pth`, persistent ID
+`doi:10.25625/VPMPID/8CIIW0`, MD5
+`106a80de2991c5f23484a3f9d03e3b16`. The authors describe this checkpoint as
+fine-tuned on their L1W benchmark after external noisy-label pretraining; its
+stated training data does not include FOR-instance.
+
+The unchanged clean checkpoint was separately evaluated once as the
+`published_pretrained` headline baseline on the frozen 11-plot test subset.
+That run is distinct from the development-only December 2024 checkpoint and
+from the development-fine-tuned checkpoint.
 
 The candidate full benchmark modes remain:
 
@@ -27,13 +52,40 @@ The candidate full benchmark modes remain:
 - `fine_tuned_on_dev`
 - `retrained_from_dev`
 
-Fine-tuning and retraining are not implemented in this first route.
+The completed short fine-tuning route starts from the December 2024 checkpoint, freezes a seed-42
+16/5 split of the 21 development plots, generates 512 bounded random crops,
+runs a one-epoch smoke, then a fixed 100-epoch run. Training is limited to
+23.5 hours. It submits no test, inference or evaluation job; the resulting
+checkpoint requires separate development validation before any test route.
+`slurm/submit_for_instance_finetune_validation.sh` performs that validation on
+the frozen five-plot subset, verifies retained raw and adapted predictions,
+and writes overall and site summaries. It does not submit held-out test work.
+
+The replacement long route uses the same fixed seed-42 16/5 plot split and
+35-epoch headline used by the completed SegmentAnyTree fine-tune. TreeLearn's
+budget is additionally frozen as a balanced 512-crop bank, 714 examples per
+epoch, batch size 2, 24,990 examples and 12,495 optimizer steps. Eight independent one-GPU trials use one
+fixed full-model learning rate (`1e-5`) and eight seeds. Checkpoints at epochs
+7, 14, 21, 28 and 35 are evaluated on the same five validation plots for
+diagnostics. The comparable candidate is preregistered as seed 42 at epoch 35;
+other seeds and earlier checkpoints cannot select it. This checkpoint, trained
+only on the fixed 16 plots, is frozen before any held-out access. See the
+[`long fine-tuning protocol`](docs/long_finetune_protocol_20260712.md).
 
 ## Input Requirements
 
-The smoke test uses one FOR-instance LAS file with `treeID` and
-`classification` dimensions. The configured plot is `CULS/plot_1_annotated.las`
-from the development split.
+The accepted smoke uses `CULS/plot_1_annotated.las`. The full development route
+freezes the exact 21 locally available paths identified as `dev` in
+`data_split_metadata.csv`: CULS 2, NIBIO 14, RMIT 1, SCION 3 and TUWIEN 1.
+Every input LAS must contain `treeID` and `classification` dimensions. The
+manifest records each input hash, point count, reference-tree count and split
+metadata hash before the array is submitted. The long route re-hashes that
+metadata and verifies the complete catalogue of 56 `dev` and 26 `test` rows.
+It then requires every path in the local 21-plot development subset to be an
+exact member of the metadata's `dev` rows at preparation and every downstream
+stage; it reads no held-out test point-cloud file. Because the supplied
+metadata has no train/validation roles within `dev`, the frozen seed-42 16/5
+subdivision is drawn solely from that local development subset.
 
 Tree material follows the shared FOR-instance protocol:
 
@@ -47,62 +99,216 @@ Tree material follows the shared FOR-instance protocol:
 TreeLearn raw outputs stay under `data/interim/treelearn/...` and full
 prediction outputs stay under `data/predictions/treelearn/...`.
 
-The smoke adapter writes:
+Each run uses a new run ID. For every plot it writes:
 
 - an aligned compressed prediction file with `pred_tree_id`,
-  `target_tree_id`, `classification` and `source_row_index`; and
-- a LAS copy of the source plot with an added `pred_treeID` dimension.
+  `target_tree_id`, `classification`, `pred_classification` and
+  `source_row_index`;
+- a LAS copy of the source plot with `pred_treeID` and
+  `pred_classification` dimensions;
+- the original-resolution upstream full-forest LAZ and NPZ plus the upstream
+  voxel-level diagnostic `pointwise_results.npz`; and
+- metrics, matched pairs, unmatched predictions and unmatched references.
 
-The aligned prediction file is the preferred evaluation input if the smoke test
-is later connected to the harmonised evaluator.
+The aligned prediction NPZ is the evaluation input. Positive TreeLearn
+instances map to prediction semantic class `4`; labels `0` and `-1` map to
+background. The upstream `pointwise_results.npz` is retained for diagnostics
+but is not source-row aligned and is never used as the primary evaluation
+input.
 
 ## FOR-instance Compatibility
 
-The smoke test checks only installation, checkpoint loading, one-plot
-inference, row preservation and prediction adaptation. It is not an accuracy
-benchmark and it must not be used for checkpoint choice.
+The smoke checked installation, checkpoint loading, one-plot inference, row
+preservation, prediction adaptation and evaluator compatibility. Run
+`treelearn_for-instance_published_pretrained_dev_smoke_20260712_135205` passed
+those checks and was manually accepted for full development-only evaluation.
+Its F1 is diagnostic evidence only and was not used to alter the checkpoint,
+IoU threshold or post-processing.
 
 ## Barkla Environment
 
-The route expects an external TreeLearn checkout and a Python environment on
-Barkla. Defaults are recorded in
+The route pins upstream commit
+`fd240ce7caa4c444fe3418aca454dc578bc557d4` and expects a Python 3.10,
+PyTorch 2.0.0/CUDA 11.8 environment on Barkla. A non-destructive guarded setup
+job creates missing prerequisites and reuses existing paths only when they
+already pass validation. Defaults are recorded in
 [`configs/for_instance_one_plot_smoke.yml`](configs/for_instance_one_plot_smoke.yml).
 
 The Slurm entrypoint expects:
 
 - `TREELEARN_ENV`, defaulting to `~/fastscratch/venvs/treelearn`;
 - `TREELEARN_REPO`, defaulting to `~/fastscratch/external/TreeLearn`; and
-- `TREELEARN_CHECKPOINT`, defaulting to the small-tree upstream weights path
-  recorded in the config.
+- `TREELEARN_CHECKPOINT`, defaulting to the upstream December 2024 default
+  checkpoint recorded in the config.
+
+The dependent CPU evaluation also requires the repository's existing
+`~/fastscratch/venvs/treebench` environment.
 
 ## Slurm Workflow
 
+The large workflow is divided by role. These names are retained because they
+are part of the frozen run evidence:
+
+| Role | Entrypoint | Status and use |
+| --- | --- | --- |
+| Canonical development-only training and freeze | [`submit_for_instance_finetune_long.sh`](slurm/submit_for_instance_finetune_long.sh) | Produced the frozen seed-42 epoch-35 checkpoint; no test access |
+| Canonical fine-tuned test evidence | [`submit_for_instance_finetuned_test.sh`](slurm/submit_for_instance_finetuned_test.sh) | Completed one authorised held-out run; historical reproduction record, not a selection route |
+| Canonical clean-checkpoint test evidence | [`submit_for_instance_pretrained_test.sh`](slurm/submit_for_instance_pretrained_test.sh) | Completed one authorised held-out run; historical reproduction record, not a selection route |
+| Development diagnostics | [`submit_for_instance_one_plot_smoke.sh`](slurm/submit_for_instance_one_plot_smoke.sh), [`submit_for_instance_development.sh`](slurm/submit_for_instance_development.sh) | Smoke and 21-plot development evidence only |
+| Rejected inherited-overlap route | [`submit_for_instance_finetune.sh`](slurm/submit_for_instance_finetune.sh), [`submit_for_instance_finetune_validation.sh`](slurm/submit_for_instance_finetune_validation.sh), [`for_instance_finetune.yml`](configs/for_instance_finetune.yml) | Preserved negative-result evidence; not eligible for the headline ranking |
+| Restricted historical recovery | [`submit_for_instance_pretrained_test_recovery.sh`](slurm/submit_for_instance_pretrained_test_recovery.sh) and matching `_recovery` jobs | One zero-cluster execution recovery for the frozen pretrained run; not a general rerun or tuning route |
+
+The two completed held-out routes and their recovery guard must not be
+resubmitted for model, checkpoint or post-processing selection.
+
 Use
-[`slurm/run_for_instance_one_plot_smoke.sbatch`](slurm/run_for_instance_one_plot_smoke.sbatch)
-for the first Barkla smoke test. It is guarded by
-`TREELEARN_SMOKE_CONFIRMED=1`.
+[`slurm/setup_treelearn_environment.sbatch`](slurm/setup_treelearn_environment.sbatch)
+only when prerequisites are absent. Submit the run through
+[`slurm/submit_for_instance_one_plot_smoke.sh`](slurm/submit_for_instance_one_plot_smoke.sh),
+which freezes the checkpoint hash and schedules inference followed by CPU
+evaluation. It also freezes the clean benchmark checkout commit. The route is
+guarded by `TREELEARN_SMOKE_CONFIRMED=1` and refuses existing run roots.
 
 Expected runtime: 30-90 minutes after the environment and checkpoint exist.
 
 Resources: one L40S GPU, 12 CPUs, 128 GB RAM and two hours wall time on
 `gpu-l40s-low`.
 
+After the accepted smoke evidence and its five retained artefacts pass the
+preparation gate, the guarded full route is submitted through
+[`slurm/submit_for_instance_development.sh`](slurm/submit_for_instance_development.sh).
+Its dependency chain freezes the exact 21-plot development manifest, runs at
+most two concurrent combined inference/evaluation GPU tasks, accounts for
+every task, then builds per-plot, per-site and whole-development summaries.
+See the
+[`full development runbook`](docs/development_evaluation.md). No held-out test
+job is part of the dependency chain.
+
+Submit the guarded clean-checkpoint search and selection through
+[`slurm/submit_for_instance_finetune_long.sh`](slurm/submit_for_instance_finetune_long.sh).
+Its training and validation arrays allow eight concurrent one-GPU tasks on
+`gpu-l40s`, matching four two-GPU nodes. The compact monitor is
+[`slurm/monitor_for_instance_finetune_long.sh`](slurm/monitor_for_instance_finetune_long.sh).
+The chain downloads and verifies the exact clean checkpoint when absent,
+hashes generated crop banks, retains and verifies all 1,025 validation
+prediction artefacts, freezes the selected epoch-35 setting and stops before
+test. Validation uses 41 checkpoint-level jobs, each processing five plots
+sequentially, so the chain remains below the Barkla submitted-job QOS limit.
+
+After explicit manual authorization, submit the selected epoch-35 checkpoint
+once through
+[`slurm/submit_for_instance_finetuned_test.sh`](slurm/submit_for_instance_finetuned_test.sh).
+The route freezes the exact local 11-plot official test subset, runs at most
+two inference tasks concurrently, retains five raw/aligned prediction
+artefacts per plot, writes per-plot, per-site and overall test summaries, and
+refuses any repeated or colliding submission. Use
+[`slurm/monitor_for_instance_finetuned_test.sh`](slurm/monitor_for_instance_finetuned_test.sh)
+for queue and result status without reading logs. See the
+[`fine-tuned test runbook`](docs/finetuned_test_evaluation.md).
+The completed frozen result is documented in the
+[`fine-tuned test result`](docs/finetuned_test_results_20260713.md); the route
+now refuses any repeated or colliding submission.
+
+The clean published-pretrained comparison has its own isolated, one-time
+route:
+[`slurm/submit_for_instance_pretrained_test.sh`](slurm/submit_for_instance_pretrained_test.sh).
+It evaluates the unchanged authors-released `model_weights_finetuned.pth`
+checkpoint on the identical 11-plot test subset, writes to separate pretrained
+run roots and uses a stable submission guard so timestamp changes cannot create
+repeat test chains. Use
+[`slurm/monitor_for_instance_pretrained_test.sh`](slurm/monitor_for_instance_pretrained_test.sh)
+and the [`pretrained test runbook`](docs/pretrained_test_evaluation.md). The
+public tracker adds the row only after its 11-plot completion and retention
+gate passes. Run
+`treelearn_for-instance_published_pretrained_20260714_134109` passed that gate
+after a restricted execution-only recovery for an upstream empty-group crash
+on test task 8. The recovery mapped unresolved labels to background, changed
+no weights or parameters and performed no selection. See the
+[`completed pretrained result`](docs/pretrained_test_results_20260714.md).
+
 ## Evaluation Route
 
-No evaluation job is included in this first route. The output adapter produces
-point-aligned prediction arrays so a later route can call the shared
-FOR-instance evaluator without coordinate rematching.
+Evaluation uses `for_instance_pointwise_v1`, the union of reference-tree and
+predicted-tree points, maximum-cardinality one-to-one matching and IoU
+`>= 0.5`. It writes matched and unmatched instance tables. The full
+development summary aggregates TP, FP and FN counts before computing micro
+metrics and reports CULS, NIBIO, RMIT, SCION and TUWIEN separately. No
+prediction-size filtering or threshold selection is permitted.
+
+Public-safe 11-row source tables are retained for the
+[`published-pretrained`](examples/treelearn_pretrained_test_plot_results_20260714.csv)
+and
+[`development-fine-tuned`](examples/treelearn_finetuned_test_plot_results_20260713.csv)
+results. Each row records the SHA-256 of its frozen Barkla metrics JSON; the
+provenance files record the source plot-summary and retention-manifest hashes.
 
 ## Known Limitations
 
-- The route does not install TreeLearn.
-- The route does not download checkpoints.
-- The route does not train, fine-tune or select a checkpoint.
-- The first smoke uses one development plot only.
-- The upstream LAS loader has its own FOR-instance class mapping, so any later
-  fine-tuning route must make the semantic mapping explicit.
+- The completed default-checkpoint route has documented FOR-instance
+  validation/test training overlap and is excluded from leakage-free ranking.
+- The December 2024 default-checkpoint route remains development-only and must
+  not be compared as a leakage-free test baseline. The separate clean
+  authors-released checkpoint has a completed comparable test result.
+- The accepted smoke score represents one CULS development plot only and is
+  not an overall or cross-site estimate.
+- The setup follows upstream dependency pins, but upstream leaves some pip
+  packages only partially pinned; the resolved Barkla environment must be
+  retained with the run evidence.
+- The clean authors-released checkpoint documentation states that it targets
+  trees above 10 m. The audit found zero matched references below 10 m, so its
+  low test score is valid for the frozen checkpoint and pipeline but is not a
+  claim about TreeLearn's best achievable small-tree performance.
+- The pinned upstream code does not bundle a complete historical
+  post-processing configuration specifically for the clean checkpoint. The
+  result therefore describes the exact recorded checkpoint and pinned
+  benchmark pipeline, not every possible TreeLearn post-processing setting.
+- The test route is restricted to the frozen selected checkpoint and refuses
+  reruns that could turn the test split into a model-selection signal.
 
 ## Current Benchmark Status
 
-TreeLearn is pending. The only implemented route is the guarded one-plot
-published-checkpoint smoke test.
+Exactly two TreeLearn rows are included in the cross-method headline tracker:
+the clean authors-released published-pretrained checkpoint and the frozen
+development-fine-tuned checkpoint. Both use the same 11 test plots, 323
+references and evaluator as the TreeX and SegmentAnyTree headline rows. The
+21-plot December 2024 checkpoint run, five-plot validation baseline and
+checkpoint sweep remain diagnostics and must not be presented as additional
+comparable TreeLearn benchmark rows.
+
+The guarded one-plot published-checkpoint development smoke is complete and
+accepted. It evaluated 1,816,672 source-aligned points with F1 `0.705882`,
+precision `0.545455`, recall `1.000000`, TP `6`, FP `5` and FN `0`. Row count
+and order were preserved, the maximum coordinate delta was
+`0.00027683842927217484` m and all five raw/aligned prediction artefacts were
+retained. The exact 21-plot full development run
+`treelearn_for-instance_published_pretrained_development_20260712_150030`
+also completed with zero failures. Its mean plot F1 is `0.515571` and its
+count-aggregated micro F1 is `0.510760` (micro precision `0.415888`, micro
+recall `0.661710`). CULS has the highest site mean F1 (`0.715010`) and NIBIO
+the lowest (`0.446965`). All 105 raw and aligned prediction artefacts, totalling
+9,645,423,654 bytes, passed retention verification. See the
+[`completed development result`](docs/development_results_20260712.md). The
+separate inherited-overlap fine-tuning run and ten-checkpoint validation sweep
+also completed. The best fine-tuned mean plot F1 was
+`0.490504` at epoch 70, below the matched published baseline `0.558769`; the
+fine-tuned route is rejected. All 250 raw and aligned checkpoint-sweep
+prediction artefacts passed retention verification. See the
+[`fine-tuning validation result`](docs/finetune_validation_results_20260712.md).
+
+The replacement clean-checkpoint long route completed eight seed trials and
+froze its preregistered seed-42 epoch-35 checkpoint before test access. Its
+one-time 11-plot test run
+`treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227` completed with
+mean plot F1 `0.364685` and micro F1 `0.331924` (micro precision `0.252006`,
+micro recall `0.486068`, TP `157`, FP `466`, FN `166`). SCION has the highest
+site mean F1 (`0.620663`) and RMIT the lowest (`0.162162`). The final gate
+hash-verified all 55 retained raw and aligned prediction artefacts. See the
+[`completed fine-tuned test result`](docs/finetuned_test_results_20260713.md).
+
+The unchanged clean checkpoint test run
+`treelearn_for-instance_published_pretrained_20260714_134109` also completed
+all 11 plots. It obtained mean plot F1 `0.078944` and micro F1 `0.098694`
+(micro precision `0.092896`, micro recall `0.105263`, TP `34`, FP `332`, FN
+`289`). The final gate and independent audit verified all 55 retained files
+and reproduced the aggregates. See the
+[`completed pretrained test result`](docs/pretrained_test_results_20260714.md).

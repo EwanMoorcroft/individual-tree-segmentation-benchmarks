@@ -1,15 +1,59 @@
 {
   "checkpoint": {
-    "path": "/path/to/model_weights_with_small_20241213.pth",
-    "sha256": null,
-    "training_mode": "published_pretrained"
+    "md5": "56a3d78f689ae7f1190906b975700311",
+    "path": "<retained_barkla_checkpoint_path>",
+    "sha256": "<recorded_at_submission>",
+    "source_dataset_name": "model_weights_20241213",
+    "source_md5": "56a3d78f689ae7f1190906b975700311",
+    "source_url": "https://data.goettingen-research-online.de/api/access/datafile/:persistentId?persistentId=doi:10.25625/VPMPID/IMHF3G"
   },
+  "conversion": {
+    "dropped_points": 0,
+    "prediction_semantic_mapping": {
+      "positive_pred_tree_id": 4,
+      "pred_tree_id_0_or_minus_1": 0
+    },
+    "reference_semantic_mapping": {
+      "ignored_classes": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "tree_classes": [
+        4,
+        5,
+        6
+      ]
+    },
+    "source_row_identifier": "zero_based_source_row_index"
+  },
+  "dataset": "for-instance",
+  "dataset_validation": {
+    "input_sha256": "<recorded_at_runtime>",
+    "point_count": 1816672,
+    "reference_tree_count": 6,
+    "split": "dev",
+    "split_metadata_sha256": "<recorded_at_runtime>"
+  },
+  "environment": {
+    "benchmark_repository": {
+      "branch": "benchmark/treelearn-dev-smoke",
+      "commit": "<recorded_at_submission>",
+      "dirty": false
+    },
+    "treelearn_repository": {
+      "commit": "fd240ce7caa4c444fe3418aca454dc578bc557d4",
+      "dirty": false
+    }
+  },
+  "method": "treelearn",
   "outputs": {
-    "adapted_prediction_las": "data/predictions/treelearn/for_instance_smoke/CULS_plot_1_annotated/CULS_plot_1_annotated_treelearn_smoke_predictions.las",
-    "adapted_prediction_npz": "data/predictions/treelearn/for_instance_smoke/CULS_plot_1_annotated/CULS_plot_1_annotated_treelearn_smoke_predictions.npz",
-    "metadata_json": "results/metadata/treelearn_for_instance/one_plot_smoke/CULS_plot_1_annotated_treelearn_smoke_metadata.json",
-    "raw_full_forest_laz": "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated/results/full_forest/CULS_plot_1_annotated.laz",
-    "raw_pointwise_npz": "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated/results/pointwise_results/pointwise_results.npz"
+    "adapted_las": "data/predictions/treelearn/for_instance_smokes/<run_id>/CULS_plot_1_annotated/CULS_plot_1_annotated_treelearn_smoke_predictions.las",
+    "adapted_npz": "data/predictions/treelearn/for_instance_smokes/<run_id>/CULS_plot_1_annotated/CULS_plot_1_annotated_treelearn_smoke_predictions.npz",
+    "raw_prediction_laz": "data/interim/treelearn/for_instance/one_plot_smokes/<run_id>/CULS_plot_1_annotated/results/full_forest/CULS_plot_1_annotated.laz",
+    "raw_prediction_npz": "data/interim/treelearn/for_instance/one_plot_smokes/<run_id>/CULS_plot_1_annotated/results/full_forest/CULS_plot_1_annotated.npz",
+    "raw_pointwise_npz": "data/interim/treelearn/for_instance/one_plot_smokes/<run_id>/CULS_plot_1_annotated/results/pointwise_results/pointwise_results.npz"
   },
   "plot": {
     "expected_point_count": 1816672,
@@ -17,11 +61,51 @@
     "relative_path": "CULS/plot_1_annotated.las",
     "split": "dev"
   },
-  "status": "example_only",
+  "retention": {
+    "adapted_point_aligned_output_retained": true,
+    "files": [
+      {
+        "exists": true,
+        "path": "<raw_full_forest_laz>",
+        "sha256": "<recorded_at_runtime>",
+        "size_bytes": "<recorded_at_runtime>"
+      },
+      {
+        "exists": true,
+        "path": "<raw_full_forest_npz>",
+        "sha256": "<recorded_at_runtime>",
+        "size_bytes": "<recorded_at_runtime>"
+      },
+      {
+        "exists": true,
+        "path": "<raw_pointwise_npz>",
+        "sha256": "<recorded_at_runtime>",
+        "size_bytes": "<recorded_at_runtime>"
+      },
+      {
+        "exists": true,
+        "path": "<adapted_prediction_npz>",
+        "sha256": "<recorded_at_runtime>",
+        "size_bytes": "<recorded_at_runtime>"
+      },
+      {
+        "exists": true,
+        "path": "<adapted_prediction_las>",
+        "sha256": "<recorded_at_runtime>",
+        "size_bytes": "<recorded_at_runtime>"
+      }
+    ],
+    "raw_full_forest_output_retained": true,
+    "raw_pointwise_output_retained": true,
+    "table_root": "results/tables/treelearn_for_instance/one_plot_smokes/<run_id>"
+  },
+  "run_id": "<run_id>",
+  "status": "example_only_not_run",
+  "training_mode": "published_pretrained",
   "validation": {
-    "positive_prediction_count": null,
+    "positive_prediction_count": "<recorded_at_runtime>",
     "row_coordinate_tolerance_m": 0.005,
-    "row_count_match": null,
-    "row_order_preserved": null
+    "row_count_match": "<recorded_at_runtime>",
+    "row_order_preserved": "<recorded_at_runtime>"
   }
 }

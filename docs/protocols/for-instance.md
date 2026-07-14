@@ -42,6 +42,9 @@ record.
   ignored run metadata.
 - Preserve each `relative_path`, collection and supplied split from
   `data_split_metadata.csv`.
+- The metadata catalogue contains 56 development and 26 test paths. The
+  downloaded 32-LAS benchmark is the exact-path subset of 21 development and
+  11 test plots; every method uses this same local subset.
 - Do not edit the source LAS files.
 - Record the observed point count, dimensions, semantic values and positive
   `treeID` count before running a method.
@@ -94,6 +97,23 @@ harmonised evaluator apply to every later method. Method-specific
 augmentations, architectures and optimisation schedules remain part of each
 method's documented reproduction rather than being forced to be identical.
 
+For the current SegmentAnyTree and TreeLearn development fine-tunes, the
+headline schedule is 35 epochs. Each method must also record examples per
+epoch, batch size, total examples and optimizer steps because an epoch does not
+represent equal work across architectures. TreeX is deterministic and has no
+optimizer or epoch count. Cross-method comparability is defined by the frozen
+development/test boundary, validation-only selection, one-time 11-plot test,
+point-aligned prediction contract and identical evaluator—not by hiding
+method-specific training exposure.
+
+The public headline result table must contain only `held_out_test_primary`
+rows. Each such row must use the supplied 11-plot test split, all 323 reference
+instances and `for_instance_pointwise_v1` with maximum-cardinality one-to-one
+matching. Development, smoke, checkpoint-sweep and overlap-affected results
+must be stored in a separate diagnostics table and must never occupy headline
+ranking rows. Missing method variants are reported as gaps rather than being
+filled with a differently scoped result.
+
 ## Reference Definition
 
 The reference instance field is `treeID`.
@@ -128,6 +148,12 @@ label and one predicted instance label for every source point.
 - Record the Barkla-relative prediction directory and any harmonised prediction
   artefact paths in run metadata. Local copies under `local_outputs/` are
   backups only and must not be the only retained prediction source.
+- A completed run must inventory retained prediction files with byte sizes and
+  SHA-256 values where the method workflow supports hashing. The final gate
+  must fail when an expected prediction artefact is missing or has changed.
+- Add every accepted, rejected or diagnostic result used in reporting to
+  `outputs/sat_treex_benchmark_metrics/for_instance_prediction_retention_registry.csv`.
+  Retries use new run-specific roots and must not delete earlier evidence.
 - Record every ignored or unassigned prediction label.
 
 Methods that naturally output one file per tree must map those predictions
@@ -249,6 +275,8 @@ For each dataset-method combination, publish:
 - evaluator version and metric definition;
 - synthetic tests;
 - public-safe per-plot and aggregate tables after validation;
+- a prediction-retention registry row that identifies the reusable off-Git
+  prediction set;
 - failures, deviations and known limitations.
 
 Raw datasets, checkpoints, predictions, full logs and machine-specific

@@ -19,6 +19,15 @@ The exact installed `pointtree` package version was not captured in the
 retained Barkla metadata. This is an explicit reproducibility limitation, not
 an inferred version. The package source is external and is not vendored here.
 
+## Completion freeze
+
+The recorded development settings and held-out test outputs are final for this
+benchmark row. Do not rerun the test split to select parameters, filter
+predictions or seek a preferred score. The retained point-aligned NPZ files are
+the source for additional metrics, site summaries or plotting; those analyses
+do not require another inference run. The missing exact package-version
+provenance remains documented and must not be reconstructed by inference.
+
 ## Exact-path split rule
 
 The workflow uses only metadata paths that exist locally.
@@ -57,7 +66,11 @@ params["stem_search_min_cluster_intensity"] = None
 The intensity threshold is disabled because an earlier pilot accidentally used
 classification values as intensity and produced zero detections.
 
-## Reproduction workflow
+## Historical reproduction workflow
+
+The commands below document how the completed artefacts were produced. They
+are not an instruction to resubmit the frozen held-out arrays. For current
+reporting, rebuild metrics from the retained prediction backup instead.
 
 Create exact-path plot lists from the supplied metadata:
 

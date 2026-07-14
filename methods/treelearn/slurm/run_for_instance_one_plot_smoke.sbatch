@@ -21,13 +21,18 @@ fi
 
 module purge
 module load miniforge3/25.3.0-python3.12.10
+source "$(conda info --base)/etc/profile.d/conda.sh"
 
 TREELEARN_ENV="${TREELEARN_ENV:-$HOME/fastscratch/venvs/treelearn}"
 TREELEARN_REPO="${TREELEARN_REPO:-$HOME/fastscratch/external/TreeLearn}"
-TREELEARN_CHECKPOINT="${TREELEARN_CHECKPOINT:-$HOME/fastscratch/treelearn_checkpoints/model_weights_with_small_20241213.pth}"
+TREELEARN_CHECKPOINT="${TREELEARN_CHECKPOINT:-$HOME/fastscratch/treelearn_checkpoints/model_weights_20241213.pth}"
 TREELEARN_DATASET_ROOT="${TREELEARN_DATASET_ROOT:-$HOME/data/datasets/for_instance/FORinstance_dataset}"
+TREELEARN_RUN_ID="${TREELEARN_RUN_ID:?TREELEARN_RUN_ID is required}"
+TREELEARN_EXPECTED_BENCHMARK_COMMIT="${TREELEARN_EXPECTED_BENCHMARK_COMMIT:?TREELEARN_EXPECTED_BENCHMARK_COMMIT is required}"
+TREELEARN_EXPECTED_CHECKPOINT_MD5="${TREELEARN_EXPECTED_CHECKPOINT_MD5:?TREELEARN_EXPECTED_CHECKPOINT_MD5 is required}"
+TREELEARN_EXPECTED_CHECKPOINT_SHA256="${TREELEARN_EXPECTED_CHECKPOINT_SHA256:?TREELEARN_EXPECTED_CHECKPOINT_SHA256 is required}"
 
-if [[ ! -f "$TREELEARN_ENV/bin/activate" ]]; then
+if [[ ! -x "$TREELEARN_ENV/bin/python" ]]; then
   echo "Missing TreeLearn environment: $TREELEARN_ENV"
   exit 1
 fi
@@ -43,8 +48,30 @@ if [[ ! -d "$TREELEARN_DATASET_ROOT" ]]; then
   echo "Missing FOR-instance dataset root: $TREELEARN_DATASET_ROOT"
   exit 1
 fi
+test -f "$TREELEARN_DATASET_ROOT/data_split_metadata.csv"
 
-source "$TREELEARN_ENV/bin/activate"
+ACTUAL_BENCHMARK_COMMIT=$(git rev-parse HEAD)
+if [[ "$ACTUAL_BENCHMARK_COMMIT" != "$TREELEARN_EXPECTED_BENCHMARK_COMMIT" ]]; then
+  echo "Benchmark checkout changed after submission."
+  exit 1
+fi
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "Benchmark checkout is dirty."
+  exit 1
+fi
+
+ACTUAL_CHECKPOINT_MD5=$(md5sum "$TREELEARN_CHECKPOINT" | cut -d ' ' -f 1)
+if [[ "$ACTUAL_CHECKPOINT_MD5" != "$TREELEARN_EXPECTED_CHECKPOINT_MD5" ]]; then
+  echo "TreeLearn checkpoint MD5 does not match the official default."
+  exit 1
+fi
+ACTUAL_CHECKPOINT_SHA256=$(sha256sum "$TREELEARN_CHECKPOINT" | cut -d ' ' -f 1)
+if [[ "$ACTUAL_CHECKPOINT_SHA256" != "$TREELEARN_EXPECTED_CHECKPOINT_SHA256" ]]; then
+  echo "TreeLearn checkpoint SHA-256 does not match the frozen submission."
+  exit 1
+fi
+
+conda activate "$TREELEARN_ENV"
 
 echo "hostname=$(hostname)"
 echo "date_utc=$(date -u)"
@@ -57,30 +84,24 @@ echo "expected_runtime=30-90 minutes"
 echo "treelearn_env=$TREELEARN_ENV"
 echo "treelearn_repo=$TREELEARN_REPO"
 echo "treelearn_checkpoint=$TREELEARN_CHECKPOINT"
+echo "treelearn_checkpoint_md5=$ACTUAL_CHECKPOINT_MD5"
+echo "treelearn_checkpoint_sha256=$ACTUAL_CHECKPOINT_SHA256"
+echo "treelearn_run_id=$TREELEARN_RUN_ID"
+echo "benchmark_commit=$ACTUAL_BENCHMARK_COMMIT"
 echo "dataset_root=$TREELEARN_DATASET_ROOT"
 echo "plot=CULS/plot_1_annotated.las"
 echo "success_criteria=imports, checkpoint load, full-forest output, aligned adapted NPZ/LAS, positive predictions"
 echo "failure_indicators=missing env/repo/checkpoint, CUDA/spconv import failure, OOM, missing output, row mismatch, zero positive predictions"
 
-python - <<'PY'
-import spconv
-import torch
-import tree_learn
-
-print(f"torch={torch.__version__}")
-print(f"cuda_available={torch.cuda.is_available()}")
-print(f"cuda_device_count={torch.cuda.device_count()}")
-print(f"spconv={getattr(spconv, '__version__', 'unknown')}")
-print(f"tree_learn={getattr(tree_learn, '__file__', 'unknown')}")
-if not torch.cuda.is_available():
-    raise SystemExit("CUDA is not available in the active TreeLearn environment.")
-PY
+python methods/treelearn/scripts/validate_treelearn_environment.py \
+  --treelearn-repo "$TREELEARN_REPO" \
+  --require-cuda
 
 python methods/treelearn/scripts/run_for_instance_one_plot_smoke.py \
   --config methods/treelearn/configs/for_instance_one_plot_smoke.yml \
   --dataset-root "$TREELEARN_DATASET_ROOT" \
   --treelearn-repo "$TREELEARN_REPO" \
   --checkpoint "$TREELEARN_CHECKPOINT" \
-  --overwrite
+  --run-id "$TREELEARN_RUN_ID"
 
 echo "TreeLearn one-plot smoke test completed."

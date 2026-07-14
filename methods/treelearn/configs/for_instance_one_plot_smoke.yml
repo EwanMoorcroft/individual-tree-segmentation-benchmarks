@@ -4,7 +4,7 @@ project:
   dataset_slug: for-instance
   method_slug: treelearn
   mode: labelled_accuracy_candidate
-  status: smoke_route_defined_not_run
+  status: completed_and_accepted_for_full_development_only
   protocol_id: for_instance_pointwise_v1
   barkla_root: "~/scratch/tree-seg-benchmark"
 
@@ -33,16 +33,23 @@ method:
   name: TreeLearn
   repo_url: "https://github.com/ecker-lab/TreeLearn"
   repo_path: "~/fastscratch/external/TreeLearn"
+  upstream_commit: "fd240ce7caa4c444fe3418aca454dc578bc557d4"
   execution_mode: external_checkout_slurm
   treelearn_env: "~/fastscratch/venvs/treelearn"
   checkpoint:
     training_mode: published_pretrained
-    filename: model_weights_with_small_20241213.pth
-    default_path: "~/fastscratch/treelearn_checkpoints/model_weights_with_small_20241213.pth"
-    source: "TreeLearn upstream downloadable model weights"
-    sha256: null
-    sha256_status: required_before_full_evaluation
-    note: "The one-plot smoke route must record the checkpoint SHA-256 before any full FOR-instance evaluation is submitted."
+    filename: model_weights_20241213.pth
+    default_path: "~/fastscratch/treelearn_checkpoints/model_weights_20241213.pth"
+    source: "TreeLearn upstream default December 2024 model weights"
+    source_dataset_name: model_weights_20241213
+    source_url: "https://data.goettingen-research-online.de/api/access/datafile/:persistentId?persistentId=doi:10.25625/VPMPID/IMHF3G"
+    source_md5: "56a3d78f689ae7f1190906b975700311"
+    training_data_provenance: "Authors' diverse-data checkpoint subsequently fine-tuned on manually labelled data including FOR-instance validation/test"
+    released_weight_test_overlap_status: "documented_for_instance_validation_test_training_overlap; exact_plot_manifest_not_bundled"
+    eligible_for_leakage_free_primary_ranking: false
+    sha256: "5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb"
+    sha256_status: frozen_from_accepted_development_smoke
+    note: "The accepted smoke metadata records the same official checkpoint MD5 and frozen SHA-256."
   upstream_pipeline:
     entrypoint: tools/pipeline/pipeline.py
     return_type: original
@@ -54,6 +61,7 @@ method:
     use_hdbscan: true
 
 smoke:
+  accepted_run_id: treelearn_for-instance_published_pretrained_dev_smoke_20260712_135205
   relative_path: CULS/plot_1_annotated.las
   plot_id: CULS/plot_1_annotated
   safe_plot_id: CULS_plot_1_annotated
@@ -62,48 +70,85 @@ smoke:
   expected_reference_tree_count: 6
   row_coordinate_tolerance_m: 0.005
   run_training: false
-  run_evaluation: false
+  run_evaluation: true
+  allow_test_split: false
+  result:
+    status: accepted_for_full_development_only
+    prediction_instance_count: 11
+    reference_instance_count: 6
+    true_positives: 6
+    false_positives: 5
+    false_negatives: 0
+    precision: 0.5454545454545454
+    recall: 1.0
+    f1: 0.7058823529411764
+    row_count_match: true
+    row_order_preserved: true
+    max_abs_coordinate_delta_m: 0.00027683842927217484
+    retained_artifact_count: 5
 
 runtime:
+  setup_script: methods/treelearn/slurm/setup_treelearn_environment.sbatch
   slurm_script: methods/treelearn/slurm/run_for_instance_one_plot_smoke.sbatch
+  submit_script: methods/treelearn/slurm/submit_for_instance_one_plot_smoke.sh
+  monitor_script: methods/treelearn/slurm/monitor_for_instance_one_plot_smoke.sh
   expected_runtime: "30-90 minutes after TreeLearn is installed and checkpoint is present"
   partition: gpu-l40s-low
   time_limit: "02:00:00"
   cpus_per_task: 12
   memory: 128G
   gres: "gpu:1"
-  live_watch_command: "squeue -j <job_id>; tail -f logs/treelearn_for_instance/treelearn_one_plot_smoke_<job_id>.out"
+  live_watch_command: "watch -n 15 bash methods/treelearn/slurm/monitor_for_instance_one_plot_smoke.sh <state_file>"
 
 paths:
-  runtime_root: "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated"
-  generated_pipeline_config: "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated/treelearn_pipeline_config.yml"
-  raw_results_root: "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated/results"
-  raw_full_forest_laz: "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated/results/full_forest/CULS_plot_1_annotated.laz"
-  raw_pointwise_npz: "data/interim/treelearn/for_instance/one_plot_smoke/CULS_plot_1_annotated/results/pointwise_results/pointwise_results.npz"
-  predictions_root: "data/predictions/treelearn/for_instance_smoke/CULS_plot_1_annotated"
-  adapted_prediction_npz: "data/predictions/treelearn/for_instance_smoke/CULS_plot_1_annotated/CULS_plot_1_annotated_treelearn_smoke_predictions.npz"
-  adapted_prediction_las: "data/predictions/treelearn/for_instance_smoke/CULS_plot_1_annotated/CULS_plot_1_annotated_treelearn_smoke_predictions.las"
-  metadata_root: "results/metadata/treelearn_for_instance/one_plot_smoke"
-  metadata_json: "results/metadata/treelearn_for_instance/one_plot_smoke/CULS_plot_1_annotated_treelearn_smoke_metadata.json"
+  runtime_root: "data/interim/treelearn/for_instance/one_plot_smokes"
+  predictions_root: "data/predictions/treelearn/for_instance_smokes"
+  metadata_root: "results/metadata/treelearn_for_instance/one_plot_smokes"
+  tables_root: "results/tables/treelearn_for_instance/one_plot_smokes"
   logs_root: "logs/treelearn_for_instance"
+
+evaluation:
+  protocol_id: for_instance_pointwise_v1
+  iou_threshold: 0.5
+  matching_policy: maximum_cardinality_one_to_one
+  evaluation_mask: union_of_reference_tree_and_predicted_tree_points
+  reference_tree_classes:
+    - 4
+    - 5
+    - 6
+  prediction_tree_class: 4
+  ignored_reference_instance_labels:
+    - 0
+    - -1
+  ignored_prediction_instance_labels:
+    - 0
+    - -1
+  postprocessing_selection_permitted: false
 
 success_criteria:
   - TreeLearn imports from the active environment.
-  - The configured checkpoint exists and loads.
+  - The clean benchmark checkout commit is frozen at submission and recorded.
+  - The pinned upstream commit and clean checkout are verified.
+  - The configured checkpoint matches the official MD5, loads and has a recorded SHA-256.
+  - The dataset manifest identifies the configured plot exactly once as development data.
   - The one-plot pipeline exits with status zero.
-  - The full-forest output exists.
-  - The adapted prediction NPZ exists.
+  - The original-resolution full-forest and raw pointwise outputs are retained.
   - Prediction row count equals the source point count.
   - Source and prediction coordinates are row-aligned within tolerance.
   - Predicted instance labels contain at least one positive tree ID.
-  - Metadata JSON records runtime, checkpoint path and output paths.
+  - Adapted NPZ and LAS outputs contain explicit prediction semantics and source-row evidence.
+  - Metadata records the run ID, hashes, pinned commit, command, runtime, resource evidence and retained paths.
+  - Shared evaluation writes metrics, matched pairs and both unmatched-instance tables.
 
 failure_indicators:
-  - Missing TreeLearn environment, checkout or checkpoint.
+  - Missing TreeLearn environment, checkout, checkpoint, dataset or split metadata.
   - CUDA, PyTorch or spconv import failure.
+  - The benchmark checkout changes or becomes dirty after submission.
+  - The upstream checkout differs from the pinned commit or is dirty.
   - Tile generation or feature calculation exceeds the Slurm memory request.
   - Pipeline exits before writing full-forest output.
   - Output point count differs from source point count.
   - Row-wise coordinate check fails.
   - Prediction contains only non-tree or unassigned labels.
   - Any test-split path is used.
+  - Run-scoped output paths already exist.

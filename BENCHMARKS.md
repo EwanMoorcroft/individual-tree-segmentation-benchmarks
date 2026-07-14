@@ -15,14 +15,18 @@ rows may use `pending` for run-specific fields until a run is scheduled.
 | --- | --- | --- | --- | --- | --- | --- |
 | frdr-treeiso | tls2trees | tls2trees_frdr_prediction_benchmark | external_training_only | operational_prediction | Prediction benchmark completed | [`frdr_benchmark.yml`](methods/tls2trees/configs/frdr_benchmark.yml); [`tls2trees_frdr_prediction_summary.csv`](methods/tls2trees/examples/tls2trees_frdr_prediction_summary.csv) |
 | for-instance | segmentanytree | released_checkpoint_coordinate_rematch | published_pretrained | provisional_coordinate_rematched | Provisional inference-only run completed; export audit failed | [`for_instance_benchmark.yml`](methods/segmentanytree/configs/for_instance_benchmark.yml); [`provisional_released_checkpoint_results.md`](methods/segmentanytree/docs/provisional_released_checkpoint_results.md) |
-| for-instance | segmentanytree | segmentanytree_for-instance_published_pretrained_20260710_231601 | published_pretrained | harmonised_pointwise_test | Completed target baseline; test mean plot F1 0.4534, micro F1 0.4442 | [`completed target results`](methods/segmentanytree/examples/sat_completed_target_results_20260711.csv); [`site results`](methods/segmentanytree/examples/sat_completed_target_site_results_20260711.csv); [`final result note`](methods/segmentanytree/docs/final_results_20260711.md) |
-| for-instance | segmentanytree | segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931 | fine_tuned_on_dev | harmonised_pointwise_test | Completed primary result; test mean plot F1 0.5447, micro F1 0.5320 | [`completed target results`](methods/segmentanytree/examples/sat_completed_target_results_20260711.csv); [`site results`](methods/segmentanytree/examples/sat_completed_target_site_results_20260711.csv); [`final result note`](methods/segmentanytree/docs/final_results_20260711.md) |
+| for-instance | segmentanytree | segmentanytree_for-instance_published_pretrained_20260710_231601 | published_pretrained | harmonised_pointwise_test | Completed target baseline; test mean plot F1 0.4534, micro F1 0.4442 | [`per-plot results`](methods/segmentanytree/examples/sat_completed_target_plot_results_20260711.csv); [`overall results`](methods/segmentanytree/examples/sat_completed_target_results_20260711.csv); [`site results`](methods/segmentanytree/examples/sat_completed_target_site_results_20260711.csv); [`final result note`](methods/segmentanytree/docs/final_results_20260711.md) |
+| for-instance | segmentanytree | segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931 | fine_tuned_on_dev | harmonised_pointwise_test | Completed primary result; test mean plot F1 0.5447, micro F1 0.5320 | [`per-plot results`](methods/segmentanytree/examples/sat_completed_target_plot_results_20260711.csv); [`overall results`](methods/segmentanytree/examples/sat_completed_target_results_20260711.csv); [`site results`](methods/segmentanytree/examples/sat_completed_target_site_results_20260711.csv); [`final result note`](methods/segmentanytree/docs/final_results_20260711.md) |
 | for-instance | segmentanytree | sat_for_quicktune_to49_20260706_140730 | retrained_from_dev | harmonised_pointwise_test | Completed historical result retained; test mean plot F1 0.4825, micro F1 0.4692 | [`sat_final_test_aligned_summary_sat_for_quicktune_to49_20260706_140730.csv`](methods/segmentanytree/examples/sat_final_test_aligned_summary_sat_for_quicktune_to49_20260706_140730.csv); [`provenance manifest`](methods/segmentanytree/examples/sat_final_test_aligned_provenance_sat_for_quicktune_to49_20260706_140730.json) |
 | for-instance | segmentanytree | sat_for_quicktune_to55_20260707_214305 | retrained_from_dev | development_validation | Rejected validation regression | [`training_progress_20260706.md`](methods/segmentanytree/docs/training_progress_20260706.md) |
 | for-instance | segmentanytree | segmentanytree_for-instance_fine_tuned_on_dev_20260708_215054_full | fine_tuned_on_dev | diagnostic_held_out_subset | Rejected; produced semantic tree predictions but zero instance predictions | [`training_progress_20260706.md`](methods/segmentanytree/docs/training_progress_20260706.md) |
-| for-instance | treex | treex_for_instance_exact_path_subset | external_training_only | harmonised_pointwise_test | Completed deterministic baseline; test mean plot F1 0.3831, micro F1 0.3627 | [`for_instance_benchmark.yml`](methods/treex/configs/for_instance_benchmark.yml); [`treex_split_summary.csv`](methods/treex/examples/treex_split_summary.csv) |
+| for-instance | treex | treex_for_instance_exact_path_subset | external_training_only | harmonised_pointwise_test | Completed and frozen unsupervised parameterised baseline; test mean plot F1 0.3831, micro F1 0.3627 | [`per-plot results`](methods/treex/examples/treex_combined_dev_test_summary.csv); [`split summary`](methods/treex/examples/treex_split_summary.csv); [`retention manifest`](methods/treex/examples/treex_prediction_retention_manifest.json) |
 | for-instance | tls2trees | tls2trees_for_instance_leaf_off_pilot | external_training_only | coordinate_fallback_leaf_off_pilot | Candidate compatibility test | [`for_instance_accuracy.yml`](methods/tls2trees/configs/for_instance_accuracy.yml); [`for_instance_pilot.md`](methods/tls2trees/docs/for_instance_pilot.md) |
-| for-instance | treelearn | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Respect the supplied development/test split and declare a training mode before running. |
+| for-instance | treelearn | treelearn_for-instance_published_pretrained_dev_smoke_20260712_135205 | published_pretrained | development_smoke_harmonised_pointwise | Accepted adapter diagnostic; one CULS development plot F1 0.7059 | [`accepted smoke`](methods/treelearn/examples/accepted_development_smoke_20260712.json); [`runbook`](methods/treelearn/docs/one_plot_smoke.md) |
+| for-instance | treelearn | treelearn_for-instance_published_pretrained_development_20260712_150030 | published_pretrained | full_development_harmonised_pointwise | Completed published-checkpoint development diagnostic with documented FOR-instance training overlap; mean plot F1 0.5156, micro F1 0.5108; excluded from leakage-free ranking | [`overall results`](methods/treelearn/examples/treelearn_completed_development_results_20260712.csv); [`site results`](methods/treelearn/examples/treelearn_completed_development_site_results_20260712.csv); [`result note`](methods/treelearn/docs/development_results_20260712.md) |
+| for-instance | treelearn | treelearn_for-instance_fine_tuned_on_dev_20260712_164057 | fine_tuned_on_dev | internal_development_validation | Completed negative result; best checkpoint mean plot F1 0.4905 versus matched published baseline 0.5588; rejected before test | [`validation results`](methods/treelearn/examples/treelearn_finetune_validation_results_20260712.csv); [`result note`](methods/treelearn/docs/finetune_validation_results_20260712.md) |
+| for-instance | treelearn | treelearn_for-instance_published_pretrained_20260714_134109 | published_pretrained | harmonised_pointwise_test | Completed clean authors-released baseline; test mean plot F1 0.0789, micro F1 0.0987 | [`per-plot results`](methods/treelearn/examples/treelearn_pretrained_test_plot_results_20260714.csv); [`overall results`](methods/treelearn/examples/treelearn_pretrained_test_results_20260714.csv); [`site results`](methods/treelearn/examples/treelearn_pretrained_test_site_results_20260714.csv); [`provenance`](methods/treelearn/examples/treelearn_pretrained_test_provenance_20260714.json); [`result note`](methods/treelearn/docs/pretrained_test_results_20260714.md) |
+| for-instance | treelearn | treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227 | fine_tuned_on_dev | harmonised_pointwise_test | Completed leakage-controlled primary result; test mean plot F1 0.3647, micro F1 0.3319 | [`per-plot results`](methods/treelearn/examples/treelearn_finetuned_test_plot_results_20260713.csv); [`overall results`](methods/treelearn/examples/treelearn_finetuned_test_results_20260713.csv); [`site results`](methods/treelearn/examples/treelearn_finetuned_test_site_results_20260713.csv); [`result note`](methods/treelearn/docs/finetuned_test_results_20260713.md) |
 | for-instance | randlanet | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
 | for-instance | pointnetpp | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
 | for-instance | pointgroup | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
@@ -45,6 +49,51 @@ but does not report IoU/F1 without an external instance reference.
 No candidate accuracy row indicates a completed method run or a reported
 accuracy result. Dataset readiness and remaining preprocessing are documented
 in [`docs/dataset_feasibility.md`](docs/dataset_feasibility.md).
+
+The FOR-instance headline tracker contains five completed comparable rows:
+TreeX unsupervised parameterised, SegmentAnyTree published pretrained, SegmentAnyTree
+fine-tuned, TreeLearn published pretrained and TreeLearn fine-tuned. All five
+use the same supplied 11-plot test split, 323 reference instances, union mask,
+IoU threshold and harmonised point-aligned evaluator. TreeX has no fine-tuning
+stage. TreeLearn development and checkpoint-sweep results remain in the
+separate diagnostics table and are not headline rankings.
+
+The accepted TreeLearn smoke is adapter evidence from one CULS development
+plot, not a headline benchmark result. It preserved the source row count and
+order across 1,816,672 points, retained all five raw and aligned prediction
+artefacts and obtained F1 `0.705882` under the shared point-wise protocol. It
+authorised only the frozen 21-plot development route. That route subsequently
+completed with mean plot F1 `0.515571` and count-aggregated micro F1 `0.510760`.
+CULS has the highest site mean F1 (`0.715010`) and NIBIO the lowest
+(`0.446965`). All 105 prediction artefacts remain retained for future metrics.
+The December 2024 checkpoint has documented FOR-instance validation/test
+training overlap, so these values are a published-method reproduction and are
+excluded from leakage-free ranking.
+The separate inherited-overlap development fine-tune evaluated ten retained checkpoints on
+the frozen five-plot validation subset. None exceeded the matched published
+baseline, so the fine-tuned route is rejected and was not submitted to the
+held-out test. Its 250 raw and aligned validation prediction artefacts remain
+hash-verified on Barkla; it inherits the same checkpoint overlap. A guarded
+replacement starts from the authors-released L1W-fine-tuned checkpoint whose
+stated training data excludes FOR-instance, uses the fixed 16/5 development
+split and freezes an epoch-35 checkpoint trained on the 16 training plots. Its
+one-time 11-plot test completed with mean plot F1 `0.364685` and micro F1
+`0.331924`. All 55 raw and aligned prediction artefacts remain hash-verified;
+the result is directly comparable with the completed SegmentAnyTree and TreeX
+test rows. The published December 2024 TreeLearn checkpoint remains a separate
+overlap-affected development reproduction and is not a leakage-free test
+baseline.
+
+The unchanged clean authors-released TreeLearn checkpoint was also evaluated
+once on the same frozen 11-plot test subset. It obtained mean plot F1
+`0.078944` and micro F1 `0.098694` (micro precision `0.092896`, micro recall
+`0.105263`, TP `34`, FP `332`, FN `289`). All 55 raw and aligned prediction
+artefacts passed retention verification. An independent recomputation audit
+re-hashed the files, reproduced the aggregate result and found recall `0/74`
+for reference trees below 10 m and `34/249` for trees at least 10 m. This is
+the genuine frozen result for that clean checkpoint and pinned pipeline; the
+authors document the checkpoint as targeting trees above 10 m, so it must not
+be interpreted as TreeLearn's best possible performance on small-tree data.
 
 The permitted training mode values for completed or provisional runs are
 `published_pretrained`, `fine_tuned_on_dev`, `retrained_from_dev` and

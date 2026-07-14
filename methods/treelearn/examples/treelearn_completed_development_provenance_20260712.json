@@ -1,0 +1,55 @@
+{
+  "benchmark": "for_instance_treelearn",
+  "benchmark_commit": "1a66696be033816d7f776d7e1293340356b34452",
+  "checkpoint": {
+        "filename": "model_weights_20241213.pth",
+        "md5": "56a3d78f689ae7f1190906b975700311",
+        "checkpoint_training_data_provenance": "Authors' diverse-data checkpoint subsequently fine-tuned on the same manually labelled data",
+        "released_weight_test_overlap_status": "documented_for_instance_validation_test_training_overlap; exact_plot_manifest_not_bundled",
+        "eligible_for_leakage_free_primary_ranking": false,
+        "sha256": "5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb",
+    "training_mode": "published_pretrained"
+  },
+  "completed_date_utc": "2026-07-12",
+  "dataset_split": "dev",
+  "documented_failures": 0,
+  "evaluation_protocol": "for_instance_pointwise_v1",
+  "generated_at_utc": "2026-07-12T15:29:56.605980+00:00",
+  "held_out_test_accessed": false,
+  "jobs": {
+    "development_array": "9763819",
+    "final_gate": "9763821",
+    "preparation": "9763818",
+    "summary": "9763820"
+  },
+  "matching_policy": "maximum_cardinality_one_to_one",
+  "next_gate": "manual_review_before_any_held_out_test_route",
+  "output_roots": {
+    "metadata": "results/metadata/treelearn_for_instance/development_runs/treelearn_for-instance_published_pretrained_development_20260712_150030",
+    "predictions": "data/predictions/treelearn/for_instance_development/treelearn_for-instance_published_pretrained_development_20260712_150030",
+    "runtime": "data/interim/treelearn/for_instance/development_runs/treelearn_for-instance_published_pretrained_development_20260712_150030",
+    "tables": "results/tables/treelearn_for_instance/development_runs/treelearn_for-instance_published_pretrained_development_20260712_150030"
+  },
+  "plots": {
+    "completed": 21,
+    "expected": 21
+  },
+  "repeat_development_for_setting_selection_permitted": false,
+    "result_status": "completed_aligned_pointwise_development",
+    "result_role": "published_method_reproduction_with_training_overlap",
+  "result_table": "methods/treelearn/examples/treelearn_completed_development_results_20260712.csv",
+  "retention": {
+    "complete_development_prediction_set_retained": true,
+    "inference_outputs_retained": 21,
+    "status": "retention_verified",
+    "verified_prediction_file_count": 105,
+    "verified_prediction_size_bytes": 9645423654
+  },
+  "run_id": "treelearn_for-instance_published_pretrained_development_20260712_150030",
+  "site_result_table": "methods/treelearn/examples/treelearn_completed_development_site_results_20260712.csv",
+  "source": "Barkla Slurm completion records and frozen aggregate summaries supplied after the final development gate completed",
+  "test_result_exists": false,
+  "test_submission_route_exists": false,
+  "upstream_commit": "fd240ce7caa4c444fe3418aca454dc578bc557d4",
+  "validated_completed_inference_records": 21
+}

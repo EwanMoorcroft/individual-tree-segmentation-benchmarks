@@ -1,0 +1,83 @@
+{
+  "benchmark": "for_instance_treelearn",
+  "checkpoint": {
+    "filename": "model_weights_finetuned.pth",
+    "md5": "106a80de2991c5f23484a3f9d03e3b16",
+    "persistent_id": "doi:10.25625/VPMPID/8CIIW0",
+    "sha256": "f896ec072f01839cd1f1f38a990169eadc98774ed681390e948bc8853067d0b7",
+    "training_mode": "published_pretrained",
+    "weight_updates": false
+  },
+  "completed_date_utc": "2026-07-14",
+  "completion": {
+    "status": "completed_treelearn_held_out_test",
+    "validated_at_utc": "2026-07-14T14:39:04.413084+00:00"
+  },
+  "dataset_split": "test",
+  "evaluation_mask": "union_of_reference_tree_and_predicted_tree_points",
+  "evaluation_protocol": "for_instance_pointwise_v1",
+  "execution_recovery": {
+    "model_or_parameter_selection_performed": false,
+    "policy": "map_all_unassigned_to_background_when_initial_grouping_is_empty",
+    "reason": "Pinned upstream post-processing and diagnostic writers did not handle a plot with zero initial clusters.",
+    "recovered_task_index": 8,
+    "relative_path": "SCION/plot_31_annotated.las"
+  },
+  "held_out_test_accessed": true,
+  "independent_audit": {
+    "aggregate_recomputed": true,
+    "audit_job": "9775494",
+    "best_iou_0_40_to_0_50_unmatched_references": 8,
+    "best_iou_zero_unmatched_references": 71,
+    "reference_recall_at_least_10m": "34/249",
+    "reference_recall_below_10m": "0/74",
+    "status": "AUDIT_PASS",
+    "unmatched_references": 289,
+    "verified_prediction_file_count": 55
+  },
+  "jobs": {
+    "final_gate": "9775446",
+    "recovery_inference_evaluation": "9775444",
+    "recovery_preparation": "9775443",
+    "summary": "9775445"
+  },
+  "matching_policy": "maximum_cardinality_one_to_one",
+  "interpretation_limits": {
+    "checkpoint_documented_detection_scope": "trees_above_10m",
+    "historical_checkpoint_specific_postprocessing_config_bundled": false,
+    "result_scope": "exact_clean_checkpoint_and_pinned_pipeline",
+    "test_result_may_be_replaced_by_development_tuning": false
+  },
+  "next_gate": "benchmark_complete",
+  "output_roots": {
+    "metadata": "results/metadata/treelearn_for_instance/pretrained_test_runs/treelearn_for-instance_published_pretrained_20260714_134109",
+    "predictions": "data/predictions/treelearn/for_instance_pretrained_test/treelearn_for-instance_published_pretrained_20260714_134109",
+    "retention_manifest": "results/tables/treelearn_for_instance/pretrained_test/treelearn_for-instance_published_pretrained_20260714_134109/retention_manifest.json",
+    "tables": "results/tables/treelearn_for_instance/pretrained_test/treelearn_for-instance_published_pretrained_20260714_134109"
+  },
+  "plots": {
+    "completed": 11,
+    "expected": 11,
+    "failed": 0
+  },
+  "repeat_test_for_setting_selection_permitted": false,
+  "result_role": "completed_target_baseline",
+  "result_status": "completed_aligned_pointwise_test",
+  "result_table": "methods/treelearn/examples/treelearn_pretrained_test_results_20260714.csv",
+  "plot_result_table": "methods/treelearn/examples/treelearn_pretrained_test_plot_results_20260714.csv",
+  "source_plot_summary_sha256": "61831f26cb94b422dc55f7116934cfe6eeb5e5a9c9b8f335d47c7fe803c82852",
+  "retention": {
+    "complete_test_prediction_set_retained": true,
+    "manifest_sha256": "e61b3413bc979eeba116eda4382fe2a5301b8460803ec1c521ca35aa96046a20",
+    "status": "retention_verified",
+    "verified_prediction_file_count": 55,
+    "verified_prediction_size_bytes": 4694894674
+  },
+  "run_id": "treelearn_for-instance_published_pretrained_20260714_134109",
+  "run_summary_sha256": "d199c85706461abdfc1ae297e04654a15cc778c8ef1d4c42b93ef52b19381ef8",
+  "site_result_table": "methods/treelearn/examples/treelearn_pretrained_test_site_results_20260714.csv",
+  "source": "Barkla Slurm completion records and frozen aggregate summaries supplied after the held-out completion gate passed",
+  "summary_sha256": "a76e813aa6f5808382c3e139b617cc17f25a8cb68ce00bf1cef092485ccadb9c",
+  "upstream_commit": "fd240ce7caa4c444fe3418aca454dc578bc557d4",
+  "variant": "published_pretrained"
+}

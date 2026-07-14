@@ -1,0 +1,64 @@
+{
+  "alignment": {
+    "max_abs_coordinate_delta_m": 0.00027683842927217484,
+    "point_count": 1816672,
+    "row_count_match": true,
+    "row_order_preserved": true
+  },
+  "benchmark_commit": "6fda72efb311873bb2beb0d4360109682710eeaa",
+  "checkpoint": {
+    "filename": "model_weights_20241213.pth",
+    "eligible_for_leakage_free_primary_ranking": false,
+    "md5": "56a3d78f689ae7f1190906b975700311",
+    "released_weight_test_overlap_status": "documented_for_instance_validation_test_training_overlap; exact_plot_manifest_not_bundled",
+    "sha256": "5df2f92828f92755bc12e114eaebe83f7ecea94a74c25a6170b68844cc5e19bb",
+    "training_mode": "published_pretrained"
+  },
+  "dataset": "FOR-instance",
+  "dataset_split": "dev",
+  "held_out_test_accessed": false,
+  "method": "TreeLearn",
+  "metrics": {
+    "f1": 0.7058823529411764,
+    "false_negatives": 0,
+    "false_positives": 5,
+    "precision": 0.5454545454545454,
+    "prediction_instances": 11,
+    "recall": 1.0,
+    "reference_instances": 6,
+    "true_positives": 6
+  },
+  "next_gate": "full_development_only",
+  "plot": "CULS/plot_1_annotated.las",
+  "retained_artifacts": [
+    {
+      "artifact": "upstream_full_forest_laz",
+      "sha256": "f2880772b4b33c634b7b7089f1962d8b219dd62c4c6ec58ea869c42d8a2d21e3",
+      "size_bytes": 5581320
+    },
+    {
+      "artifact": "upstream_full_forest_npz",
+      "sha256": "e0c65c9c0b5a129961c519646414933a73c4aeae137c8445abcc96fa549ff84a",
+      "size_bytes": 13714276
+    },
+    {
+      "artifact": "upstream_pointwise_npz",
+      "sha256": "da1b93405e2a66d2a5ee2e8d6618cfaf27caa02d74a077ef0f3093dcf1bfb833",
+      "size_bytes": 50673978
+    },
+    {
+      "artifact": "aligned_prediction_npz",
+      "sha256": "7a3da12995aad7e65917c338452c37c54a3f608ea6398ded68464f15956dcb4d",
+      "size_bytes": 2825238
+    },
+    {
+      "artifact": "aligned_prediction_las",
+      "sha256": "3dde19cfb436b6618a208787d6e594d40b062be988c1407940cd7698e0e1de26",
+      "size_bytes": 70851327
+    }
+  ],
+  "retained_artifact_count": 5,
+  "run_id": "treelearn_for-instance_published_pretrained_dev_smoke_20260712_135205",
+  "status": "accepted_for_full_development_only",
+  "upstream_commit": "fd240ce7caa4c444fe3418aca454dc578bc557d4"
+}

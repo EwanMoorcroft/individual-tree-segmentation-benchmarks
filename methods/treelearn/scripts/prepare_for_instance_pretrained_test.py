@@ -1,13 +1,14 @@
-"""Freeze the authorized one-time TreeLearn fine-tuned held-out evaluation."""
+"""Freeze one authorized TreeLearn clean-pretrained held-out evaluation."""
 
 from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 from for_instance_development_common import MANIFEST_FIELDS, plot_id, safe_plot_id
 from for_instance_test_common import (
@@ -21,76 +22,44 @@ from for_instance_test_common import (
     validate_test_rows,
 )
 from prepare_for_instance_development_manifest import inspect_las, sha256
+from prepare_for_instance_finetuned_test import read_test_metadata
 
 
-EXPECTED_INITIAL_MD5 = "106a80de2991c5f23484a3f9d03e3b16"
+EXPECTED_CHECKPOINT_MD5 = "106a80de2991c5f23484a3f9d03e3b16"
 EXPECTED_UPSTREAM_COMMIT = "fd240ce7caa4c444fe3418aca454dc578bc557d4"
+SOURCE_URL = (
+    "https://data.goettingen-research-online.de/api/access/datafile/"
+    ":persistentId?persistentId=doi:10.25625/VPMPID/8CIIW0"
+)
 
 
-def load_object(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError(f"Expected JSON object: {path}")
-    return payload
-
-
-def read_test_metadata(metadata_path: Path) -> dict[str, str]:
-    with metadata_path.open(encoding="utf-8-sig", newline="") as handle:
-        rows = list(csv.DictReader(handle))
-    found: dict[str, str] = {}
-    for row in rows:
-        if (row.get("split") or "").strip() != "test":
-            continue
-        relative = (row.get("path") or "").strip().replace("\\", "/")
-        folder = (row.get("folder") or "").strip()
-        if relative in EXPECTED_TEST_PATHS:
-            if relative in found:
-                raise ValueError(f"Duplicate test metadata path: {relative}")
-            if folder != Path(relative).parts[0]:
-                raise ValueError(f"Test metadata folder mismatch for {relative}")
-            found[relative] = folder
-    if set(found) != set(EXPECTED_TEST_PATHS):
-        raise ValueError("Official split metadata does not contain the frozen test subset")
-    return found
+def md5(path: Path) -> str:
+    digest = hashlib.md5(usedforsecurity=False)
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def prepare(
-    selected_freeze_path: Path,
+    checkpoint: Path,
     dataset_root: Path,
     metadata_path: Path,
-    expected_run_id: str | None = None,
-) -> dict[str, Any]:
-    selected_freeze_path = selected_freeze_path.expanduser().resolve()
+    run_id: str,
+) -> dict:
+    checkpoint = checkpoint.expanduser().resolve()
     dataset_root = dataset_root.expanduser().resolve()
     metadata_path = metadata_path.expanduser().resolve()
-    selected = load_object(selected_freeze_path)
-    expected_selection = {
-        "status": "frozen_selected_checkpoint_pending_manual_held_out_test_authorisation",
-        "method": "TreeLearn",
-        "training_mode": "fine_tuned_on_dev",
-        "held_out_test_accessed": False,
-        "test_jobs_submitted": 0,
-        "selected_config_id": "full_lr_1e-5",
-        "selected_epoch": 35,
-        "selected_seed": 42,
-        "training_plots": 16,
-        "initial_checkpoint_md5": EXPECTED_INITIAL_MD5,
-        "next_gate": "manual_review_before_any_held_out_test_submission",
-    }
-    for field, value in expected_selection.items():
-        if selected.get(field) != value:
-            raise ValueError(f"Selected checkpoint freeze has unexpected {field}")
-    if expected_run_id is not None and selected.get("source_long_run_id") != expected_run_id:
-        raise ValueError("Selected checkpoint freeze belongs to a different long run")
-    checkpoint = Path(str(selected["checkpoint"])).expanduser().resolve()
-    if (
-        not checkpoint.is_file()
-        or checkpoint.stat().st_size != int(selected["checkpoint_size_bytes"])
-        or sha256(checkpoint) != selected["checkpoint_sha256"]
+    if not re.fullmatch(
+        r"treelearn_for-instance_published_pretrained_[0-9]{8}_[0-9]{6}",
+        run_id,
     ):
-        raise ValueError("Selected checkpoint identity changed before test")
+        raise ValueError("Unexpected TreeLearn pretrained run ID")
+    if not checkpoint.is_file() or md5(checkpoint) != EXPECTED_CHECKPOINT_MD5:
+        raise ValueError("Clean authors-released checkpoint identity differs")
     if not dataset_root.is_dir() or not metadata_path.is_file():
         raise FileNotFoundError("FOR-instance dataset or split metadata is missing")
+
     metadata_rows = read_test_metadata(metadata_path)
     split_hash = sha256(metadata_path)
     plots = []
@@ -121,38 +90,36 @@ def prepare(
             }
         )
     plots = validate_test_rows(plots)
+    checkpoint_sha256 = sha256(checkpoint)
     return {
         "schema_version": 1,
         "status": "frozen_for_one_time_held_out_test",
         "method": "TreeLearn",
         "dataset": "FOR-instance",
-        "run_id": selected["source_long_run_id"],
-        "variant": "fine_tuned_on_dev_long_epoch_35",
-        "training_mode": "fine_tuned_on_dev",
-        "source_long_run_id": selected["source_long_run_id"],
+        "run_id": run_id,
+        "variant": "published_pretrained",
+        "training_mode": "published_pretrained",
         "dataset_split": "test",
         "held_out_test_accessed": True,
         "manual_authorisation_recorded": True,
-        "test_jobs_submitted_at_freeze": 0,
         "repeat_test_for_setting_selection_permitted": False,
         "weight_updates": False,
         "postprocessing_updates": False,
         "evaluation_protocol": "for_instance_pointwise_v1",
         "matching_policy": "maximum_cardinality_one_to_one",
         "iou_threshold": 0.5,
-        "selected_checkpoint_freeze": str(selected_freeze_path),
-        "selected_checkpoint_freeze_sha256": sha256(selected_freeze_path),
         "checkpoint": str(checkpoint),
         "checkpoint_size_bytes": checkpoint.stat().st_size,
-        "checkpoint_sha256": selected["checkpoint_sha256"],
-        "initial_checkpoint_md5": selected["initial_checkpoint_md5"],
+        "checkpoint_sha256": checkpoint_sha256,
+        "checkpoint_md5": EXPECTED_CHECKPOINT_MD5,
         "checkpoint_provenance": {
-            "source_md5": EXPECTED_INITIAL_MD5,
-            "source_url": (
-                "https://data.goettingen-research-online.de/api/access/datafile/"
-                ":persistentId?persistentId=doi:10.25625/VPMPID/8CIIW0"
-            ),
+            "source_md5": EXPECTED_CHECKPOINT_MD5,
+            "source_url": SOURCE_URL,
             "source_dataset_name": "model_weights_finetuned",
+            "training_data": (
+                "Authors-released noisy-label checkpoint fine-tuned on L1W; "
+                "no FOR-instance training"
+            ),
         },
         "upstream_commit": EXPECTED_UPSTREAM_COMMIT,
         "dataset_root": str(dataset_root),
@@ -171,22 +138,22 @@ def prepare(
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--selected-freeze", required=True)
+    parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--dataset-root", required=True)
     parser.add_argument("--metadata-csv", required=True)
-    parser.add_argument("--expected-run-id", required=True)
+    parser.add_argument("--run-id", required=True)
     parser.add_argument("--output-json", required=True)
     parser.add_argument("--output-csv", required=True)
     args = parser.parse_args()
     json_path = Path(args.output_json).expanduser().resolve()
     csv_path = Path(args.output_csv).expanduser().resolve()
     if json_path.exists() or csv_path.exists():
-        raise FileExistsError("One-time TreeLearn test freeze already exists")
+        raise FileExistsError("One-time TreeLearn pretrained test freeze already exists")
     payload = prepare(
-        Path(args.selected_freeze),
+        Path(args.checkpoint),
         Path(args.dataset_root),
         Path(args.metadata_csv),
-        args.expected_run_id,
+        args.run_id,
     )
     json_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
@@ -201,6 +168,7 @@ def main() -> int:
     print(f"test_freeze={json_path}")
     print(f"test_manifest={csv_path}")
     print(f"held_out_test_plots={len(payload['plots'])}")
+    print("training_mode=published_pretrained")
     print("held_out_test_accessed=true")
     return 0
 

@@ -13,17 +13,10 @@ import run_for_instance_one_plot_smoke as runner
 from for_instance_test_common import load_test_manifest
 
 
-CLEAN_SOURCE_MD5 = "106a80de2991c5f23484a3f9d03e3b16"
-CLEAN_SOURCE_URL = (
-    "https://data.goettingen-research-online.de/api/access/datafile/"
-    ":persistentId?persistentId=doi:10.25625/VPMPID/8CIIW0"
-)
-
-
 def read_row(path: Path, task_index: int, run_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
     rows, manifest = load_test_manifest(path)
-    if manifest.get("source_long_run_id") != run_id:
-        raise ValueError("Test manifest belongs to a different long run")
+    if manifest.get("run_id") != run_id:
+        raise ValueError("Test manifest belongs to a different run")
     matches = [row for row in rows if int(row["task_index"]) == task_index]
     if len(matches) != 1:
         raise ValueError(f"Expected one test row for task {task_index}")
@@ -36,6 +29,7 @@ def write_preflight_failure(
     task_index: int,
     row: dict[str, Any] | None,
     error: Exception,
+    training_mode: str | None,
 ) -> None:
     safe_id = (row or {}).get("safe_plot_id", f"task_{task_index:03d}")
     output = metadata_root / run_id / f"{safe_id}_inference.json"
@@ -46,7 +40,7 @@ def write_preflight_failure(
         "method": "treelearn",
         "dataset": "for-instance",
         "run_id": run_id,
-        "training_mode": "fine_tuned_on_dev",
+        "training_mode": training_mode,
         "evaluation_scope": "held_out_test",
         "status": "failed_preflight",
         "return_code": 1,
@@ -79,11 +73,13 @@ def main() -> int:
     parser.add_argument("--tables-root", required=True)
     args = parser.parse_args()
     row: dict[str, Any] | None = None
+    training_mode: str | None = None
     metadata_root = Path(args.metadata_root).expanduser().resolve()
     try:
         row, manifest = read_row(
             Path(args.manifest).expanduser().resolve(), args.task_index, args.run_id
         )
+        training_mode = str(manifest["training_mode"])
         dataset_root = Path(args.dataset_root).expanduser().resolve()
         checkpoint = Path(args.checkpoint).expanduser().resolve()
         if (dataset_root / row["relative_path"]).resolve() != Path(
@@ -92,6 +88,10 @@ def main() -> int:
             raise ValueError("Test manifest input path differs from dataset root")
         if checkpoint != Path(manifest["checkpoint"]).resolve():
             raise ValueError("Submitted checkpoint differs from frozen selection")
+        provenance = manifest.get("checkpoint_provenance") or {}
+        for field in ("source_md5", "source_url", "source_dataset_name"):
+            if not provenance.get(field):
+                raise ValueError(f"Checkpoint provenance is missing {field}")
         command = [
             sys.executable,
             str(runner.ROOT / "methods/treelearn/scripts/run_for_instance_one_plot_smoke.py"),
@@ -99,10 +99,10 @@ def main() -> int:
             "--dataset-root", str(dataset_root),
             "--treelearn-repo", args.treelearn_repo,
             "--checkpoint", str(checkpoint),
-            "--checkpoint-source-md5", CLEAN_SOURCE_MD5,
-            "--checkpoint-source-url", CLEAN_SOURCE_URL,
-            "--checkpoint-source-dataset-name", "model_weights_finetuned",
-            "--training-mode", "fine_tuned_on_dev",
+            "--checkpoint-source-md5", provenance["source_md5"],
+            "--checkpoint-source-url", provenance["source_url"],
+            "--checkpoint-source-dataset-name", provenance["source_dataset_name"],
+            "--training-mode", manifest["training_mode"],
             "--runtime-root", args.runtime_root,
             "--predictions-root", args.predictions_root,
             "--metadata-root", args.metadata_root,
@@ -123,7 +123,7 @@ def main() -> int:
         return 0
     except Exception as exc:
         write_preflight_failure(
-            metadata_root, args.run_id, args.task_index, row, exc
+            metadata_root, args.run_id, args.task_index, row, exc, training_mode
         )
         raise
 

@@ -35,7 +35,6 @@ from summarise_for_instance_development import (
 
 EXPECTED_UPSTREAM_COMMIT = "fd240ce7caa4c444fe3418aca454dc578bc557d4"
 EXPECTED_SOURCE_MD5 = "106a80de2991c5f23484a3f9d03e3b16"
-VARIANT = "fine_tuned_on_dev_long_epoch_35"
 
 
 def require_equal(actual: Any, expected: Any, label: str) -> None:
@@ -49,6 +48,8 @@ def validate_inference(
     run_id: str,
     checkpoint_sha256: str,
     benchmark_commit: str,
+    training_mode: str,
+    checkpoint_source_md5: str,
 ) -> list[dict[str, Any]]:
     for field, expected in (
         ("method", "treelearn"),
@@ -56,7 +57,7 @@ def validate_inference(
         ("dataset_split", "test"),
         ("held_out_test_accessed", True),
         ("run_id", run_id),
-        ("training_mode", "fine_tuned_on_dev"),
+        ("training_mode", training_mode),
         ("status", "completed"),
         ("return_code", 0),
         ("evaluation_scope", "held_out_test"),
@@ -67,7 +68,7 @@ def validate_inference(
         require_equal(plot.get(field), row[field], f"Inference plot {field} mismatch")
     checkpoint = metadata.get("checkpoint") or {}
     require_equal(
-        checkpoint.get("source_md5"), EXPECTED_SOURCE_MD5, "Checkpoint source mismatch"
+        checkpoint.get("source_md5"), checkpoint_source_md5, "Checkpoint source mismatch"
     )
     require_equal(
         checkpoint.get("sha256"), checkpoint_sha256, "Checkpoint SHA-256 mismatch"
@@ -172,6 +173,7 @@ def aggregate(
     match_rows: list[dict[str, Any]],
     site: str,
     expected_plots: int,
+    variant: str,
 ) -> dict[str, Any]:
     completed = [row for row in rows if row["result_status"] == "completed"]
     tp = sum(int(row["true_positives"]) for row in completed)
@@ -180,7 +182,7 @@ def aggregate(
     failed = expected_plots - len(completed)
     return {
         "method": "TreeLearn",
-        "variant": VARIANT,
+        "variant": variant,
         "dataset_split": "test",
         "site": site,
         "expected_plots": expected_plots,
@@ -229,8 +231,15 @@ def summarise(
     if not re.fullmatch(r"[0-9a-f]{40}", expected_benchmark_commit):
         raise ValueError("Expected benchmark commit must be a full SHA-1")
     rows, manifest = load_test_manifest(manifest_path.resolve())
-    require_equal(manifest.get("source_long_run_id"), run_id, "Test run ID mismatch")
+    require_equal(manifest.get("run_id"), run_id, "Test run ID mismatch")
     checkpoint_sha256 = str(manifest["checkpoint_sha256"])
+    checkpoint_source_md5 = str(
+        (manifest.get("checkpoint_provenance") or {}).get("source_md5", "")
+    )
+    if checkpoint_source_md5 != EXPECTED_SOURCE_MD5:
+        raise ValueError("Test manifest checkpoint source differs from the clean contract")
+    variant = str(manifest["variant"])
+    training_mode = str(manifest["training_mode"])
     evaluation_root = evaluation_root.resolve()
     metadata_root = metadata_root.resolve()
     output_root = output_root.resolve()
@@ -300,6 +309,8 @@ def summarise(
                     run_id,
                     checkpoint_sha256,
                     expected_benchmark_commit,
+                    training_mode,
+                    checkpoint_source_md5,
                 )
                 retention_records.append({
                     "task_index": row["task_index"], "plot_id": row["plot_id"],
@@ -314,7 +325,15 @@ def summarise(
         if not metrics_path.is_file() or not metadata_path.is_file():
             raise ValueError(f"Missing accounted test output for {row['relative_path']}")
         metadata = load_object(metadata_path)
-        retained = validate_inference(metadata, row, run_id, checkpoint_sha256, expected_benchmark_commit)
+        retained = validate_inference(
+            metadata,
+            row,
+            run_id,
+            checkpoint_sha256,
+            expected_benchmark_commit,
+            training_mode,
+            checkpoint_source_md5,
+        )
         metrics = load_object(metrics_path)
         validate_metrics(metrics, metadata_path, retained, row, run_id)
         matched, unmatched_predictions, unmatched_references = validate_evaluation_tables(plot_root, row, metrics)
@@ -349,9 +368,12 @@ def summarise(
     for site, count in EXPECTED_TEST_SITE_COUNTS.items():
         site_rows.append(aggregate(
             [row for row in plot_rows if row["collection"] == site],
-            [row for row in all_matches if row["collection"] == site], site, count,
+            [row for row in all_matches if row["collection"] == site],
+            site,
+            count,
+            variant,
         ))
-    overall = aggregate(plot_rows, all_matches, "ALL", len(rows))
+    overall = aggregate(plot_rows, all_matches, "ALL", len(rows), variant)
     output_root.mkdir(parents=True, exist_ok=True)
     write_csv(targets["plot_summary"], plot_rows, PER_PLOT_FIELDS)
     write_csv(targets["site_summary"], site_rows, AGGREGATE_FIELDS)
@@ -370,6 +392,7 @@ def summarise(
         "schema_version": 1,
         "status": "retention_verified" if not failures else "retention_verified_for_completed_plots_with_documented_failures",
         "method": "TreeLearn", "dataset": "FOR-instance", "run_id": run_id,
+        "variant": variant, "training_mode": training_mode,
         "dataset_split": "test", "held_out_test_accessed": True,
         "checkpoint_sha256": checkpoint_sha256,
         "expected_plots": len(rows), "completed_plots": completed_count,
@@ -383,7 +406,8 @@ def summarise(
     targets["retention_manifest"].write_text(json.dumps(retention, indent=2, sort_keys=True) + "\n")
     summary = {
         "schema_version": 1, "status": overall["result_status"],
-        "method": "TreeLearn", "dataset": "FOR-instance", "variant": VARIANT,
+        "method": "TreeLearn", "dataset": "FOR-instance", "variant": variant,
+        "training_mode": training_mode,
         "run_id": run_id, "dataset_split": "test", "held_out_test_accessed": True,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "benchmark_commit": expected_benchmark_commit,

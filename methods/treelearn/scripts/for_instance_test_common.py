@@ -154,11 +154,22 @@ def load_test_manifest(path: Path) -> tuple[list[dict[str, Any]], dict[str, Any]
         "dataset": "FOR-instance",
         "dataset_split": "test",
         "held_out_test_accessed": True,
-        "training_mode": "fine_tuned_on_dev",
         "expected_test_plot_count": EXPECTED_TEST_PLOTS,
         "repeat_test_for_setting_selection_permitted": False,
     }
     for field, value in expected.items():
         if payload.get(field) != value:
             raise ValueError(f"Test manifest has unexpected {field}")
+    allowed = {
+        "fine_tuned_on_dev": "fine_tuned_on_dev_long_epoch_35",
+        "published_pretrained": "published_pretrained",
+    }
+    training_mode = payload.get("training_mode")
+    if training_mode not in allowed:
+        raise ValueError("Test manifest has unexpected training_mode")
+    if payload.get("variant") != allowed[training_mode]:
+        raise ValueError("Test manifest variant and training mode disagree")
+    run_id = payload.get("run_id")
+    if not isinstance(run_id, str) or not run_id:
+        raise ValueError("Test manifest run_id is missing")
     return validate_test_rows(payload.get("plots") or []), payload

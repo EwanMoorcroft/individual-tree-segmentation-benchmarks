@@ -57,8 +57,8 @@ def main() -> int:
     parser.add_argument("--tables-root", required=True)
     args = parser.parse_args()
     rows, manifest = load_test_manifest(Path(args.manifest).expanduser().resolve())
-    if manifest.get("source_long_run_id") != args.run_id:
-        raise ValueError("Test manifest belongs to a different long run")
+    if manifest.get("run_id") != args.run_id:
+        raise ValueError("Test manifest belongs to a different run")
     matches = [row for row in rows if row["task_index"] == args.task_index]
     if len(matches) != 1:
         raise ValueError(f"Expected one test row for task {args.task_index}")

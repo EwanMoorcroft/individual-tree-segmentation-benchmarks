@@ -485,7 +485,7 @@ def build_metadata(
     if evaluation_scope == "held_out_test":
         success_criteria = [
             "The manually authorized frozen test manifest selects this exact plot.",
-            "The frozen epoch-35 checkpoint identity is unchanged.",
+            "The frozen checkpoint identity is unchanged.",
             "Source rows and coordinates remain aligned in the adapted output.",
             "Raw full-forest, raw pointwise and adapted predictions are retained.",
         ]

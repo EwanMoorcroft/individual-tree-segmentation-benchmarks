@@ -189,6 +189,18 @@ The completed frozen result is documented in the
 [`fine-tuned test result`](docs/finetuned_test_results_20260713.md); the route
 now refuses any repeated or colliding submission.
 
+The missing clean published-pretrained comparison has its own isolated,
+one-time route:
+[`slurm/submit_for_instance_pretrained_test.sh`](slurm/submit_for_instance_pretrained_test.sh).
+It evaluates the unchanged authors-released `model_weights_finetuned.pth`
+checkpoint on the identical 11-plot test subset, writes to separate pretrained
+run roots and uses a stable submission guard so timestamp changes cannot create
+repeat test chains. Use
+[`slurm/monitor_for_instance_pretrained_test.sh`](slurm/monitor_for_instance_pretrained_test.sh)
+and the [`pretrained test runbook`](docs/pretrained_test_evaluation.md). The
+public tracker must not add this row until its 11-plot completion and retention
+gate passes.
+
 ## Evaluation Route
 
 Evaluation uses `for_instance_pointwise_v1`, the union of reference-tree and

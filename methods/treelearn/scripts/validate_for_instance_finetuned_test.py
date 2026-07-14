@@ -1,4 +1,4 @@
-"""Final gate for the one-time TreeLearn fine-tuned held-out evaluation."""
+"""Final gate for a one-time TreeLearn held-out evaluation."""
 
 from __future__ import annotations
 
@@ -31,12 +31,15 @@ def main() -> int:
     freeze = load(args.test_freeze)
     run = load(args.run_summary)
     retention = load(args.retention_manifest)
-    expected_run_id = freeze.get("source_long_run_id")
+    expected_run_id = freeze.get("run_id")
     expected_checkpoint = freeze.get("checkpoint_sha256")
+    expected_variant = freeze.get("variant")
+    expected_training_mode = freeze.get("training_mode")
     expected_run = {
         "status": "completed_aligned_pointwise_test",
         "method": "TreeLearn",
-        "variant": "fine_tuned_on_dev_long_epoch_35",
+        "variant": expected_variant,
+        "training_mode": expected_training_mode,
         "run_id": expected_run_id,
         "dataset_split": "test",
         "held_out_test_accessed": True,
@@ -87,7 +90,7 @@ def main() -> int:
     result = rows[0]
     expected_csv = {
         "method": "TreeLearn",
-        "variant": "fine_tuned_on_dev_long_epoch_35",
+        "variant": expected_variant,
         "dataset_split": "test",
         "site": "ALL",
         "expected_plots": str(EXPECTED_TEST_PLOTS),
@@ -105,10 +108,11 @@ def main() -> int:
         raise FileExistsError(args.output)
     payload = {
         "schema_version": 1,
-        "status": "completed_treelearn_finetuned_held_out_test",
+        "status": "completed_treelearn_held_out_test",
         "run_id": expected_run_id,
         "method": "TreeLearn",
-        "variant": "fine_tuned_on_dev_long_epoch_35",
+        "variant": expected_variant,
+        "training_mode": expected_training_mode,
         "dataset_split": "test",
         "held_out_test_accessed": True,
         "repeat_test_for_setting_selection_permitted": False,

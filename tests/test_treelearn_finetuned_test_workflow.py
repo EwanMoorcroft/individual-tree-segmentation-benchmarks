@@ -106,9 +106,15 @@ def test_prepare_freezes_selected_epoch_35_and_exact_test_subset(
     )
     payload = prepare.prepare(selected, dataset, metadata, run_id)
     assert payload["status"] == "frozen_for_one_time_held_out_test"
+    assert payload["run_id"] == run_id
+    assert payload["variant"] == "fine_tuned_on_dev_long_epoch_35"
+    assert payload["training_mode"] == "fine_tuned_on_dev"
     assert payload["held_out_test_accessed"] is True
     assert payload["repeat_test_for_setting_selection_permitted"] is False
     assert payload["checkpoint_sha256"] == "a" * 64
+    assert payload["checkpoint_provenance"]["source_md5"] == (
+        "106a80de2991c5f23484a3f9d03e3b16"
+    )
     assert len(payload["plots"]) == 11
     assert all(row["split"] == "test" for row in payload["plots"])
 

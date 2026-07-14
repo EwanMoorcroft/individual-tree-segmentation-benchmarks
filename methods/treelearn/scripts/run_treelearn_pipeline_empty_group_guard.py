@@ -13,6 +13,7 @@ import numpy as np
 
 
 POLICY = "map_all_unassigned_to_background_when_initial_grouping_is_empty"
+EMPTY_DIAGNOSTICS = {"cluster_coords_initial", "cluster_coords"}
 
 
 def guarded_assignment(
@@ -40,6 +41,26 @@ def guarded_assignment(
     return original(coords, predictions, remaining_points_idx, n_neighbors)
 
 
+def guarded_save_data(
+    data: np.ndarray,
+    save_format: str,
+    save_name: str,
+    save_folder: str,
+    use_offset: bool = True,
+    *,
+    original: Callable,
+    on_empty: Callable[[str, str], None] | None = None,
+):
+    """Skip only empty optional cluster visualizations."""
+
+    values = np.asarray(data)
+    if values.shape[0] == 0 and save_name in EMPTY_DIAGNOSTICS:
+        if on_empty is not None:
+            on_empty(save_name, save_format)
+        return None
+    return original(data, save_format, save_name, save_folder, use_offset)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--pipeline", required=True, type=Path)
@@ -57,6 +78,7 @@ def main() -> int:
     import tree_learn.util as treelearn_util
 
     original = treelearn_util.assign_remaining_points_nearest_neighbor
+    original_save_data = treelearn_util.save_data
     record = {
         "schema_version": 1,
         "status": "guard_active_not_triggered",
@@ -64,6 +86,7 @@ def main() -> int:
         "triggered": False,
         "query_points": 0,
         "reference_points": None,
+        "skipped_empty_diagnostics": [],
     }
     marker.parent.mkdir(parents=True, exist_ok=True)
     marker.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
@@ -94,7 +117,28 @@ def main() -> int:
             on_empty=on_empty,
         )
 
+    def on_empty_diagnostic(save_name: str, save_format: str) -> None:
+        record["skipped_empty_diagnostics"].append(
+            {"save_name": save_name, "save_format": save_format}
+        )
+        marker.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
+        print(f"treelearn_empty_diagnostic_skipped={save_name}.{save_format}", flush=True)
+
+    def save_data_replacement(
+        data, save_format, save_name, save_folder, use_offset=True
+    ):
+        return guarded_save_data(
+            data,
+            save_format,
+            save_name,
+            save_folder,
+            use_offset,
+            original=original_save_data,
+            on_empty=on_empty_diagnostic,
+        )
+
     treelearn_util.assign_remaining_points_nearest_neighbor = replacement
+    treelearn_util.save_data = save_data_replacement
     old_argv = sys.argv
     try:
         sys.argv = [str(pipeline), "--config", str(config)]
@@ -102,6 +146,7 @@ def main() -> int:
     finally:
         sys.argv = old_argv
         treelearn_util.assign_remaining_points_nearest_neighbor = original
+        treelearn_util.save_data = original_save_data
     return 0
 
 

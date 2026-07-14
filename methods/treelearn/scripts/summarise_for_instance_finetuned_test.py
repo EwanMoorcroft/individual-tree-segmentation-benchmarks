@@ -99,6 +99,15 @@ def validate_inference(
             ("reference_points", 0),
         ):
             require_equal(outcome.get(field), value, f"Execution recovery outcome {field} mismatch")
+        skipped = {
+            item.get("save_name")
+            for item in outcome.get("skipped_empty_diagnostics") or []
+        }
+        require_equal(
+            skipped,
+            {"cluster_coords_initial", "cluster_coords"},
+            "Execution recovery skipped diagnostics mismatch",
+        )
     dataset = metadata.get("dataset_validation") or {}
     for field in ("input_sha256", "split_metadata_sha256"):
         require_equal(dataset.get(field), row[field], f"Dataset {field} mismatch")

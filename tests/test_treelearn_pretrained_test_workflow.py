@@ -131,6 +131,30 @@ def test_empty_group_guard_delegates_when_reference_clusters_exist() -> None:
     assert result is expected
 
 
+def test_empty_diagnostic_writer_skips_only_empty_cluster_visualizations() -> None:
+    calls = []
+    skipped = []
+    empty = np.empty((0, 4))
+    assert guard.guarded_save_data(
+        empty,
+        "laz",
+        "cluster_coords_initial",
+        "/tmp",
+        original=lambda *args: calls.append(args),
+        on_empty=lambda name, fmt: skipped.append((name, fmt)),
+    ) is None
+    assert calls == []
+    assert skipped == [("cluster_coords_initial", "laz")]
+    guard.guarded_save_data(
+        empty,
+        "laz",
+        "full_forest",
+        "/tmp",
+        original=lambda *args: calls.append(args),
+    )
+    assert len(calls) == 1
+
+
 def test_recovery_archives_only_failed_task_and_partial_aggregates(tmp_path: Path) -> None:
     run_id = "treelearn_for-instance_published_pretrained_20260714_134109"
     split = tmp_path / "data_split_metadata.csv"
@@ -237,6 +261,61 @@ def test_recovery_archives_only_failed_task_and_partial_aggregates(tmp_path: Pat
     assert (archive / "aggregate/final_summary.csv").is_file()
     assert output.is_file()
 
+    retry_runtime = tmp_path / "runtime" / recovery.SAFE_PLOT_ID
+    pointwise = retry_runtime / "results/pointwise_results/pointwise_results.npz"
+    pointwise.parent.mkdir(parents=True)
+    pointwise.write_bytes(b"retained partial prediction")
+    (retry_runtime / "empty_group_recovery.json").write_text(
+        json.dumps({"triggered": True, "reference_points": 0})
+    )
+    inference.write_text(
+        json.dumps(
+            {
+                "status": "failed",
+                "error": {"message": "non-zero exit status 1"},
+            }
+        )
+    )
+    failed_root = tables / "per_plot" / recovery.SAFE_PLOT_ID
+    failed_root.mkdir(parents=True)
+    (failed_root / "status.json").write_text("{}")
+    (tables / "failures.csv").write_text(
+        "task_index,relative_path,status\n"
+        f"8,{recovery.RELATIVE_PATH},documented_inference_failure\n"
+    )
+    (tables / "run_summary.json").write_text(
+        json.dumps(
+            {
+                "benchmark_commit": current,
+                "completed_plots": 10,
+                "documented_failures": 1,
+            }
+        )
+    )
+    for name in recovery.AGGREGATES:
+        path = tables / name
+        if not path.exists():
+            path.write_text(name)
+    retry_archive = tmp_path / "retry_archive"
+    retry_output = metadata / "task_8_execution_recovery_attempt_2.json"
+    retry = recovery.prepare(
+        manifest,
+        tmp_path / "runtime",
+        predictions,
+        metadata,
+        tables,
+        retry_archive,
+        retry_output,
+        original,
+        "3" * 40,
+        output,
+    )
+    assert retry["partial_benchmark_commit"] == current
+    assert (
+        retry_archive
+        / "failure/runtime_results/pointwise_results/pointwise_results.npz"
+    ).read_bytes() == b"retained partial prediction"
+
 
 def test_pretrained_recovery_route_is_exact_and_does_not_retrain() -> None:
     submit = (
@@ -250,6 +329,7 @@ def test_pretrained_recovery_route_is_exact_and_does_not_retrain() -> None:
     ).read_text()
     assert "treelearn_for-instance_published_pretrained_20260714_134109" in submit
     assert "treelearn_pretrained_test_recovery_once" in submit
+    assert "TREELEARN_PRETRAINED_TEST_RECOVERY_ATTEMPT" in submit
     assert "--task-index 8" in task
     assert "--allow-empty-group-recovery" in task
     assert "model_or_parameter_selection_performed=false" in task

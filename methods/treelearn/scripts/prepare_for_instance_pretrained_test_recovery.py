@@ -77,6 +77,7 @@ def prepare(
     output: Path,
     original_benchmark_commit: str,
     recovery_benchmark_commit: str,
+    prior_recovery_manifest: Path | None = None,
 ) -> dict[str, Any]:
     if not re.fullmatch(r"[0-9a-f]{40}", original_benchmark_commit):
         raise ValueError("Original benchmark commit must be a full SHA-1")
@@ -94,6 +95,23 @@ def prepare(
         raise ValueError("Frozen recovery task differs from SCION plot 31")
     row = matches[0]
     run_id = str(manifest["run_id"])
+    prior_recovery: dict[str, Any] | None = None
+    partial_benchmark_commit = original_benchmark_commit
+    if prior_recovery_manifest is not None:
+        prior_recovery = json.loads(
+            prior_recovery_manifest.resolve().read_text(encoding="utf-8")
+        )
+        for field, expected in (
+            ("status", "prepared_single_execution_recovery"),
+            ("run_id", run_id),
+            ("task_index", TASK_INDEX),
+            ("relative_path", RELATIVE_PATH),
+            ("checkpoint_sha256", manifest["checkpoint_sha256"]),
+            ("original_benchmark_commit", original_benchmark_commit),
+        ):
+            if prior_recovery.get(field) != expected:
+                raise ValueError(f"Prior recovery has unexpected {field}")
+        partial_benchmark_commit = str(prior_recovery["recovery_benchmark_commit"])
     expected_runtime = runtime_root.resolve() / SAFE_PLOT_ID
     expected_prediction = prediction_root.resolve() / SAFE_PLOT_ID
     expected_metadata = metadata_root.resolve() / f"{SAFE_PLOT_ID}_inference.json"
@@ -117,9 +135,14 @@ def prepare(
     error_text = json.dumps(original_metadata.get("error") or {}, sort_keys=True)
     if "0 sample(s)" not in error_text and "non-zero exit status 1" not in error_text:
         raise ValueError("Inference failure does not match the empty-group execution fault")
+    if prior_recovery is not None:
+        marker_path = expected_runtime / "empty_group_recovery.json"
+        marker = json.loads(marker_path.read_text(encoding="utf-8"))
+        if marker.get("triggered") is not True or marker.get("reference_points") != 0:
+            raise ValueError("Prior empty-group guard evidence is missing")
     run_summary = json.loads(run_summary_path.read_text(encoding="utf-8"))
-    if run_summary.get("benchmark_commit") != original_benchmark_commit:
-        raise ValueError("Original summary benchmark commit differs from the state file")
+    if run_summary.get("benchmark_commit") != partial_benchmark_commit:
+        raise ValueError("Partial summary benchmark commit differs from recovery history")
     if run_summary.get("completed_plots") != 10 or run_summary.get("documented_failures") != 1:
         raise ValueError("Recovery requires the accounted 10-of-11 partial result")
     for other in rows:
@@ -129,10 +152,6 @@ def prepare(
         if not metrics.is_file():
             raise FileNotFoundError(f"Completed plot metric missing: {metrics}")
 
-    final_outputs = list((expected_runtime / "results" / "full_forest").glob("*"))
-    final_outputs += list((expected_runtime / "results" / "pointwise_results").glob("*"))
-    if any(path.is_file() for path in final_outputs):
-        raise ValueError("Failed runtime unexpectedly contains final prediction outputs")
     if output.exists() or archive_root.exists():
         raise FileExistsError("Recovery record or archive already exists")
     archive_root.mkdir(parents=True)
@@ -141,6 +160,17 @@ def prepare(
     archived.append(move_to_archive(expected_evaluation, archive_root, "failure/evaluation"))
     if expected_prediction.exists():
         archived.append(move_to_archive(expected_prediction, archive_root, "failure/predictions"))
+    results_root = expected_runtime / "results"
+    if results_root.is_dir():
+        for artifact in sorted(item for item in results_root.rglob("*") if item.is_file()):
+            relative = artifact.relative_to(results_root).as_posix()
+            archived.append(
+                move_to_archive(
+                    artifact,
+                    archive_root,
+                    f"failure/runtime_results/{relative}",
+                )
+            )
     for name in AGGREGATES:
         path = table_root.resolve() / name
         if path.exists():
@@ -166,10 +196,16 @@ def prepare(
         "input_sha256": row["input_sha256"],
         "checkpoint_sha256": manifest["checkpoint_sha256"],
         "original_benchmark_commit": original_benchmark_commit,
+        "partial_benchmark_commit": partial_benchmark_commit,
         "recovery_benchmark_commit": recovery_benchmark_commit,
         "policy": POLICY,
         "scientific_interpretation": "zero_predicted_instances",
         "original_failure": original_metadata,
+        "prior_recovery_manifest": (
+            str(prior_recovery_manifest.resolve())
+            if prior_recovery_manifest is not None
+            else None
+        ),
         "archived_artifacts": archived,
         "discarded_non_prediction_intermediate_runtime": runtime_inventory,
         "archive_root": str(archive_root),
@@ -191,6 +227,7 @@ def main() -> int:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--original-benchmark-commit", required=True)
     parser.add_argument("--recovery-benchmark-commit", required=True)
+    parser.add_argument("--prior-recovery-manifest", type=Path)
     args = parser.parse_args()
     payload = prepare(
         args.manifest,
@@ -202,6 +239,7 @@ def main() -> int:
         args.output,
         args.original_benchmark_commit,
         args.recovery_benchmark_commit,
+        args.prior_recovery_manifest,
     )
     print(f"status={payload['status']}")
     print(f"task_index={payload['task_index']}")

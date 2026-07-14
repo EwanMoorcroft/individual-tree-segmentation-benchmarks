@@ -12,6 +12,10 @@ test "${TREELEARN_PRETRAINED_TEST_RECOVERY_CONFIRMED:-0}" = 1
 test "$(git rev-parse HEAD)" = "$TREELEARN_TEST_BENCHMARK_COMMIT"
 test -z "$(git status --porcelain)"
 source "$HOME/fastscratch/venvs/treebench/bin/activate"
+PRIOR_ARGS=()
+if [[ -n "${TREELEARN_TEST_PRIOR_RECOVERY_MANIFEST:-}" ]]; then
+  PRIOR_ARGS=(--prior-recovery-manifest "$TREELEARN_TEST_PRIOR_RECOVERY_MANIFEST")
+fi
 python methods/treelearn/scripts/prepare_for_instance_pretrained_test_recovery.py \
   --manifest "$TREELEARN_TEST_FREEZE" \
   --runtime-root "$TREELEARN_TEST_RUNTIME_ROOT" \
@@ -21,4 +25,5 @@ python methods/treelearn/scripts/prepare_for_instance_pretrained_test_recovery.p
   --archive-root "$TREELEARN_TEST_RECOVERY_ARCHIVE" \
   --output "$TREELEARN_TEST_RECOVERY_MANIFEST" \
   --original-benchmark-commit "$TREELEARN_TEST_ORIGINAL_BENCHMARK_COMMIT" \
-  --recovery-benchmark-commit "$TREELEARN_TEST_BENCHMARK_COMMIT"
+  --recovery-benchmark-commit "$TREELEARN_TEST_BENCHMARK_COMMIT" \
+  "${PRIOR_ARGS[@]}"

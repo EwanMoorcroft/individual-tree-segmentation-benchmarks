@@ -72,6 +72,12 @@ failure and partial aggregate evidence, removes only failed non-prediction
 intermediates, reruns task 8, then rebuilds the unchanged 11-plot summary and
 retention gate. The other ten predictions are not rerun.
 
+Attempt 1 exposed another upstream bug: the optional cluster-visualization
+writer cannot serialize a zero-row array. Attempt 2 skips only the empty
+`cluster_coords_initial` and `cluster_coords` diagnostic LAS files. It
+archives the failed attempt's pointwise prediction evidence and still writes
+the full all-background prediction used by the evaluator.
+
 ```bash
 cd "$HOME/scratch/tree-seg-benchmark"
 git pull --ff-only
@@ -79,6 +85,7 @@ git pull --ff-only
 STATE_FILE="$HOME/fastscratch/treelearn_pretrained_test_treelearn_for-instance_published_pretrained_20260714_134109.env"
 
 TREELEARN_PRETRAINED_TEST_RECOVERY_CONFIRMED=1 \
+TREELEARN_PRETRAINED_TEST_RECOVERY_ATTEMPT=2 \
 TREELEARN_PRETRAINED_TEST_STATE_FILE="$STATE_FILE" \
   bash methods/treelearn/slurm/submit_for_instance_pretrained_test_recovery.sh
 ```

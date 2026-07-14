@@ -4,6 +4,7 @@ project:
   method_slug: tls2trees
   barkla_root: "~/scratch/tree-seg-benchmark"
   mode: frdr_tls2trees_prediction_benchmark
+  status: completed_operational_prediction
 
 environment:
   module: "miniforge3/25.3.0-python3.12.10"
@@ -16,7 +17,7 @@ environment:
 
 dataset:
   slug: frdr-treeiso
-  name: frdr_treeiso
+  name: FRDR treeiso TLS
   root: "~/data/datasets/frdr_treeiso"
   input_extension: ".laz"
   inventory:
@@ -68,7 +69,7 @@ conversion:
 
 method:
   slug: tls2trees
-  name: tls2trees
+  name: TLS2trees
   repo_url: "https://github.com/tls-tools-ucl/TLS2trees.git"
   repo_path: "external/TLS2trees"
   tested_commit: "ca12cb73b2c736d80b020e8025f8d975d42e6f01"

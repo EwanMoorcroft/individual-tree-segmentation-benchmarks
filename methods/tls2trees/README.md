@@ -11,7 +11,9 @@ compatibility pilot.
 TLS2trees is an external dependency and is not vendored here. The tested
 repository URL and commit are recorded in
 [`configs/frdr_benchmark.yml`](configs/frdr_benchmark.yml) and
-[`configs/for_instance_accuracy.yml`](configs/for_instance_accuracy.yml).
+[`configs/for_instance_accuracy.yml`](configs/for_instance_accuracy.yml). Cite
+the [`TLS2trees` paper](https://doi.org/10.1111/2041-210X.14233) when using the
+method.
 
 ## Training Mode Support
 
@@ -52,9 +54,12 @@ Use:
 
 - [`docs/frdr_runbook.md`](docs/frdr_runbook.md) for reproduction;
 - [`docs/frdr_results.md`](docs/frdr_results.md) for the completed operational
-  result; and
+  result;
 - [`configs/frdr_benchmark.yml`](configs/frdr_benchmark.yml) for parameters and
-  paths.
+  paths; and
+- [`examples/README.md`](examples/README.md) for the distinction between the
+  completed FRDR summary, FOR-instance candidate evidence and fabricated schema
+  examples.
 
 Current canonical equivalents are:
 

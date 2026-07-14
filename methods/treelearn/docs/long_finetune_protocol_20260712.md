@@ -86,7 +86,8 @@ retained control file is size- and SHA-256-inventoried.
 
 ## Evaluation contract and completion
 
-Future primary comparison uses all 11 locally available held-out test plots under
+The subsequently completed primary comparison used all 11 locally available
+held-out test plots under
 `for_instance_pointwise_v1`: source-row-aligned labels, union evaluation mask,
 IoU threshold 0.5 and maximum-cardinality one-to-one matching. Site summaries
 remain separate for CULS, NIBIO, RMIT, SCION and TUWIEN. Development scores

@@ -12,7 +12,7 @@ trees and matching rounded coordinates back to the source LAS.
 This route does not reproduce the published aligned point-wise evaluation.
 The NIBIO F1 differs from the published result by approximately 0.87, and the
 initial CULS export contained more rows than its source file. The accuracy
-evaluation is therefore being repeated using
+evaluation was subsequently repeated using
 [`for_instance_pointwise_v1`](../../../docs/protocols/for-instance.md).
 
 All 11 subsequent test-plot audits failed point-count or
@@ -99,8 +99,9 @@ performance.
 | Test | 11 | 323 | 789 | 111 | 678 | 212 | 0.140684 | 0.343653 | 0.199640 | 0.739771 |
 
 The split labels are reported for transparency. These diagnostic values include
-development and test data. The final comparable headline result will use the
-test split only.
+development and test data. The completed comparable headline results use the
+test split only and are documented in
+[`final_results_20260711.md`](final_results_20260711.md).
 
 ## Provisional Public-Safe Files
 

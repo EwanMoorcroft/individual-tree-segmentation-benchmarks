@@ -23,7 +23,8 @@ runbooks, configs and result notes remain with their method under `methods/`.
 ## Status Records
 
 - [`plans/labelled-accuracy.md`](plans/labelled-accuracy.md): completed
-  SegmentAnyTree labelled-accuracy sequence and remaining provenance gaps.
+  SegmentAnyTree labelled-accuracy sequence and historical provenance
+  limitations.
 - [`../BENCHMARKS.md`](../BENCHMARKS.md): concise dataset-method registry.
 
 Raw data, predictions, checkpoints, containers and logs are intentionally not

@@ -3,6 +3,7 @@ project:
   dataset_slug: for-instance
   method_slug: tls2trees
   mode: for_instance_tls2trees_leaf_off_accuracy_pilot
+  status: candidate_compatibility_test
   barkla_root: "~/scratch/tree-seg-benchmark"
 
 environment:
@@ -51,7 +52,7 @@ conversion:
 
 method:
   slug: tls2trees
-  name: tls2trees
+  name: TLS2trees
   repo_url: "https://github.com/tls-tools-ucl/TLS2trees.git"
   repo_path: "external/TLS2trees"
   tested_commit: "ca12cb73b2c736d80b020e8025f8d975d42e6f01"

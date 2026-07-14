@@ -15,9 +15,10 @@ one-time 11-plot held-out test evaluation.
 The upstream implementation is `ecker-lab/TreeLearn`:
 <https://github.com/ecker-lab/TreeLearn>.
 
-The method paper is:
-Henrich et al., TreeLearn: A deep learning method for segmenting individual
-trees from ground-based LiDAR forest point clouds.
+The method paper is
+[Henrich et al., *TreeLearn: A deep learning method for segmenting individual
+trees from ground-based LiDAR forest point
+clouds*](https://doi.org/10.1016/j.ecoinf.2024.102888).
 
 ## Training Mode Support
 
@@ -46,7 +47,7 @@ The unchanged clean checkpoint was separately evaluated once as the
 That run is distinct from the development-only December 2024 checkpoint and
 from the development-fine-tuned checkpoint.
 
-The candidate full benchmark modes remain:
+The supported benchmark training-mode vocabulary is:
 
 - `published_pretrained`
 - `fine_tuned_on_dev`
@@ -241,6 +242,8 @@ and
 [`development-fine-tuned`](examples/treelearn_finetuned_test_plot_results_20260713.csv)
 results. Each row records the SHA-256 of its frozen Barkla metrics JSON; the
 provenance files record the source plot-summary and retention-manifest hashes.
+The [`examples index`](examples/README.md) classifies all committed headline,
+diagnostic and fabricated-schema files.
 
 ## Known Limitations
 

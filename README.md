@@ -101,6 +101,8 @@ The public repository is organised primarily by method:
 - [`docs/evaluation_metrics.md`](docs/evaluation_metrics.md): operational and
   instance-accuracy definitions.
 - [`docs/README.md`](docs/README.md): documentation index.
+- [`outputs/README.md`](outputs/README.md): public result tables, workbook and
+  prediction-retention index.
 - [`CITATION.cff`](CITATION.cff): repository citation metadata.
 
 Generated output paths such as `data/`, `results/` and `logs/` remain at the
@@ -147,7 +149,7 @@ They indicate over-segmentation and background-confusion false positives, with
 TUWIEN and RMIT as the weakest domain-transfer cases.
 
 The consolidated public workbook is
-[`outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx`](outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx).
+[`outputs/for_instance_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx`](outputs/for_instance_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx).
 It includes the five completed held-out rows shown above. Public-safe per-plot,
 site and overall source tables independently reproduce every aggregate; raw
 predictions remain off Git under the paths and hashes recorded in the

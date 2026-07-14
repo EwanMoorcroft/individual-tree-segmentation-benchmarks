@@ -148,8 +148,13 @@ def validate_manifest_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if str(row["safe_plot_id"]) != safe_plot_id(expected_plot_id):
             raise ValueError(f"Manifest safe plot ID mismatch for {relative}")
         input_path = Path(str(row["input_las"])).expanduser()
+        split_metadata_path = Path(str(row["split_metadata"])).expanduser()
         if not input_path.is_absolute():
             raise ValueError(f"Manifest input LAS is not absolute: {input_path}")
+        if not split_metadata_path.is_absolute():
+            raise ValueError(
+                f"Manifest split metadata is not absolute: {split_metadata_path}"
+            )
         for field in ("input_sha256", "split_metadata_sha256"):
             if not re.fullmatch(r"[0-9a-f]{64}", str(row[field])):
                 raise ValueError(f"Manifest {field} is not SHA-256 for {relative}")
@@ -162,9 +167,7 @@ def validate_manifest_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "input_las": str(input_path.resolve()),
                 "point_count": _as_int(row, "point_count"),
                 "reference_tree_count": _as_int(row, "reference_tree_count"),
-                "split_metadata": str(
-                    Path(str(row["split_metadata"])).expanduser().resolve()
-                ),
+                "split_metadata": str(split_metadata_path.resolve()),
             }
         )
         if row["point_count"] <= 0:

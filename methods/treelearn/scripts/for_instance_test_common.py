@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -67,6 +68,7 @@ EXPECTED_TEST_POINTS = sum(EXPECTED_TEST_SITE_POINTS.values())
 EXPECTED_TEST_REFERENCE_TREES = sum(
     EXPECTED_TEST_SITE_REFERENCE_TREES.values()
 )
+RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 def validate_test_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -92,10 +94,12 @@ def validate_test_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             raise ValueError(f"Test manifest plot ID mismatch for {relative}")
         if str(row["safe_plot_id"]) != safe_plot_id(plot_id(relative)):
             raise ValueError(f"Test manifest safe plot ID mismatch for {relative}")
-        input_las = Path(str(row["input_las"])).expanduser().resolve()
-        split_metadata = Path(str(row["split_metadata"])).expanduser().resolve()
-        if not input_las.is_absolute() or not split_metadata.is_absolute():
+        raw_input_las = Path(str(row["input_las"])).expanduser()
+        raw_split_metadata = Path(str(row["split_metadata"])).expanduser()
+        if not raw_input_las.is_absolute() or not raw_split_metadata.is_absolute():
             raise ValueError("Test manifest paths must be absolute")
+        input_las = raw_input_las.resolve()
+        split_metadata = raw_split_metadata.resolve()
         for field in ("input_sha256", "split_metadata_sha256"):
             value = str(row[field])
             if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
@@ -149,6 +153,7 @@ def load_test_manifest(path: Path) -> tuple[list[dict[str, Any]], dict[str, Any]
     if not isinstance(payload, dict):
         raise ValueError("Test manifest must be a JSON object")
     expected = {
+        "schema_version": 1,
         "status": "frozen_for_one_time_held_out_test",
         "method": "TreeLearn",
         "dataset": "FOR-instance",
@@ -170,6 +175,6 @@ def load_test_manifest(path: Path) -> tuple[list[dict[str, Any]], dict[str, Any]
     if payload.get("variant") != allowed[training_mode]:
         raise ValueError("Test manifest variant and training mode disagree")
     run_id = payload.get("run_id")
-    if not isinstance(run_id, str) or not run_id:
-        raise ValueError("Test manifest run_id is missing")
+    if not isinstance(run_id, str) or not RUN_ID_PATTERN.fullmatch(run_id):
+        raise ValueError("Test manifest run_id is missing or unsafe")
     return validate_test_rows(payload.get("plots") or []), payload

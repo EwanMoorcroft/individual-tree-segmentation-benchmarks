@@ -11,8 +11,12 @@ released SegmentAnyTree code and container interface.
 
 The released SegmentAnyTree repository and container are external
 dependencies. They are not copied into this repository. The upstream project
-and paper are recorded in [`docs/for_instance_benchmark.md`](docs/for_instance_benchmark.md)
-and [`configs/for_instance_benchmark.yml`](configs/for_instance_benchmark.yml).
+is [`SmartForest-no/SegmentAnyTree`](https://github.com/SmartForest-no/SegmentAnyTree),
+and the method is described in the
+[`SegmentAnyTree` paper](https://doi.org/10.1016/j.rse.2024.114367). Pinned
+run-specific details are recorded in
+[`docs/for_instance_benchmark.md`](docs/for_instance_benchmark.md) and
+[`configs/for_instance_benchmark.yml`](configs/for_instance_benchmark.yml).
 
 ## Training Mode Support
 
@@ -25,7 +29,8 @@ plots are evaluated. Training from scratch is not part of the target comparison.
 The completed `retrained_from_dev` run and the rejected 8 July fine-tune remain
 historical evidence. Their predictions and results are retained, but neither
 is a completed target or initial checkpoint. The result roles are recorded in
-[`examples/for_instance_result_registry.csv`](examples/for_instance_result_registry.csv).
+the method-specific
+[`examples/segmentanytree_result_registry.csv`](examples/segmentanytree_result_registry.csv).
 
 ## Input Requirements
 

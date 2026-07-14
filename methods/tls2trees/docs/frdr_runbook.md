@@ -34,7 +34,10 @@ FRDR provides the semantic field `woods`:
 
 Each plot is converted into a single numeric tile named `001.downsample.segmented.ply`, with columns `x`, `y`, `z`, `n_z`, and `label`. The tile name must be numeric because TLS2trees parses it as an integer. `tile_index.dat` contains the tested five-field layout: tile ID, X centre, Y centre, Z centre, and PLY path. The PLY deliberately excludes `buffer` and `fn`; the instance script creates those fields internally.
 
-`n_z` currently uses `z - min(z)` for each plot. This local-minimum normalisation is a feasibility approximation, not terrain normalisation. Record it with every result and revisit it before treating outputs as final benchmark predictions.
+`n_z` uses `z - min(z)` for each plot. This local-minimum normalisation is a
+documented limitation of the completed operational benchmark, not terrain
+normalisation. Any future accuracy-oriented benchmark should replace it with a
+documented terrain-normalisation route.
 
 ## Why Semantic Segmentation Is Skipped
 

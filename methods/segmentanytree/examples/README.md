@@ -39,9 +39,11 @@ mean plot F1 `0.4798`; it is retained for failure-mode interpretation and must
 not be substituted for the final aggregate. The validation-selected size
 filter improved validation slightly but did not replace that historical result.
 
-`for_instance_result_registry.csv` is the status authority for current and
-historical result roles. The aligned pretrained and replacement fine-tuned
-target rows are complete. Their authoritative public aggregates are in
+`segmentanytree_result_registry.csv` indexes the current and historical
+SegmentAnyTree result roles. Cross-method status remains authoritative in the
+repository-level `BENCHMARKS.md` and public output tables. The aligned
+pretrained and replacement fine-tuned target rows are complete. Their
+authoritative public aggregates are in
 `sat_completed_target_results_20260711.csv`; the matching provenance record is
 `sat_completed_target_provenance_20260711.json`. The 22 source rows for the two
 11-plot variants, including each frozen metrics-JSON hash, are in

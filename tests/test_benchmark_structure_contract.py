@@ -42,6 +42,11 @@ KNOWN_METHOD_SLUGS = {
     "forestformer3d",
     "segmentanytreev2",
 }
+CANONICAL_RESULT_VARIANTS = {
+    "unsupervised_parameterised",
+    "published_pretrained",
+    "fine_tuned_on_dev",
+}
 REGISTRY_COLUMNS = (
     "| Dataset slug | Method slug | Run label | Training mode | "
     "Evaluation mode | Status | Evidence |"
@@ -169,6 +174,46 @@ def test_repository_publication_metadata_is_present() -> None:
     )
     assert (ROOT / "docs/README.md").is_file()
     assert (ROOT / "outputs/README.md").is_file()
+
+
+def test_cross_method_outputs_use_method_neutral_paths_and_canonical_variants() -> None:
+    output_root = ROOT / "outputs/for_instance_benchmark_metrics"
+    assert output_root.is_dir()
+    assert not (ROOT / "outputs/sat_treex_benchmark_metrics").exists()
+
+    with (output_root / "for_instance_method_development_diagnostics.csv").open(
+        encoding="utf-8", newline=""
+    ) as handle:
+        diagnostics = list(csv.DictReader(handle))
+    assert diagnostics
+    assert {row["variant"] for row in diagnostics} <= CANONICAL_RESULT_VARIANTS
+    assert all(row["variant"] == row["training_mode"] for row in diagnostics)
+
+    with (output_root / "for_instance_prediction_retention_registry.csv").open(
+        encoding="utf-8", newline=""
+    ) as handle:
+        retention = list(csv.DictReader(handle))
+    assert retention
+    assert {row["variant"] for row in retention} <= CANONICAL_RESULT_VARIANTS
+    assert all(row["retention_profile"] for row in retention)
+    assert len(
+        {
+            (row["method_slug"], row["retention_profile"], row["run_id"])
+            for row in retention
+        }
+    ) == len(retention)
+
+
+def test_segmentanytree_result_registry_is_method_scoped() -> None:
+    path = ROOT / "methods/segmentanytree/examples/segmentanytree_result_registry.csv"
+    assert path.is_file()
+    assert not (
+        ROOT / "methods/segmentanytree/examples/for_instance_result_registry.csv"
+    ).exists()
+    with path.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows
+    assert {row["method_slug"] for row in rows} == {"segmentanytree"}
 
 
 def test_tracked_repository_excludes_private_or_large_runtime_artifacts() -> None:

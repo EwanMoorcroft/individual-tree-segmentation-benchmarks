@@ -1,4 +1,5 @@
 project:
+  name: tree-seg-benchmark
   benchmark_name: for_instance_treex
   dataset_slug: for-instance
   method_slug: treex
@@ -33,6 +34,7 @@ dataset:
 
 method:
   slug: treex
+  name: TreeX
   package: pointtree
   repo_url: https://github.com/ai4trees/pointtree
   package_index_url: https://pypi.org/project/pointtree/

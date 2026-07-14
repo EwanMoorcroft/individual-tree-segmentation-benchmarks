@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -77,6 +78,23 @@ def test_prepare_freezes_clean_checkpoint_and_exact_test_subset(
     rows, loaded = common.load_test_manifest(manifest)
     assert loaded["run_id"] == run_id
     assert len(rows) == 11
+
+    invalid_payloads = []
+    wrong_schema = json.loads(json.dumps(payload))
+    wrong_schema["schema_version"] = 2
+    invalid_payloads.append((wrong_schema, "schema_version"))
+    unsafe_run = json.loads(json.dumps(payload))
+    unsafe_run["run_id"] = "../../escape"
+    invalid_payloads.append((unsafe_run, "missing or unsafe"))
+    for field in ("input_las", "split_metadata"):
+        relative_path = json.loads(json.dumps(payload))
+        relative_path["plots"][0][field] = f"relative/{field}"
+        invalid_payloads.append((relative_path, "paths must be absolute"))
+
+    for invalid, message in invalid_payloads:
+        manifest.write_text(json.dumps(invalid))
+        with pytest.raises(ValueError, match=message):
+            common.load_test_manifest(manifest)
 
 
 def test_pretrained_route_is_one_time_separate_and_retains_predictions() -> None:
@@ -182,6 +200,7 @@ def test_recovery_archives_only_failed_task_and_partial_aggregates(tmp_path: Pat
     manifest.write_text(
         json.dumps(
             {
+                "schema_version": 1,
                 "status": "frozen_for_one_time_held_out_test",
                 "method": "TreeLearn",
                 "dataset": "FOR-instance",

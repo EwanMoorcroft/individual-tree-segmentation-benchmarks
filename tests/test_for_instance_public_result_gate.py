@@ -372,7 +372,7 @@ def test_five_headline_rows_reconcile_from_committed_plot_sources() -> None:
     assert treex_config["evaluation"]["iou_threshold"] == IOU_THRESHOLD
 
     tracker_rows = read_csv(
-        "outputs/sat_treex_benchmark_metrics/"
+        "outputs/for_instance_benchmark_metrics/"
         "for_instance_method_benchmark_results.csv"
     )
     tracker = {
@@ -465,7 +465,7 @@ def test_public_source_hashes_and_treex_retention_manifest_reconcile() -> None:
     assert all(formats == {"las", "npz"} for formats in by_plot.values())
 
     retention_rows = read_csv(
-        "outputs/sat_treex_benchmark_metrics/"
+        "outputs/for_instance_benchmark_metrics/"
         "for_instance_prediction_retention_registry.csv"
     )
     treex = next(row for row in retention_rows if row["method_slug"] == "treex")

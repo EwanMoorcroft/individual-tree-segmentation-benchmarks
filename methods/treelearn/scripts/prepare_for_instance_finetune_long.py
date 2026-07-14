@@ -312,6 +312,7 @@ def prepare(
         "initial_checkpoint_source": CLEAN_CHECKPOINT_SOURCE,
         "initial_checkpoint_persistent_id": CLEAN_CHECKPOINT_PERSISTENT_ID,
         "initial_checkpoint_md5": CLEAN_CHECKPOINT_MD5,
+        "initial_checkpoint_size_bytes": checkpoint.stat().st_size,
         "initial_checkpoint_sha256": checkpoint_sha256,
         "evaluation_config": str(evaluation_config.resolve()),
         "evaluation_config_sha256": file_hash(evaluation_config),

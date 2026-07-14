@@ -9,7 +9,12 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-from resolve_for_instance_finetune_long_validation_task import EPOCHS
+from resolve_for_instance_finetune_long_validation_task import (
+    EPOCHS,
+    completion_checkpoint,
+    frozen_initial_checkpoint,
+    load_trial_completion,
+)
 
 
 SEEDS = (42, 31415, 2022, 2026, 2718, 1618, 1729, 123456)
@@ -85,6 +90,22 @@ def choose_candidate(candidates: list[dict]) -> dict:
     )[0]
 
 
+def bind_trial_completions(
+    trials: list[dict], completion_root: Path,
+) -> tuple[dict[int, dict], dict[int, dict[int, dict]]]:
+    records: dict[int, dict] = {}
+    checkpoints: dict[int, dict[int, dict]] = {}
+    for trial in trials:
+        trial_index = int(trial["trial_index"])
+        completion = load_trial_completion(trial, completion_root)
+        records[trial_index] = completion
+        checkpoints[trial_index] = {
+            epoch: completion_checkpoint(trial, epoch, completion)
+            for epoch in EPOCHS
+        }
+    return records, checkpoints
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--freeze", required=True, type=Path)
@@ -94,38 +115,29 @@ def main() -> int:
     parser.add_argument("--selection-root", required=True, type=Path)
     args = parser.parse_args()
 
-    freeze = json.loads(args.freeze.read_text())
+    freeze_path = args.freeze.expanduser().resolve()
+    freeze = json.loads(freeze_path.read_text())
     if freeze.get("held_out_test_accessed") is not False:
         raise ValueError("Long-run freeze must explicitly lock held-out test access")
-    initial_checkpoint = Path(freeze["initial_checkpoint"]).expanduser().resolve()
-    if not initial_checkpoint.is_file():
-        raise FileNotFoundError(initial_checkpoint)
+    initial_checkpoint, initial_checkpoint_size, initial_sha256 = (
+        frozen_initial_checkpoint(freeze)
+    )
     initial_md5 = md5(initial_checkpoint)
     if initial_md5 != CLEAN_INITIAL_CHECKPOINT_MD5:
         raise ValueError("Long run must start from the clean official L1W checkpoint")
-    initial_sha256 = sha256(initial_checkpoint)
-    if initial_sha256 != freeze.get("initial_checkpoint_sha256"):
-        raise ValueError("Frozen initial checkpoint changed")
     trials = freeze.get("trials", [])
     if len(trials) != 8:
         raise ValueError("Selection requires one fixed configuration and eight seeds")
-    for trial in trials:
-        trial_index = int(trial["trial_index"])
-        completion_path = args.freeze.parent / "trial_completions" / f"trial_{trial_index}.json"
-        completion = json.loads(completion_path.read_text())
-        if (
-            completion.get("status") != "long_finetune_trial_completed"
-            or int(completion.get("seed", -1)) != int(trial["seed"])
-            or completion.get("bitwise_determinism_guaranteed") is not False
-        ):
-            raise ValueError(f"Incomplete trial evidence: {completion_path}")
+    completion_root = freeze_path.parent / "trial_completions"
+    completion_records, completion_checkpoints = bind_trial_completions(
+        trials, completion_root
+    )
     dev_manifest = json.loads(args.development_manifest.read_text())
     rows = validation_rows(dev_manifest)
     if args.selection_root.exists():
         raise FileExistsError(args.selection_root)
     args.selection_root.mkdir(parents=True)
 
-    checkpoint_hashes: dict[Path, str] = {}
     group_results: list[dict] = []
     retained_paths: set[Path] = set()
     for trial in trials:
@@ -150,13 +162,9 @@ def main() -> int:
         ):
             raise ValueError("Every long-run trial must use the frozen 24,990-example budget")
         for epoch in EPOCHS:
-            checkpoint_root = Path(
-                trial.get("checkpoint_root") or trial.get("work_dir")
-            ).expanduser().resolve()
-            checkpoint = checkpoint_root / f"epoch_{epoch}.pth"
-            if not checkpoint.is_file():
-                raise FileNotFoundError(checkpoint)
-            checkpoint_sha = checkpoint_hashes.setdefault(checkpoint, sha256(checkpoint))
+            checkpoint_record = completion_checkpoints[trial_index][epoch]
+            checkpoint = Path(checkpoint_record["path"]).expanduser().resolve()
+            checkpoint_sha = checkpoint_record["sha256"]
             run_id = (
                 f'{freeze["run_id"]}_trial_{trial_index:02d}_{config_id}'
                 f"_seed_{seed}_epoch_{epoch}_validation"
@@ -208,7 +216,10 @@ def main() -> int:
                 "seed": seed,
                 "epoch": epoch,
                 "checkpoint": str(checkpoint),
+                "checkpoint_size_bytes": checkpoint_record["size_bytes"],
                 "checkpoint_sha256": checkpoint_sha,
+                "completion_record": completion_records[trial_index]["path"],
+                "completion_record_sha256": completion_records[trial_index]["sha256"],
                 "retained_prediction_files": retained_files,
                 "retained_prediction_bytes": retained_bytes,
                 **aggregate(metrics),
@@ -313,8 +324,9 @@ def main() -> int:
         "trial_index", "config_id", "seed", "epoch", "plots",
         "true_positives", "false_positives", "false_negatives",
         "mean_plot_f1", "micro_precision", "micro_recall", "micro_f1",
-        "checkpoint", "checkpoint_sha256", "retained_prediction_files",
-        "retained_prediction_bytes",
+        "checkpoint", "checkpoint_size_bytes", "checkpoint_sha256",
+        "completion_record", "completion_record_sha256",
+        "retained_prediction_files", "retained_prediction_bytes",
     ]
     with diagnostics_path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=diagnostics_fields, lineterminator="\n")
@@ -358,6 +370,7 @@ def main() -> int:
             "initial_checkpoint_role", "authors_released_l1w_finetuned"
         ),
         "selected_initial_checkpoint_md5": initial_md5,
+        "selected_initial_checkpoint_size_bytes": initial_checkpoint_size,
         "selected_initial_checkpoint_sha256": initial_sha256,
         "selected_checkpoint": str(selected_checkpoint),
         "selected_checkpoint_size_bytes": selected_checkpoint.stat().st_size,

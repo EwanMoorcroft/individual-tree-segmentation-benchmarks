@@ -118,6 +118,7 @@ def test_long_freeze_has_fixed_split_matrix_budget_and_clean_checkpoint(
         "authors_released_l1w_finetuned_for_instance_clean"
     )
     assert freeze["initial_checkpoint_persistent_id"] == "doi:10.25625/VPMPID/8CIIW0"
+    assert freeze["initial_checkpoint_size_bytes"] == checkpoint.stat().st_size
     assert freeze["held_out_test_accessed"] is False
     assert freeze["supplied_split_contract"]["metadata_development_rows"] == 56
     assert freeze["supplied_split_contract"]["metadata_test_rows"] == 26
@@ -189,20 +190,29 @@ def test_long_crop_views_keep_validation_out_of_tuning(tmp_path: Path) -> None:
         for crop in range(2):
             (crop_root / f"{crop}.npz").write_bytes(b"crop")
         crop_inventory = tmp_path / "by_plot" / str(index) / "crop_inventory.json"
+        entries = [
+            {
+                "name": f"{crop}.npz",
+                "size_bytes": 4,
+                "sha256": hashlib.sha256(b"crop").hexdigest(),
+            }
+            for crop in range(2)
+        ]
+        aggregate = hashlib.sha256()
+        for entry in entries:
+            aggregate.update(
+                f'{entry["name"]}\0{entry["size_bytes"]}\0{entry["sha256"]}\n'.encode()
+            )
         crop_inventory.write_text(json.dumps({
             "status": "treelearn_plot_crops_sha256_inventoried",
             "held_out_test_accessed": False,
+            "safe_plot_id": f"plot_{index}",
             "crop_seed": 42000 + index,
             "crop_count": 2,
-            "entries_aggregate_sha256": "a" * 64,
-            "files": [
-                {
-                    "name": f"{crop}.npz",
-                    "size_bytes": 4,
-                    "sha256": hashlib.sha256(b"crop").hexdigest(),
-                }
-                for crop in range(2)
-            ],
+            "total_size_bytes": 8,
+            "crop_root": str(crop_root.resolve()),
+            "entries_aggregate_sha256": aggregate.hexdigest(),
+            "files": entries,
         }))
         rows.append({
             "task_index": index, "safe_plot_id": f"plot_{index}", "split": "dev",
@@ -218,11 +228,52 @@ def test_long_crop_views_keep_validation_out_of_tuning(tmp_path: Path) -> None:
         "held_out_test_accessed": False, "crops_per_plot": 2, "plots": rows,
         "tuning_data_root": str(tuning),
     }))
-    result = module.consolidate(freeze_path, tmp_path / "inventory.json")
+    inventory_path = tmp_path / "inventory.json"
+    result = module.consolidate(freeze_path, inventory_path)
     assert result["tuning"]["crop_count"] == 32
+    assert len(result["tuning"]["entries_aggregate_sha256"]) == 64
     assert not any(path.name.startswith("plot_20__") for path in tuning.iterdir())
     assert not all_dev.exists()
     assert result["plot_crop_inventory_count"] == 16
+    verified = module.verify_consolidated(freeze_path, inventory_path)
+    assert verified["crop_count"] == 32
+    legacy_inventory_path = tmp_path / "inventory_schema_v1.json"
+    legacy_inventory = json.loads(inventory_path.read_text())
+    legacy_inventory["schema_version"] = 1
+    for field in (
+        "entries_aggregate_sha256",
+        "aggregate_fields",
+        "symlink_targets_verified",
+    ):
+        legacy_inventory["tuning"].pop(field)
+    legacy_inventory_path.write_text(
+        json.dumps(legacy_inventory, indent=2, sort_keys=True) + "\n"
+    )
+    legacy_bytes = legacy_inventory_path.read_bytes()
+    link_targets = {
+        path.name: path.readlink() for path in sorted(tuning.iterdir())
+    }
+    legacy_verified = module.verify_consolidated(
+        freeze_path, legacy_inventory_path
+    )
+    assert legacy_verified["inventory_schema_version"] == 1
+    assert legacy_verified["entries_aggregate_sha256"] == (
+        verified["entries_aggregate_sha256"]
+    )
+    assert legacy_inventory_path.read_bytes() == legacy_bytes
+    assert {
+        path.name: path.readlink() for path in sorted(tuning.iterdir())
+    } == link_targets
+    source = tmp_path / "by_plot/0/0.npz"
+    source.write_bytes(b"xxxx")
+    with pytest.raises(ValueError, match="hashes changed"):
+        module.verify_consolidated(freeze_path, legacy_inventory_path)
+    source.write_bytes(b"crop")
+    changed = tuning / "plot_0__0000.npz"
+    changed.unlink()
+    changed.symlink_to(tmp_path / "by_plot/1/0.npz")
+    with pytest.raises(ValueError, match="symlink target changed"):
+        module.verify_consolidated(freeze_path, inventory_path)
 
 
 def test_long_crop_inventory_deterministically_prunes_excess(tmp_path: Path) -> None:
@@ -280,6 +331,9 @@ def test_long_slurm_training_half_is_guarded_and_uses_eight_gpus() -> None:
         assert "held_out_test_accessed=false" in text
     crop = (ROOT / paths[1]).read_text()
     train = (ROOT / paths[3]).read_text()
+    training_runner = (
+        ROOT / "methods/treelearn/scripts/run_treelearn_training_seeded.py"
+    ).read_text()
     assert "#SBATCH --partition=nodes" in crop
     assert "#SBATCH --gres=gpu:1" not in crop
     assert 'EXPECTED_CROPS="${TREELEARN_LONG_CROPS_PER_PLOT:-32}"' in crop
@@ -287,3 +341,8 @@ def test_long_slurm_training_half_is_guarded_and_uses_eight_gpus() -> None:
     assert "#SBATCH --time=36:00:00" in train
     assert "run_treelearn_training_seeded.py" in train
     assert '--work-dir "$WORK_DIR"' in train
+    assert '--crop-inventory "$TREELEARN_LONG_ROOT/crop_inventory.json"' in train
+    assert '--freeze "$TREELEARN_LONG_FREEZE"' in train
+    assert training_runner.index("crop_integrity = verify_consolidated") < (
+        training_runner.index("import numpy as np")
+    )

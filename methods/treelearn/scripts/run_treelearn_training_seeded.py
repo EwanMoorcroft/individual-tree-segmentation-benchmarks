@@ -11,6 +11,8 @@ import runpy
 import sys
 from pathlib import Path
 
+from consolidate_for_instance_finetune_long_crops import verify_consolidated
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -18,8 +20,14 @@ def main() -> int:
     parser.add_argument("--config", required=True, type=Path)
     parser.add_argument("--work-dir", required=True, type=Path)
     parser.add_argument("--environment-record", required=True, type=Path)
+    parser.add_argument("--freeze", required=True, type=Path)
+    parser.add_argument("--crop-inventory", required=True, type=Path)
     parser.add_argument("--seed", required=True, type=int)
     args = parser.parse_args()
+    crop_integrity = verify_consolidated(
+        args.freeze.expanduser().resolve(),
+        args.crop_inventory.expanduser().resolve(),
+    )
     repo = args.treelearn_repo.expanduser().resolve()
     entrypoint = repo / "tools" / "training" / "train.py"
     if not entrypoint.is_file() or not args.config.is_file():
@@ -70,6 +78,15 @@ def main() -> int:
         "cublas_workspace_config": os.environ["CUBLAS_WORKSPACE_CONFIG"],
         "training_config": str(args.config.resolve()),
         "training_config_sha256": hashlib.sha256(args.config.read_bytes()).hexdigest(),
+        "crop_inventory": crop_integrity["inventory"],
+        "crop_inventory_sha256": crop_integrity["inventory_sha256"],
+        "crop_entries_aggregate_sha256": crop_integrity[
+            "entries_aggregate_sha256"
+        ],
+        "crop_count_verified": crop_integrity["crop_count"],
+        "crop_referenced_size_bytes_verified": crop_integrity[
+            "referenced_size_bytes"
+        ],
         "bitwise_determinism_guaranteed": False,
         "determinism_note": (
             "Seeds, sorted input paths and deterministic cuDNN settings are fixed; "

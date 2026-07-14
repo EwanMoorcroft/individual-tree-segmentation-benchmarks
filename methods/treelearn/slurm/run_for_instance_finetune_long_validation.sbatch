@@ -27,20 +27,32 @@ python methods/treelearn/scripts/verify_for_instance_finetune_long_contract.py \
 mapfile -t TASK < <(
   python methods/treelearn/scripts/resolve_for_instance_finetune_long_validation_task.py \
     --freeze "$TREELEARN_LONG_FREEZE" \
-    --array-task-id "$SLURM_ARRAY_TASK_ID"
+    --array-task-id "$SLURM_ARRAY_TASK_ID" \
+    --completion-root "$TREELEARN_LONG_ROOT/trial_completions"
 )
-test "${#TASK[@]}" -eq 10
+test "${#TASK[@]}" -eq 14
 TRIAL_INDEX=${TASK[0]}
 CONFIG_ID=${TASK[1]}
 SEED=${TASK[2]}
 EPOCH=${TASK[3]}
 MANIFEST_TASK_INDICES=${TASK[4]}
 CHECKPOINT=${TASK[5]}
-VALIDATION_RUN_ID=${TASK[6]}
-EVALUATION_CONFIG=${TASK[7]}
-EVALUATION_CONFIG_SHA256=${TASK[8]}
-TRAINING_MODE=${TASK[9]}
+CHECKPOINT_SIZE_BYTES=${TASK[6]}
+CHECKPOINT_SHA256=${TASK[7]}
+COMPLETION_RECORD=${TASK[8]}
+COMPLETION_RECORD_SHA256=${TASK[9]}
+VALIDATION_RUN_ID=${TASK[10]}
+EVALUATION_CONFIG=${TASK[11]}
+EVALUATION_CONFIG_SHA256=${TASK[12]}
+TRAINING_MODE=${TASK[13]}
 test -f "$CHECKPOINT"
+test "$(stat -c %s "$CHECKPOINT")" = "$CHECKPOINT_SIZE_BYTES"
+test "$(sha256sum "$CHECKPOINT" | cut -d ' ' -f 1)" = "$CHECKPOINT_SHA256"
+if test "$TRIAL_INDEX" -ge 0; then
+  test -f "$COMPLETION_RECORD"
+  test "$(sha256sum "$COMPLETION_RECORD" | cut -d ' ' -f 1)" = \
+    "$COMPLETION_RECORD_SHA256"
+fi
 test -f "$EVALUATION_CONFIG"
 test "$(sha256sum "$EVALUATION_CONFIG" | cut -d ' ' -f 1)" = \
   "$EVALUATION_CONFIG_SHA256"

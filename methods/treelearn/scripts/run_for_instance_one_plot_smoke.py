@@ -31,6 +31,24 @@ def resolve_path(path_text: str, base: Path = ROOT) -> Path:
     return path.resolve()
 
 
+def validate_safe_plot_id(value: Any) -> str:
+    """Return a safe single path component for plot-scoped outputs."""
+
+    if not isinstance(value, str) or not RUN_ID_PATTERN.fullmatch(value):
+        raise ValueError(f"Unsafe TreeLearn safe plot ID: {value!r}")
+    return value
+
+
+def contained_path(base: Path, *parts: str) -> Path:
+    """Resolve an output path and require it to remain below its base root."""
+
+    root = base.resolve()
+    path = root.joinpath(*parts).resolve()
+    if not path.is_relative_to(root):
+        raise ValueError(f"TreeLearn output path escapes root {root}: {path}")
+    return path
+
+
 def load_config(path_text: str) -> tuple[dict[str, Any], Path]:
     path = resolve_path(path_text)
     if not path.is_file():
@@ -741,10 +759,15 @@ def main() -> int:
     if relative.is_absolute() or ".." in relative.parts:
         raise ValueError(f"Unsafe TreeLearn relative path: {relative_path!r}")
     plot_id = args.plot_id or defaults.get("plot_id") or relative.with_suffix("").as_posix()
-    safe_plot_id = (
+    configured_safe_plot_id = defaults.get("safe_plot_id")
+    safe_plot_id = validate_safe_plot_id(
         args.safe_plot_id
-        or defaults.get("safe_plot_id")
-        or re.sub(r"[^A-Za-z0-9._-]+", "_", plot_id)
+        if args.safe_plot_id is not None
+        else (
+            configured_safe_plot_id
+            if configured_safe_plot_id is not None
+            else re.sub(r"[^A-Za-z0-9._-]+", "_", plot_id)
+        )
     )
     expected_point_count = args.expected_point_count or defaults.get(
         "expected_point_count"
@@ -789,10 +812,10 @@ def main() -> int:
     metadata_base = resolve_path(args.metadata_root or config["paths"]["metadata_root"])
     tables_base = resolve_path(args.tables_root or config["paths"]["tables_root"])
 
-    runtime_root = runtime_base / args.run_id / safe_plot_id
-    predictions_root = predictions_base / args.run_id / safe_plot_id
-    metadata_root = metadata_base / args.run_id
-    tables_root = tables_base / args.run_id
+    runtime_root = contained_path(runtime_base, args.run_id, safe_plot_id)
+    predictions_root = contained_path(predictions_base, args.run_id, safe_plot_id)
+    metadata_root = contained_path(metadata_base, args.run_id)
+    tables_root = contained_path(tables_base, args.run_id)
     source_las = (dataset_root / plot_contract["relative_path"]).resolve()
     staged_las = runtime_root / "forest" / f"{safe_plot_id}.las"
     pipeline_config = runtime_root / "treelearn_pipeline_config.yml"

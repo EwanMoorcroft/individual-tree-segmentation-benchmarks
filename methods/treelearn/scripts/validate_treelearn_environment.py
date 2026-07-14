@@ -22,7 +22,7 @@ def validate_package_locations(repo: Path, locations: Iterable[str]) -> list[Pat
 
     repo = repo.resolve()
     resolved = [Path(location).resolve() for location in locations]
-    if not resolved or not any(location.is_relative_to(repo) for location in resolved):
+    if not resolved or not all(location.is_relative_to(repo) for location in resolved):
         raise ValueError(
             f"tree_learn package locations {resolved} are not under pinned repo {repo}"
         )

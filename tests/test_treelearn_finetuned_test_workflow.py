@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import importlib.util
 import json
 import math
 import sys
 from pathlib import Path
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +28,107 @@ def load(name: str):
 
 common = load("for_instance_test_common")
 prepare = load("prepare_for_instance_finetuned_test")
+test_task = load("run_for_instance_finetuned_test_task")
+
+
+def test_direct_test_task_rejects_checkpoint_identity_before_dataset_or_subprocess(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    checkpoint = tmp_path / "epoch_35.pth"
+    checkpoint.write_bytes(b"frozen checkpoint")
+    digest = hashlib.sha256(checkpoint.read_bytes()).hexdigest()
+    manifest = {
+        "checkpoint": str(checkpoint),
+        "checkpoint_size_bytes": checkpoint.stat().st_size,
+        "checkpoint_sha256": digest,
+    }
+    with pytest.raises(ValueError, match="size changed"):
+        test_task.validate_frozen_checkpoint(
+            {**manifest, "checkpoint_size_bytes": checkpoint.stat().st_size + 1},
+            checkpoint,
+        )
+
+    row = {
+        "task_index": 0,
+        "safe_plot_id": "plot_0",
+        "relative_path": "test/plot.las",
+        "input_las": str(tmp_path / "dataset/test/plot.las"),
+    }
+    frozen = {
+        **manifest,
+        "checkpoint_sha256": "0" * 64,
+        "training_mode": "fine_tuned_on_dev",
+    }
+    dataset_accessed: list[bool] = []
+    subprocess_started: list[bool] = []
+    monkeypatch.setattr(test_task, "read_row", lambda *args: (row, frozen))
+    monkeypatch.setattr(
+        test_task, "validate_dataset_row",
+        lambda *args: dataset_accessed.append(True),
+    )
+    monkeypatch.setattr(
+        test_task.subprocess, "run",
+        lambda *args, **kwargs: subprocess_started.append(True),
+    )
+    monkeypatch.setattr(test_task, "write_preflight_failure", lambda *args: None)
+    monkeypatch.setattr(sys, "argv", [
+        "run_for_instance_finetuned_test_task.py",
+        "--config", "config.yml",
+        "--manifest", "manifest.json",
+        "--task-index", "0",
+        "--run-id", "run",
+        "--dataset-root", str(tmp_path / "dataset"),
+        "--treelearn-repo", str(tmp_path / "TreeLearn"),
+        "--checkpoint", str(checkpoint),
+        "--runtime-root", str(tmp_path / "runtime"),
+        "--predictions-root", str(tmp_path / "predictions"),
+        "--metadata-root", str(tmp_path / "metadata"),
+        "--tables-root", str(tmp_path / "tables"),
+    ])
+    with pytest.raises(ValueError, match="SHA-256 changed"):
+        test_task.main()
+    assert dataset_accessed == []
+    assert subprocess_started == []
+
+
+def test_test_task_rejects_traversal_run_id_before_any_failure_write(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    metadata_root = tmp_path / "metadata"
+    manifest_read: list[bool] = []
+    monkeypatch.setattr(
+        test_task,
+        "read_row",
+        lambda *args: manifest_read.append(True),
+    )
+    monkeypatch.setattr(sys, "argv", [
+        "run_for_instance_finetuned_test_task.py",
+        "--config", "config.yml",
+        "--manifest", "manifest.json",
+        "--task-index", "0",
+        "--run-id", "../../escape",
+        "--dataset-root", str(tmp_path / "dataset"),
+        "--treelearn-repo", str(tmp_path / "TreeLearn"),
+        "--checkpoint", str(tmp_path / "checkpoint.pth"),
+        "--runtime-root", str(tmp_path / "runtime"),
+        "--predictions-root", str(tmp_path / "predictions"),
+        "--metadata-root", str(metadata_root),
+        "--tables-root", str(tmp_path / "tables"),
+    ])
+    with pytest.raises(ValueError, match="Unsafe TreeLearn run ID"):
+        test_task.main()
+    with pytest.raises(ValueError, match="Unsafe TreeLearn run ID"):
+        test_task.write_preflight_failure(
+            metadata_root,
+            "../../escape",
+            0,
+            None,
+            ValueError("synthetic failure"),
+            None,
+        )
+    assert manifest_read == []
+    assert not metadata_root.exists()
+    assert not (tmp_path / "escape").exists()
 
 
 def test_test_contract_matches_completed_cross_method_subset() -> None:

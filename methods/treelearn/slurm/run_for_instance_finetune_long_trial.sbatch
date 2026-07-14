@@ -38,11 +38,14 @@ python "$TREELEARN_PROJECT_ROOT/methods/treelearn/scripts/run_treelearn_training
   --config "$CONFIG" \
   --seed "$SEED" \
   --work-dir "$WORK_DIR" \
+  --freeze "$TREELEARN_LONG_FREEZE" \
+  --crop-inventory "$TREELEARN_LONG_ROOT/crop_inventory.json" \
   --environment-record "$TREELEARN_LONG_ROOT/trial_completions/trial_${SLURM_ARRAY_TASK_ID}_environment.json"
 cd "$TREELEARN_PROJECT_ROOT"
 python methods/treelearn/scripts/resolve_for_instance_finetune_long_trial.py \
   --freeze "$TREELEARN_LONG_FREEZE" \
   --trial-index "$SLURM_ARRAY_TASK_ID" \
+  --crop-inventory "$TREELEARN_LONG_ROOT/crop_inventory.json" \
   --verify-output "$TREELEARN_LONG_ROOT/trial_completions/trial_${SLURM_ARRAY_TASK_ID}.json"
 echo status=treelearn-long-trial-completed
 echo held_out_test_accessed=false

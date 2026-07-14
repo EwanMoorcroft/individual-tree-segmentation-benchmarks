@@ -250,6 +250,43 @@ def test_treelearn_evaluator_rejects_mismatched_and_empty_arrays() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "invalid_value",
+    (10.5, np.nan, np.inf, -np.inf),
+    ids=("fractional", "nan", "positive_infinity", "negative_infinity"),
+)
+def test_treelearn_evaluator_rejects_non_integral_or_non_finite_labels(
+    invalid_value: float,
+) -> None:
+    evaluator = load_evaluator()
+    arrays = known_arrays()
+    pred_tree_id = arrays["pred_tree_id"].astype(np.float64)
+    pred_tree_id[0] = invalid_value
+    arrays["pred_tree_id"] = pred_tree_id
+
+    with pytest.raises(ValueError, match="pred_tree_id"):
+        evaluator.evaluate_arrays(
+            **arrays,
+            plot_id="CULS/plot_1",
+            split="dev",
+        )
+
+
+def test_treelearn_evaluator_rejects_uint64_label_overflow() -> None:
+    evaluator = load_evaluator()
+    arrays = known_arrays()
+    pred_tree_id = arrays["pred_tree_id"].astype(np.uint64)
+    pred_tree_id[0] = np.uint64(2**63)
+    arrays["pred_tree_id"] = pred_tree_id
+
+    with pytest.raises(ValueError, match="pred_tree_id.*int64 range"):
+        evaluator.evaluate_arrays(
+            **arrays,
+            plot_id="CULS/plot_1",
+            split="dev",
+        )
+
+
 def test_treelearn_evaluator_rejects_inconsistent_prediction_semantics() -> None:
     evaluator = load_evaluator()
     arrays = known_arrays()
@@ -488,6 +525,47 @@ def test_treelearn_namespace_package_location_uses_search_locations(
             repo,
             [str(tmp_path / "another_checkout/tree_learn")],
         )
+    with pytest.raises(ValueError, match="not under pinned repo"):
+        validator.validate_package_locations(
+            repo,
+            [str(package), str(tmp_path / "another_checkout/tree_learn")],
+        )
+
+
+def test_treelearn_runner_rejects_unsafe_safe_plot_ids(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runner = load_runner()
+    runtime_root = tmp_path / "runtime"
+
+    for unsafe_value in (
+        "",
+        ".",
+        "..",
+        "a/b",
+        "../../escape",
+        str(tmp_path / "absolute_escape"),
+    ):
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                str(RUNNER_PATH),
+                "--run-id",
+                "synthetic_unsafe_plot_id",
+                "--safe-plot-id",
+                unsafe_value,
+                "--runtime-root",
+                str(runtime_root),
+            ],
+        )
+        with pytest.raises(ValueError, match="Unsafe TreeLearn safe plot ID"):
+            runner.main()
+
+    assert not runtime_root.exists()
+    assert runner.contained_path(tmp_path, "run", "plot").is_relative_to(tmp_path)
+    with pytest.raises(ValueError, match="escapes root"):
+        runner.contained_path(tmp_path, "..", "escape")
 
 
 def test_treelearn_checkpoint_identity_is_not_self_derived(tmp_path: Path) -> None:

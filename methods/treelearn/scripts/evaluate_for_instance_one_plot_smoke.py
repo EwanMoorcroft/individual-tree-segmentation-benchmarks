@@ -70,6 +70,32 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _as_lossless_int64(name: str, value: np.ndarray) -> np.ndarray:
+    """Convert integer-valued numeric data to int64 without changing values."""
+
+    if np.issubdtype(value.dtype, np.unsignedinteger):
+        if np.any(value > np.iinfo(np.int64).max):
+            raise ValueError(f"{name} contains values outside the int64 range")
+    elif np.issubdtype(value.dtype, np.signedinteger):
+        limits = np.iinfo(np.int64)
+        if np.any(value < limits.min) or np.any(value > limits.max):
+            raise ValueError(f"{name} contains values outside the int64 range")
+    elif np.issubdtype(value.dtype, np.floating):
+        if not np.all(np.isfinite(value)):
+            raise ValueError(f"{name} must contain only finite integer values")
+        if not np.all(value == np.trunc(value)):
+            raise ValueError(f"{name} must contain only integer values")
+        if np.any(value < -(2**63)) or np.any(value >= 2**63):
+            raise ValueError(f"{name} contains values outside the int64 range")
+    else:
+        raise ValueError(f"{name} must contain numeric integer values")
+
+    converted = value.astype(np.int64, copy=False)
+    if not np.array_equal(value, converted):
+        raise ValueError(f"{name} cannot be converted to int64 without loss")
+    return converted
+
+
 def validate_arrays(
     pred_tree_id: np.ndarray,
     target_tree_id: np.ndarray,
@@ -105,7 +131,18 @@ def validate_arrays(
     ):
         raise ValueError("source_row_index must equal np.arange(point_count)")
     pred, target, classes, pred_classes, row_index = (
-        value.astype(np.int64, copy=False) for value in arrays
+        _as_lossless_int64(name, value)
+        for name, value in zip(
+            (
+                "pred_tree_id",
+                "target_tree_id",
+                "classification",
+                "pred_classification",
+                "source_row_index",
+            ),
+            arrays,
+            strict=True,
+        )
     )
     expected_pred_classes = np.where(pred > 0, 4, 0)
     if not np.array_equal(pred_classes, expected_pred_classes):

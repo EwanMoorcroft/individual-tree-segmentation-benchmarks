@@ -25,6 +25,7 @@ rows may use `pending` for run-specific fields until a run is scheduled.
 | for-instance | treelearn | treelearn_for-instance_published_pretrained_dev_smoke_20260712_135205 | published_pretrained | development_smoke_harmonised_pointwise | Accepted adapter diagnostic; one CULS development plot F1 0.7059 | [`accepted smoke`](methods/treelearn/examples/accepted_development_smoke_20260712.json); [`runbook`](methods/treelearn/docs/one_plot_smoke.md) |
 | for-instance | treelearn | treelearn_for-instance_published_pretrained_development_20260712_150030 | published_pretrained | full_development_harmonised_pointwise | Completed published-checkpoint development diagnostic with documented FOR-instance training overlap; mean plot F1 0.5156, micro F1 0.5108; excluded from leakage-free ranking | [`overall results`](methods/treelearn/examples/treelearn_completed_development_results_20260712.csv); [`site results`](methods/treelearn/examples/treelearn_completed_development_site_results_20260712.csv); [`result note`](methods/treelearn/docs/development_results_20260712.md) |
 | for-instance | treelearn | treelearn_for-instance_fine_tuned_on_dev_20260712_164057 | fine_tuned_on_dev | internal_development_validation | Completed negative result; best checkpoint mean plot F1 0.4905 versus matched published baseline 0.5588; rejected before test | [`validation results`](methods/treelearn/examples/treelearn_finetune_validation_results_20260712.csv); [`result note`](methods/treelearn/docs/finetune_validation_results_20260712.md) |
+| for-instance | treelearn | treelearn_for-instance_published_pretrained_20260714_134109 | published_pretrained | harmonised_pointwise_test | Completed clean authors-released baseline; test mean plot F1 0.0789, micro F1 0.0987 | [`overall results`](methods/treelearn/examples/treelearn_pretrained_test_results_20260714.csv); [`site results`](methods/treelearn/examples/treelearn_pretrained_test_site_results_20260714.csv); [`provenance`](methods/treelearn/examples/treelearn_pretrained_test_provenance_20260714.json); [`result note`](methods/treelearn/docs/pretrained_test_results_20260714.md) |
 | for-instance | treelearn | treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227 | fine_tuned_on_dev | harmonised_pointwise_test | Completed leakage-controlled primary result; test mean plot F1 0.3647, micro F1 0.3319 | [`overall results`](methods/treelearn/examples/treelearn_finetuned_test_results_20260713.csv); [`site results`](methods/treelearn/examples/treelearn_finetuned_test_site_results_20260713.csv); [`result note`](methods/treelearn/docs/finetuned_test_results_20260713.md) |
 | for-instance | randlanet | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
 | for-instance | pointnetpp | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
@@ -49,14 +50,13 @@ No candidate accuracy row indicates a completed method run or a reported
 accuracy result. Dataset readiness and remaining preprocessing are documented
 in [`docs/dataset_feasibility.md`](docs/dataset_feasibility.md).
 
-The FOR-instance headline tracker contains four completed comparable rows:
-SegmentAnyTree published pretrained, SegmentAnyTree fine-tuned on development,
-TreeX deterministic and TreeLearn fine-tuned on development. All four use the
-same supplied 11-plot test split, 323 reference instances and harmonised
-point-aligned evaluator. TreeX has no fine-tuning stage. A leakage-controlled
-TreeLearn published-checkpoint test has not been run, so that variant is a
-documented coverage gap. TreeLearn development and checkpoint-sweep results
-remain in the separate diagnostics table and are not headline rankings.
+The FOR-instance headline tracker contains five completed comparable rows:
+TreeX published, SegmentAnyTree published pretrained, SegmentAnyTree
+fine-tuned, TreeLearn published pretrained and TreeLearn fine-tuned. All five
+use the same supplied 11-plot test split, 323 reference instances, union mask,
+IoU threshold and harmonised point-aligned evaluator. TreeX has no fine-tuning
+stage. TreeLearn development and checkpoint-sweep results remain in the
+separate diagnostics table and are not headline rankings.
 
 The accepted TreeLearn smoke is adapter evidence from one CULS development
 plot, not a headline benchmark result. It preserved the source row count and
@@ -83,6 +83,17 @@ the result is directly comparable with the completed SegmentAnyTree and TreeX
 test rows. The published December 2024 TreeLearn checkpoint remains a separate
 overlap-affected development reproduction and is not a leakage-free test
 baseline.
+
+The unchanged clean authors-released TreeLearn checkpoint was also evaluated
+once on the same frozen 11-plot test subset. It obtained mean plot F1
+`0.078944` and micro F1 `0.098694` (micro precision `0.092896`, micro recall
+`0.105263`, TP `34`, FP `332`, FN `289`). All 55 raw and aligned prediction
+artefacts passed retention verification. An independent recomputation audit
+re-hashed the files, reproduced the aggregate result and found recall `0/74`
+for reference trees below 10 m and `34/249` for trees at least 10 m. This is
+the genuine frozen result for that clean checkpoint and pinned pipeline; the
+authors document the checkpoint as targeting trees above 10 m, so it must not
+be interpreted as TreeLearn's best possible performance on small-tree data.
 
 The permitted training mode values for completed or provisional runs are
 `published_pretrained`, `fine_tuned_on_dev`, `retrained_from_dev` and

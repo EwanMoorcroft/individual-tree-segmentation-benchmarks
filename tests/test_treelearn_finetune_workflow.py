@@ -109,18 +109,33 @@ def test_cross_method_results_separate_comparable_groups_and_retain_predictions(
     results_path = ROOT / "outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_results.csv"
     with results_path.open(encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
-    assert len(rows) == 4
+    assert len(rows) == 5
     assert {row["comparable_group"] for row in rows} == {"held_out_test_primary"}
     assert {(row["method_slug"], row["training_mode"]) for row in rows} == {
         ("segmentanytree", "published_pretrained"),
         ("segmentanytree", "fine_tuned_on_dev"),
         ("treex", "external_training_only"),
+        ("treelearn", "published_pretrained"),
         ("treelearn", "fine_tuned_on_dev"),
     }
     assert {row["evaluation_split"] for row in rows} == {"test"}
     assert {int(row["plots"]) for row in rows} == {11}
     assert {int(row["reference_instances"]) for row in rows} == {323}
     assert all(row["evaluation_protocol"] == "for_instance_pointwise_v1" for row in rows)
+    clean_pretrained = next(
+        row
+        for row in rows
+        if row["method_slug"] == "treelearn"
+        and row["training_mode"] == "published_pretrained"
+    )
+    assert clean_pretrained["run_id"] == (
+        "treelearn_for-instance_published_pretrained_20260714_134109"
+    )
+    assert int(clean_pretrained["true_positives"]) == 34
+    assert int(clean_pretrained["false_positives"]) == 332
+    assert int(clean_pretrained["false_negatives"]) == 289
+    assert math.isclose(float(clean_pretrained["mean_plot_f1"]), 0.07894350692791946)
+    assert math.isclose(float(clean_pretrained["micro_f1"]), 0.09869375907111756)
 
     diagnostics_path = (
         ROOT
@@ -148,3 +163,8 @@ def test_cross_method_results_separate_comparable_groups_and_retain_predictions(
         ("treelearn", "fine_tuned_on_dev_long_epoch_35"),
     ):
         assert retained[key]["future_metrics_without_inference"] == "true"
+    assert retained[("treelearn", "published_pretrained")]["run_id"] == (
+        "treelearn_for-instance_published_pretrained_20260714_134109"
+    )
+    assert retained[("treelearn", "published_pretrained")]["evaluation_split"] == "test"
+    assert int(retained[("treelearn", "published_pretrained")]["retained_file_count"]) == 55

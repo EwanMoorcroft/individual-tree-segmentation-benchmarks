@@ -41,6 +41,11 @@ The new long route instead starts from authors-released
 fine-tuned on their L1W benchmark after external noisy-label pretraining; its
 stated training data does not include FOR-instance.
 
+The unchanged clean checkpoint was separately evaluated once as the
+`published_pretrained` headline baseline on the frozen 11-plot test subset.
+That run is distinct from the development-only December 2024 checkpoint and
+from the development-fine-tuned checkpoint.
+
 The candidate full benchmark modes remain:
 
 - `published_pretrained`
@@ -189,8 +194,8 @@ The completed frozen result is documented in the
 [`fine-tuned test result`](docs/finetuned_test_results_20260713.md); the route
 now refuses any repeated or colliding submission.
 
-The missing clean published-pretrained comparison has its own isolated,
-one-time route:
+The clean published-pretrained comparison has its own isolated, one-time
+route:
 [`slurm/submit_for_instance_pretrained_test.sh`](slurm/submit_for_instance_pretrained_test.sh).
 It evaluates the unchanged authors-released `model_weights_finetuned.pth`
 checkpoint on the identical 11-plot test subset, writes to separate pretrained
@@ -198,13 +203,13 @@ run roots and uses a stable submission guard so timestamp changes cannot create
 repeat test chains. Use
 [`slurm/monitor_for_instance_pretrained_test.sh`](slurm/monitor_for_instance_pretrained_test.sh)
 and the [`pretrained test runbook`](docs/pretrained_test_evaluation.md). The
-public tracker must not add this row until its 11-plot completion and retention
-gate passes.
-Run `treelearn_for-instance_published_pretrained_20260714_134109` has one
-documented upstream empty-group execution failure on test task 8. The
-[`pretrained test runbook`](docs/pretrained_test_evaluation.md) defines the
-single-task, no-selection recovery; partial 10-plot metrics remain excluded
-from the headline tracker.
+public tracker adds the row only after its 11-plot completion and retention
+gate passes. Run
+`treelearn_for-instance_published_pretrained_20260714_134109` passed that gate
+after a restricted execution-only recovery for an upstream empty-group crash
+on test task 8. The recovery mapped unresolved labels to background, changed
+no weights or parameters and performed no selection. See the
+[`completed pretrained result`](docs/pretrained_test_results_20260714.md).
 
 ## Evaluation Route
 
@@ -219,27 +224,34 @@ prediction-size filtering or threshold selection is permitted.
 
 - The completed default-checkpoint route has documented FOR-instance
   validation/test training overlap and is excluded from leakage-free ranking.
-- The published route remains development-only. It must not be compared as a
-  leakage-free test baseline with the completed fine-tuned checkpoint.
+- The December 2024 default-checkpoint route remains development-only and must
+  not be compared as a leakage-free test baseline. The separate clean
+  authors-released checkpoint has a completed comparable test result.
 - The accepted smoke score represents one CULS development plot only and is
   not an overall or cross-site estimate.
 - The setup follows upstream dependency pins, but upstream leaves some pip
   packages only partially pinned; the resolved Barkla environment must be
   retained with the run evidence.
-- The completed published-checkpoint result is development-only and must not
-  be presented as a held-out benchmark score. The separate frozen epoch-35
-  result is the completed TreeLearn held-out benchmark score.
+- The clean authors-released checkpoint documentation states that it targets
+  trees above 10 m. The audit found zero matched references below 10 m, so its
+  low test score is valid for the frozen checkpoint and pipeline but is not a
+  claim about TreeLearn's best achievable small-tree performance.
+- The pinned upstream code does not bundle a complete historical
+  post-processing configuration specifically for the clean checkpoint. The
+  result therefore describes the exact recorded checkpoint and pinned
+  benchmark pipeline, not every possible TreeLearn post-processing setting.
 - The test route is restricted to the frozen selected checkpoint and refuses
   reruns that could turn the test split into a model-selection signal.
 
 ## Current Benchmark Status
 
-Only the leakage-controlled epoch-35 held-out-test result is included in the
-cross-method headline tracker. The 21-plot published-checkpoint development
-run, five-plot validation baseline and checkpoint sweep remain diagnostics.
-They use different scopes and must not be presented as additional comparable
-TreeLearn benchmark rows. A clean published-checkpoint result on the frozen
-11-plot test remains unevaluated.
+Exactly two TreeLearn rows are included in the cross-method headline tracker:
+the clean authors-released published-pretrained checkpoint and the frozen
+development-fine-tuned checkpoint. Both use the same 11 test plots, 323
+references and evaluator as the TreeX and SegmentAnyTree headline rows. The
+21-plot December 2024 checkpoint run, five-plot validation baseline and
+checkpoint sweep remain diagnostics and must not be presented as additional
+comparable TreeLearn benchmark rows.
 
 The guarded one-plot published-checkpoint development smoke is complete and
 accepted. It evaluated 1,816,672 source-aligned points with F1 `0.705882`,
@@ -270,3 +282,11 @@ micro recall `0.486068`, TP `157`, FP `466`, FN `166`). SCION has the highest
 site mean F1 (`0.620663`) and RMIT the lowest (`0.162162`). The final gate
 hash-verified all 55 retained raw and aligned prediction artefacts. See the
 [`completed fine-tuned test result`](docs/finetuned_test_results_20260713.md).
+
+The unchanged clean checkpoint test run
+`treelearn_for-instance_published_pretrained_20260714_134109` also completed
+all 11 plots. It obtained mean plot F1 `0.078944` and micro F1 `0.098694`
+(micro precision `0.092896`, micro recall `0.105263`, TP `34`, FP `332`, FN
+`289`). The final gate and independent audit verified all 55 retained files
+and reproduced the aggregates. See the
+[`completed pretrained test result`](docs/pretrained_test_results_20260714.md).

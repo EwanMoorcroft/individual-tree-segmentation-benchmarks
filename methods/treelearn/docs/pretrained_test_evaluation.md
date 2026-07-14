@@ -101,3 +101,15 @@ watch -n 15 bash \
   methods/treelearn/slurm/monitor_for_instance_pretrained_test_recovery.sh \
   "$RECOVERY_STATE_FILE"
 ```
+
+## Completed result
+
+Recovery attempt 2 completed. Jobs `9775443` through `9775446` passed, the
+completion gate verified all 11 plots and all 55 retained prediction files,
+and no model or post-processing selection was performed. The frozen result is
+mean plot F1 `0.078944` and micro F1 `0.098694`.
+
+The public aggregate tables, provenance record and interpretation are stored
+in the [`completed result note`](pretrained_test_results_20260714.md). The
+stable submission guard remains active; this held-out route must not be run
+again.

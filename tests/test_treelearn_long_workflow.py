@@ -314,6 +314,62 @@ def test_long_crop_inventory_deterministically_prunes_excess(tmp_path: Path) -> 
     assert len(list(crop_root.glob("*.npz"))) == 32
 
 
+def test_long_crop_inventory_rejects_unmanaged_and_symlinked_roots(
+    tmp_path: Path,
+) -> None:
+    module = load(
+        "treelearn_long_crop_inventory_containment",
+        "methods/treelearn/scripts/inventory_for_instance_finetune_long_crops.py",
+    )
+    run_root = tmp_path / "run"
+    run_root.mkdir()
+    outside_root = tmp_path / "outside"
+    outside_root.mkdir()
+    for index in range(35):
+        (outside_root / f"{index:04d}.npz").write_bytes(f"crop-{index}".encode())
+    normalised = run_root / "normalised.las"
+    normalised.write_bytes(b"las")
+    config = run_root / "crops.json"
+    config.write_text("{}")
+
+    def write_freeze(crop_root: Path, inventory_name: str) -> Path:
+        freeze = run_root / f"{inventory_name}.json"
+        freeze.write_text(
+            json.dumps(
+                {
+                    "held_out_test_accessed": False,
+                    "plots": [
+                        {
+                            "task_index": 1,
+                            "split": "dev",
+                            "safe_plot_id": "plot_1",
+                            "crop_inventory": str(
+                                run_root / f"{inventory_name}_inventory.json"
+                            ),
+                            "crop_root": str(crop_root),
+                            "crops_expected": 32,
+                            "crops_generate_requested": 48,
+                            "crop_seed": 42001,
+                            "normalised_las": str(normalised),
+                            "crop_config": str(config),
+                        }
+                    ],
+                }
+            )
+        )
+        return freeze
+
+    with pytest.raises(ValueError, match="escapes the long-run root"):
+        module.inventory(write_freeze(outside_root, "outside"), 1)
+    assert len(list(outside_root.glob("*.npz"))) == 35
+
+    linked_root = run_root / "linked_crops"
+    linked_root.symlink_to(outside_root, target_is_directory=True)
+    with pytest.raises(ValueError, match="symlinked path component"):
+        module.inventory(write_freeze(linked_root, "symlink"), 1)
+    assert len(list(outside_root.glob("*.npz"))) == 35
+
+
 def test_long_slurm_training_half_is_guarded_and_uses_eight_gpus() -> None:
     paths = [
         "methods/treelearn/slurm/prepare_for_instance_finetune_long.sbatch",
@@ -346,3 +402,39 @@ def test_long_slurm_training_half_is_guarded_and_uses_eight_gpus() -> None:
     assert training_runner.index("crop_integrity = verify_consolidated") < (
         training_runner.index("import numpy as np")
     )
+
+
+def test_long_slurm_chain_honours_project_root_override() -> None:
+    paths = [
+        "methods/treelearn/slurm/prepare_for_instance_finetune_long.sbatch",
+        "methods/treelearn/slurm/generate_for_instance_finetune_long_crops.sbatch",
+        "methods/treelearn/slurm/consolidate_for_instance_finetune_long_crops.sbatch",
+        "methods/treelearn/slurm/run_for_instance_finetune_long_trial.sbatch",
+        "methods/treelearn/slurm/run_for_instance_finetune_long_validation.sbatch",
+        "methods/treelearn/slurm/select_for_instance_finetune_long.sbatch",
+        "methods/treelearn/slurm/gate_for_instance_finetune_long.sbatch",
+    ]
+    root_assignment = (
+        'TREELEARN_PROJECT_ROOT="${TREELEARN_PROJECT_ROOT:-'
+        '$HOME/scratch/tree-seg-benchmark}"'
+    )
+    for relative in paths:
+        text = (ROOT / relative).read_text()
+        assert root_assignment in text
+        assert 'cd "$TREELEARN_PROJECT_ROOT"' in text
+        completed = subprocess.run(
+            ["bash", "-n", str(ROOT / relative)], capture_output=True, text=True
+        )
+        assert completed.returncode == 0, (relative, completed.stderr)
+
+    crop = (ROOT / paths[1]).read_text()
+    assert (
+        'python "$TREELEARN_PROJECT_ROOT/methods/treelearn/scripts/'
+        'run_treelearn_crop_generation_seeded.py"'
+    ) in crop
+    submit = (
+        ROOT / "methods/treelearn/slurm/submit_for_instance_finetune_long.sh"
+    ).read_text()
+    assert root_assignment in submit
+    assert "export TREELEARN_PROJECT_ROOT" in submit
+    assert 'PROJECT_ROOT="$TREELEARN_PROJECT_ROOT"' in submit

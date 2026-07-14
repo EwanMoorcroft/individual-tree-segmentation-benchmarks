@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 import run_for_instance_one_plot_smoke as runner
-from run_for_instance_development_task import read_manifest_row
+from run_for_instance_development_task import read_manifest_row, validate_run_id
 
 
 def write_failure(
@@ -60,22 +60,28 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    run_id = validate_run_id(args.run_id)
+    args.run_id = run_id
     config, _ = runner.load_config(args.config)
     row = read_manifest_row(
         Path(args.manifest).expanduser().resolve(), args.task_index
     )
-    safe_plot_id = row["safe_plot_id"]
+    safe_plot_id = runner.validate_safe_plot_id(row["safe_plot_id"])
     predictions_base = runner.resolve_path(config["paths"]["predictions_root"])
     metadata_base = runner.resolve_path(config["paths"]["metadata_root"])
     tables_base = runner.resolve_path(config["paths"]["tables_root"])
-    prediction = (
-        predictions_base
-        / args.run_id
-        / safe_plot_id
-        / f"{safe_plot_id}_treelearn_development_predictions.npz"
+    prediction = runner.contained_path(
+        predictions_base,
+        run_id,
+        safe_plot_id,
+        f"{safe_plot_id}_treelearn_development_predictions.npz",
     )
-    inference_path = metadata_base / args.run_id / f"{safe_plot_id}_inference.json"
-    final_root = tables_base / args.run_id / "per_plot" / safe_plot_id
+    inference_path = runner.contained_path(
+        metadata_base, run_id, f"{safe_plot_id}_inference.json"
+    )
+    final_root = runner.contained_path(
+        tables_base, run_id, "per_plot", safe_plot_id
+    )
     if final_root.exists():
         raise FileExistsError(f"Refusing existing evaluation root: {final_root}")
     final_root.parent.mkdir(parents=True, exist_ok=True)
@@ -110,7 +116,7 @@ def main() -> int:
             "--inference-metadata",
             str(inference_path),
             "--run-id",
-            args.run_id,
+            run_id,
             "--plot-id",
             row["plot_id"],
             "--relative-path",

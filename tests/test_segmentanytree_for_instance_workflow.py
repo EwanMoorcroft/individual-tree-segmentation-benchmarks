@@ -475,6 +475,176 @@ def test_normaliser_splits_tiny_labelled_prediction(tmp_path: Path) -> None:
     assert read_ply_vertices(outputs[0])[0].vertex_count == 2
 
 
+def test_normaliser_refuses_symlinked_output_without_touching_target(
+    tmp_path: Path,
+) -> None:
+    normaliser = load_script(
+        "methods/segmentanytree/scripts/runtime/normalise_segmentanytree_predictions.py",
+        "segmentanytree_normaliser_symlink",
+    )
+    input_path = tmp_path / "prediction.las"
+    protected_dir = tmp_path / "protected"
+    protected_dir.mkdir()
+    marker = protected_dir / "keep.txt"
+    marker.write_text("keep\n", encoding="utf-8")
+    output_link = tmp_path / "normalised"
+    output_link.symlink_to(protected_dir, target_is_directory=True)
+    write_labelled_prediction_las(input_path)
+
+    with pytest.raises(ValueError, match="symlinked destination"):
+        normaliser.normalise(
+            input_path=input_path,
+            output_dir=output_link,
+            requested_format="labelled_point_cloud",
+            instance_field="predicted_instance",
+            ignored_labels={"0", "-1"},
+            overwrite=True,
+        )
+
+    assert output_link.is_symlink()
+    assert marker.read_text(encoding="utf-8") == "keep\n"
+
+
+def test_normaliser_allows_canonical_platform_style_parent_alias(
+    tmp_path: Path,
+) -> None:
+    normaliser = load_script(
+        "methods/segmentanytree/scripts/runtime/normalise_segmentanytree_predictions.py",
+        "segmentanytree_normaliser_parent_alias",
+    )
+    input_path = tmp_path / "prediction.las"
+    real_parent = tmp_path / "real_parent"
+    real_parent.mkdir()
+    alias_parent = tmp_path / "alias_parent"
+    alias_parent.symlink_to(real_parent, target_is_directory=True)
+    write_labelled_prediction_las(input_path)
+
+    payload = normaliser.normalise(
+        input_path=input_path,
+        output_dir=alias_parent / "normalised",
+        requested_format="labelled_point_cloud",
+        instance_field="predicted_instance",
+        ignored_labels={"0", "-1"},
+        overwrite=False,
+    )
+
+    canonical_output = real_parent / "normalised"
+    assert Path(payload["output_path"]) == canonical_output
+    assert (canonical_output / "instance_7.ply").is_file()
+
+
+def test_normaliser_refuses_output_nested_below_input(tmp_path: Path) -> None:
+    normaliser = load_script(
+        "methods/segmentanytree/scripts/runtime/normalise_segmentanytree_predictions.py",
+        "segmentanytree_normaliser_overlap",
+    )
+    input_dir = tmp_path / "per_tree"
+    input_dir.mkdir()
+    source = input_dir / "tree.ply"
+    write_xyz_ply(source, np.array([[1.0, 2.0, 3.0]]))
+
+    with pytest.raises(ValueError, match="must not be equal, nested"):
+        normaliser.normalise(
+            input_path=input_dir,
+            output_dir=input_dir / "normalised",
+            requested_format="per_tree_directory",
+            instance_field=None,
+            ignored_labels=set(),
+            overwrite=True,
+        )
+
+    assert source.is_file()
+    assert not (input_dir / "normalised").exists()
+
+
+def test_normaliser_failed_overwrite_preserves_previous_output(
+    tmp_path: Path,
+) -> None:
+    normaliser = load_script(
+        "methods/segmentanytree/scripts/runtime/normalise_segmentanytree_predictions.py",
+        "segmentanytree_normaliser_failed_overwrite",
+    )
+    input_path = tmp_path / "prediction.las"
+    output_dir = tmp_path / "normalised"
+    output_dir.mkdir()
+    marker = output_dir / "keep.txt"
+    marker.write_text("old output\n", encoding="utf-8")
+    write_labelled_prediction_las(input_path)
+
+    with pytest.raises(ValueError, match="missing instance field"):
+        normaliser.normalise(
+            input_path=input_path,
+            output_dir=output_dir,
+            requested_format="labelled_point_cloud",
+            instance_field="missing_field",
+            ignored_labels={"0", "-1"},
+            overwrite=True,
+        )
+
+    assert marker.read_text(encoding="utf-8") == "old output\n"
+    assert not list(tmp_path.glob(".normalised.partial.*"))
+
+
+def test_normaliser_invalid_external_metadata_preserves_previous_output(
+    tmp_path: Path,
+) -> None:
+    normaliser = load_script(
+        "methods/segmentanytree/scripts/runtime/normalise_segmentanytree_predictions.py",
+        "segmentanytree_normaliser_invalid_metadata",
+    )
+    input_path = tmp_path / "prediction.las"
+    output_dir = tmp_path / "normalised"
+    output_dir.mkdir()
+    marker = output_dir / "keep.txt"
+    marker.write_text("old output\n", encoding="utf-8")
+    invalid_metadata = tmp_path / "metadata_directory"
+    invalid_metadata.mkdir()
+    write_labelled_prediction_las(input_path)
+
+    with pytest.raises(IsADirectoryError, match="Metadata output is a directory"):
+        normaliser.normalise(
+            input_path=input_path,
+            output_dir=output_dir,
+            requested_format="labelled_point_cloud",
+            instance_field="predicted_instance",
+            ignored_labels={"0", "-1"},
+            overwrite=True,
+            metadata_path=invalid_metadata,
+        )
+
+    assert marker.read_text(encoding="utf-8") == "old output\n"
+    assert not list(tmp_path.glob(".normalised.partial.*"))
+
+
+def test_normaliser_successful_overwrite_swaps_complete_directory(
+    tmp_path: Path,
+) -> None:
+    normaliser = load_script(
+        "methods/segmentanytree/scripts/runtime/normalise_segmentanytree_predictions.py",
+        "segmentanytree_normaliser_successful_overwrite",
+    )
+    input_path = tmp_path / "prediction.las"
+    output_dir = tmp_path / "normalised"
+    output_dir.mkdir()
+    (output_dir / "obsolete.txt").write_text("old\n", encoding="utf-8")
+    write_labelled_prediction_las(input_path)
+
+    payload = normaliser.normalise(
+        input_path=input_path,
+        output_dir=output_dir,
+        requested_format="labelled_point_cloud",
+        instance_field="predicted_instance",
+        ignored_labels={"0", "-1"},
+        overwrite=True,
+    )
+
+    assert payload["predicted_instance_count"] == 2
+    assert not (output_dir / "obsolete.txt").exists()
+    assert (output_dir / "normalisation_metadata.json").is_file()
+    assert not list(tmp_path.glob(".normalised.partial.*"))
+    assert not list(tmp_path.glob(".normalised.backup.*"))
+
+
 def test_export_patch_is_narrow_and_requires_expected_source() -> None:
     patcher = load_script(
         (

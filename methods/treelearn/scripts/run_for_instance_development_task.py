@@ -26,6 +26,12 @@ def read_manifest_row(path: Path, task_index: int) -> dict[str, Any]:
     return matches[0]
 
 
+def validate_run_id(value: Any) -> str:
+    if not isinstance(value, str) or not runner.RUN_ID_PATTERN.fullmatch(value):
+        raise ValueError(f"Unsafe TreeLearn run ID: {value!r}")
+    return value
+
+
 def write_preflight_failure(
     config_path: str,
     run_id: str,
@@ -33,10 +39,15 @@ def write_preflight_failure(
     row: dict[str, str] | None,
     error: Exception,
 ) -> None:
+    safe_run_id = validate_run_id(run_id)
     config, _ = runner.load_config(config_path)
     metadata_base = runner.resolve_path(config["paths"]["metadata_root"])
-    safe_plot_id = (row or {}).get("safe_plot_id", f"task_{task_index:03d}")
-    output = metadata_base / run_id / f"{safe_plot_id}_inference.json"
+    safe_plot_id = runner.validate_safe_plot_id(
+        (row or {}).get("safe_plot_id", f"task_{task_index:03d}")
+    )
+    output = runner.contained_path(
+        metadata_base, safe_run_id, f"{safe_plot_id}_inference.json"
+    )
     if output.exists():
         return
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -83,6 +94,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    run_id = validate_run_id(args.run_id)
     manifest = Path(args.manifest).expanduser().resolve()
     row: dict[str, str] | None = None
     try:
@@ -106,7 +118,7 @@ def main() -> int:
             "--training-mode",
             args.training_mode,
             "--run-id",
-            args.run_id,
+            run_id,
             "--relative-path",
             row["relative_path"],
             "--plot-id",
@@ -131,7 +143,7 @@ def main() -> int:
     except Exception as exc:
         write_preflight_failure(
             args.config,
-            args.run_id,
+            run_id,
             args.task_index,
             row,
             exc,

@@ -7,6 +7,8 @@ import json
 import re
 import shutil
 import sys
+import tempfile
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -31,6 +33,14 @@ def resolve_path(path_text: str) -> Path:
     if not path.is_absolute():
         path = ROOT / path
     return path.resolve()
+
+
+def resolve_destination_path(path_text: str) -> Path:
+    """Return an absolute destination without following its final symlink."""
+    path = Path(path_text).expanduser()
+    if not path.is_absolute():
+        path = ROOT / path
+    return path.absolute()
 
 
 def load_xyz(path: Path) -> np.ndarray:
@@ -88,9 +98,18 @@ def safe_component(value: str) -> str:
     return component or "unnamed"
 
 
-def prepare_output_directory(path: Path, overwrite: bool) -> None:
-    if path.is_symlink():
-        raise ValueError(f"Refusing to replace symlinked output directory: {path}")
+def canonical_destination(path: Path) -> Path:
+    """Canonicalise existing parents without following the final component."""
+    lexical = path.absolute()
+    if lexical.is_symlink():
+        raise ValueError(f"Refusing symlinked destination: {lexical}")
+    for parent in lexical.parents:
+        if parent.is_symlink() and not parent.exists():
+            raise ValueError(f"Refusing destination below dangling symlink: {parent}")
+    return lexical.parent.resolve(strict=False) / lexical.name
+
+
+def validate_output_directory(path: Path, overwrite: bool) -> None:
     if path.exists() and not path.is_dir():
         raise FileExistsError(f"Output path exists and is not a directory: {path}")
     if path.exists() and any(path.iterdir()):
@@ -98,8 +117,47 @@ def prepare_output_directory(path: Path, overwrite: bool) -> None:
             raise FileExistsError(
                 f"Output directory is not empty; pass --overwrite to replace it: {path}"
             )
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
+
+
+def paths_overlap(first: Path, second: Path) -> bool:
+    return first == second or first in second.parents or second in first.parents
+
+
+def install_staged_directory(staged: Path, destination: Path) -> None:
+    """Atomically install a sibling directory, restoring the old one on failure."""
+    backup: Path | None = None
+    if destination.exists():
+        backup = destination.parent / f".{destination.name}.backup.{uuid.uuid4().hex}"
+        destination.rename(backup)
+    try:
+        staged.rename(destination)
+    except Exception:
+        if backup is not None and not destination.exists():
+            backup.rename(destination)
+        raise
+    if backup is not None:
+        shutil.rmtree(backup)
+
+
+def stage_json(destination: Path, payload: dict[str, Any]) -> Path:
+    """Validate and stage JSON beside its destination without replacing it."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    canonical_after_mkdir = canonical_destination(destination)
+    if canonical_after_mkdir != destination:
+        raise ValueError(f"Metadata destination changed during preparation: {destination}")
+    if destination.exists() and destination.is_dir():
+        raise IsADirectoryError(f"Metadata output is a directory: {destination}")
+    temporary = destination.parent / (
+        f".{destination.name}.partial.{uuid.uuid4().hex}"
+    )
+    try:
+        temporary.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
+    return temporary
 
 
 def detect_format(input_path: Path, requested: str) -> str:
@@ -202,57 +260,104 @@ def normalise(
     overwrite: bool,
     metadata_path: Path | None = None,
 ) -> dict[str, Any]:
+    input_path = input_path.resolve()
+    output_dir = canonical_destination(output_dir)
     if not input_path.exists():
         raise FileNotFoundError(f"SegmentAnyTree output does not exist: {input_path}")
     detected_format = detect_format(input_path, requested_format)
-    prepare_output_directory(output_dir, overwrite)
+    if detected_format == "labelled_point_cloud" and not instance_field:
+        raise ValueError("--instance-field is required for labelled_point_cloud format")
+    if detected_format == "per_tree_directory" and instance_field:
+        raise ValueError("--instance-field is not used with per_tree_directory format")
 
+    validate_output_directory(output_dir, overwrite)
+    canonical_output = output_dir.resolve(strict=False)
+    if paths_overlap(input_path, canonical_output):
+        raise ValueError(
+            "Input and output paths must not be equal, nested, or contain one another: "
+            f"input={input_path}, output={canonical_output}"
+        )
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    if canonical_destination(output_dir) != canonical_output:
+        raise ValueError(f"Output destination changed during preparation: {output_dir}")
+    staged_dir = Path(
+        tempfile.mkdtemp(
+            prefix=f".{output_dir.name}.partial.", dir=str(output_dir.parent)
+        )
+    )
+    external_metadata_stage: Path | None = None
     try:
         if detected_format == "labelled_point_cloud":
             instances, ignored_point_count = normalise_labelled_point_cloud(
-                input_path, output_dir, instance_field, ignored_labels
+                input_path, staged_dir, instance_field, ignored_labels
             )
         elif detected_format == "per_tree_directory":
-            if instance_field:
-                raise ValueError(
-                    "--instance-field is not used with per_tree_directory format"
-                )
             instances, ignored_point_count = normalise_per_tree_directory(
-                input_path, output_dir
+                input_path, staged_dir
             )
         else:
             raise ValueError(f"Unsupported detected format: {detected_format}")
-    except Exception:
-        if not any(output_dir.iterdir()):
-            output_dir.rmdir()
-        raise
+        if not instances:
+            raise ValueError(
+                "No predicted instances remained after ignored labels were removed"
+            )
+        for record in instances:
+            staged_output = Path(record["output"])
+            record["output"] = str(
+                output_dir / staged_output.relative_to(staged_dir)
+            )
+        payload = {
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+            "input_path": str(input_path),
+            "output_path": str(output_dir),
+            "requested_format": requested_format,
+            "detected_format": detected_format,
+            "instance_field": instance_field,
+            "predicted_instance_count": len(instances),
+            "ignored_predicted_labels": sorted(ignored_labels),
+            "ignored_point_count": ignored_point_count,
+            "input_point_count": sum(record["point_count"] for record in instances)
+            + ignored_point_count,
+            "output_point_count": sum(record["point_count"] for record in instances),
+            "instances": instances,
+        }
 
-    if not instances:
-        raise ValueError(
-            "No predicted instances remained after ignored labels were removed"
-        )
-    payload = {
-        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "input_path": str(input_path),
-        "output_path": str(output_dir),
-        "requested_format": requested_format,
-        "detected_format": detected_format,
-        "instance_field": instance_field,
-        "predicted_instance_count": len(instances),
-        "ignored_predicted_labels": sorted(ignored_labels),
-        "ignored_point_count": ignored_point_count,
-        "input_point_count": sum(record["point_count"] for record in instances)
-        + ignored_point_count,
-        "output_point_count": sum(record["point_count"] for record in instances),
-        "instances": instances,
-    }
-    destination = metadata_path or output_dir / "normalisation_metadata.json"
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    payload["metadata_path"] = str(destination)
-    return payload
+        if metadata_path is None:
+            destination = output_dir / "normalisation_metadata.json"
+            (staged_dir / destination.name).write_text(
+                json.dumps(payload, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+        else:
+            destination = canonical_destination(metadata_path)
+            canonical_metadata = destination.resolve(strict=False)
+            if paths_overlap(input_path, canonical_metadata):
+                raise ValueError(
+                    "Metadata output must not overlap the prediction input: "
+                    f"input={input_path}, metadata={canonical_metadata}"
+                )
+            if canonical_metadata == canonical_output or canonical_output in canonical_metadata.parents:
+                relative_metadata = canonical_metadata.relative_to(canonical_output)
+                staged_metadata = staged_dir / relative_metadata
+                staged_metadata.parent.mkdir(parents=True, exist_ok=True)
+                staged_metadata.write_text(
+                    json.dumps(payload, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+            else:
+                staged_metadata = None
+                external_metadata_stage = stage_json(destination, payload)
+
+        install_staged_directory(staged_dir, output_dir)
+        if external_metadata_stage is not None:
+            external_metadata_stage.replace(destination)
+        payload["metadata_path"] = str(destination)
+        return payload
+    finally:
+        if staged_dir.exists():
+            shutil.rmtree(staged_dir)
+        if external_metadata_stage is not None:
+            external_metadata_stage.unlink(missing_ok=True)
 
 
 def parse_args() -> argparse.Namespace:
@@ -287,12 +392,12 @@ def main() -> int:
     }
     payload = normalise(
         input_path=resolve_path(args.input),
-        output_dir=resolve_path(args.output_dir),
+        output_dir=resolve_destination_path(args.output_dir),
         requested_format=args.format,
         instance_field=args.instance_field,
         ignored_labels=ignored_labels,
         overwrite=args.overwrite,
-        metadata_path=resolve_path(args.metadata_output)
+        metadata_path=resolve_destination_path(args.metadata_output)
         if args.metadata_output
         else None,
     )

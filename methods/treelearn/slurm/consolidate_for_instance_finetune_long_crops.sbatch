@@ -7,7 +7,8 @@
 #SBATCH --output=logs/treelearn_for_instance/treelearn_long_merge_%j.out
 #SBATCH --error=logs/treelearn_for_instance/treelearn_long_merge_%j.err
 set -euo pipefail
-cd "$HOME/scratch/tree-seg-benchmark"
+TREELEARN_PROJECT_ROOT="${TREELEARN_PROJECT_ROOT:-$HOME/scratch/tree-seg-benchmark}"
+cd "$TREELEARN_PROJECT_ROOT"
 test "${TREELEARN_FINETUNE_LONG_CONFIRMED:-0}" = 1
 test "$(git rev-parse HEAD)" = "$TREELEARN_EXPECTED_BENCHMARK_COMMIT"
 test -z "$(git status --porcelain)"

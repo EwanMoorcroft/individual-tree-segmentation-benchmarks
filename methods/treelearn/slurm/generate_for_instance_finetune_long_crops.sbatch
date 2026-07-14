@@ -7,7 +7,8 @@
 #SBATCH --output=logs/treelearn_for_instance/treelearn_long_crops_%A_%a.out
 #SBATCH --error=logs/treelearn_for_instance/treelearn_long_crops_%A_%a.err
 set -euo pipefail
-cd "$HOME/scratch/tree-seg-benchmark"
+TREELEARN_PROJECT_ROOT="${TREELEARN_PROJECT_ROOT:-$HOME/scratch/tree-seg-benchmark}"
+cd "$TREELEARN_PROJECT_ROOT"
 test "${TREELEARN_FINETUNE_LONG_CONFIRMED:-0}" = 1
 test "$(git rev-parse HEAD)" = "$TREELEARN_EXPECTED_BENCHMARK_COMMIT"
 test -z "$(git status --porcelain)"
@@ -42,13 +43,13 @@ PY
 )
 cd "$TREELEARN_REPO"
 export PYTHONHASHSEED="$CROP_SEED"
-python "$HOME/scratch/tree-seg-benchmark/methods/treelearn/scripts/run_treelearn_crop_generation_seeded.py" \
+python "$TREELEARN_PROJECT_ROOT/methods/treelearn/scripts/run_treelearn_crop_generation_seeded.py" \
   --treelearn-repo "$TREELEARN_REPO" \
   --config "$CROP_CONFIG" \
   --seed "$CROP_SEED"
 EXPECTED_CROPS="${TREELEARN_LONG_CROPS_PER_PLOT:-32}"
 test "$(find "$CROP_ROOT" -maxdepth 1 -type f -name '*.npz' | wc -l)" -ge "$EXPECTED_CROPS"
-cd "$HOME/scratch/tree-seg-benchmark"
+cd "$TREELEARN_PROJECT_ROOT"
 python methods/treelearn/scripts/inventory_for_instance_finetune_long_crops.py \
   --freeze "$TREELEARN_LONG_FREEZE" \
   --task-index "$SLURM_ARRAY_TASK_ID"

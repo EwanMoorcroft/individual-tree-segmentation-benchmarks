@@ -299,6 +299,11 @@ def test_manifest_contract_rejects_test_duplicate_and_unsafe_rows(tmp_path: Path
     with pytest.raises(ValueError, match="LAS file"):
         common.strict_relative_path("CULS/plot.laz")
 
+    relative_metadata_rows = [dict(row) for row in rows]
+    relative_metadata_rows[0]["split_metadata"] = "data_split_metadata.csv"
+    with pytest.raises(ValueError, match="split metadata is not absolute"):
+        common.validate_manifest_rows(relative_metadata_rows)
+
     manifest = tmp_path / "manifest.json"
     write_manifest(manifest, rows)
     payload = json.loads(manifest.read_text(encoding="utf-8"))
@@ -306,6 +311,48 @@ def test_manifest_contract_rejects_test_duplicate_and_unsafe_rows(tmp_path: Path
     manifest.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(ValueError, match="lock held-out test"):
         common.load_manifest(manifest)
+
+
+def test_development_tasks_reject_traversal_run_ids_before_writes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    task = load_script(
+        "treelearn_development_task_run_id",
+        "run_for_instance_development_task.py",
+    )
+    evaluator = load_script(
+        "treelearn_development_evaluator_run_id",
+        "evaluate_for_instance_development_task.py",
+    )
+
+    with pytest.raises(ValueError, match="Unsafe TreeLearn run ID"):
+        task.write_preflight_failure(
+            "missing.yml",
+            "../../escape",
+            0,
+            None,
+            ValueError("synthetic failure"),
+        )
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "evaluate_for_instance_development_task.py",
+            "--config",
+            "missing.yml",
+            "--manifest",
+            "missing.json",
+            "--task-index",
+            "0",
+            "--run-id",
+            str(tmp_path / "absolute_escape"),
+        ],
+    )
+    with pytest.raises(ValueError, match="Unsafe TreeLearn run ID"):
+        evaluator.main()
+    assert not (tmp_path / "absolute_escape").exists()
 
 
 def test_development_task_selection_is_deterministic_and_strict(tmp_path: Path) -> None:

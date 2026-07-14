@@ -4,7 +4,9 @@ test "${TREELEARN_FINETUNE_LONG_CONFIRMED:-0}" = 1 || {
   echo "Set TREELEARN_FINETUNE_LONG_CONFIRMED=1." >&2
   exit 2
 }
-PROJECT_ROOT="${TREELEARN_PROJECT_ROOT:-$HOME/scratch/tree-seg-benchmark}"
+TREELEARN_PROJECT_ROOT="${TREELEARN_PROJECT_ROOT:-$HOME/scratch/tree-seg-benchmark}"
+export TREELEARN_PROJECT_ROOT
+PROJECT_ROOT="$TREELEARN_PROJECT_ROOT"
 TREELEARN_ENV="${TREELEARN_ENV:-$HOME/fastscratch/venvs/treelearn}"
 TREELEARN_REPO="${TREELEARN_REPO:-$HOME/fastscratch/external/TreeLearn}"
 TREELEARN_DATASET_ROOT="${TREELEARN_DATASET_ROOT:-$HOME/data/datasets/for_instance/FORinstance_dataset}"

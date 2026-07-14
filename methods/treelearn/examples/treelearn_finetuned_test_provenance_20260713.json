@@ -34,6 +34,9 @@
   "next_gate": "treelearn_benchmark_complete",
   "output_roots": {
     "checkpoint": "data/checkpoints/treelearn/treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227/epoch_35.pth",
+    "metadata": "results/metadata/treelearn_for_instance/finetuned_test_runs/treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227",
+    "predictions": "data/predictions/treelearn/for_instance_finetuned_test/treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227",
+    "retention_manifest": "results/tables/treelearn_for_instance/finetuned_test/treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227/retention_manifest.json",
     "tables": "results/tables/treelearn_for_instance/finetuned_test/treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227"
   },
   "plots": {
@@ -45,11 +48,14 @@
   "result_role": "completed_primary_result",
   "result_status": "completed_aligned_pointwise_test",
   "result_table": "methods/treelearn/examples/treelearn_finetuned_test_results_20260713.csv",
+  "plot_result_table": "methods/treelearn/examples/treelearn_finetuned_test_plot_results_20260713.csv",
+  "source_plot_summary_sha256": "031e747e10c6b1d0a61b9f712f12bb0bcf231ae25ff4a0f730a9b61175bdfa90",
   "retention": {
     "complete_test_prediction_set_retained": true,
     "manifest_sha256": "972ad17ba103b151095d2925862e76e7186594b549d659cea2ca781d62600b0b",
     "status": "retention_verified",
-    "verified_prediction_file_count": 55
+    "verified_prediction_file_count": 55,
+    "verified_prediction_size_bytes": 4547400887
   },
   "run_id": "treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227",
   "run_summary_sha256": "a612e3f1b8a51aaf3b86ba977262ee45941721a50f693573cec01324dbdfce8b",
@@ -57,5 +63,5 @@
   "source": "Barkla Slurm completion records and frozen aggregate summaries supplied after the one-time held-out test gate completed",
   "summary_sha256": "f6ba94aae5e6307d57967b6153b40ebbacb743d17d74cf5a565631e01448e689",
   "upstream_commit": "fd240ce7caa4c444fe3418aca454dc578bc557d4",
-  "variant": "fine_tuned_on_dev_long_epoch_35"
+  "variant": "fine_tuned_on_dev"
 }

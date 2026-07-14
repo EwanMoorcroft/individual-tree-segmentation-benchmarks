@@ -15,9 +15,10 @@ diagnostic values are documented in
 [`provisional_released_checkpoint_results.md`](../../methods/segmentanytree/docs/provisional_released_checkpoint_results.md).
 The aligned development-trained evaluation is complete and retained as
 historical evidence. Run `sat_for_quicktune_to49_20260706_140730` has 11-plot
-held-out mean plot F1 `0.4825` and micro F1 `0.4692`. The current target is a
-two-variant comparison: evaluate the released checkpoint unchanged, then
-fine-tune those released weights on development data and evaluate again.
+held-out mean plot F1 `0.4825` and micro F1 `0.4692`; it is not a target row.
+The completed target comparison evaluated the released checkpoint unchanged,
+then fine-tuned those released weights on development data and evaluated the
+frozen development-selected checkpoint once on the held-out split.
 
 ## Split Control
 
@@ -31,7 +32,7 @@ label in metadata and metric tables.
   before evaluating the test set.
 - Record the model checkpoint, external commit and container route.
 
-## Current SegmentAnyTree Sequence
+## Completed SegmentAnyTree Sequence
 
 1. Reproduce the upstream seed-42 split of development plots into 16 training
    and 5 validation plots.
@@ -49,9 +50,12 @@ label in metadata and metric tables.
    separately.
 9. Rebuild the workbook and public-safe tables only after all gates pass.
 
-Stages 1 and 2 are established; stages 3 through 9 are pending guarded Barkla
-execution. The historical from-scratch aggregate and provenance manifest are
-retained under [`methods/segmentanytree/examples/`](../../methods/segmentanytree/examples/)
+All nine stages completed. The published-pretrained target obtained mean plot
+F1 `0.453409` and micro F1 `0.444245`; the development-fine-tuned target
+obtained mean plot F1 `0.544679` and micro F1 `0.531987`. The public per-plot,
+site and overall tables reconcile to 11 test plots and 323 references for each
+variant. The historical from-scratch aggregate and provenance manifest remain
+under [`methods/segmentanytree/examples/`](../../methods/segmentanytree/examples/)
 and must not be used as either target result.
 
 Every completed accuracy row records reference and prediction counts, TP, FP,
@@ -66,6 +70,10 @@ peak memory, checkpoint identity, thresholds and semantic masks.
 4. Fine-tuned checkpoint selection must use the five development validation
    plots only.
 5. Each target must retain all 11 test predictions and aligned metric files.
+
+All five gates passed for both target variants. The shared off-Git retention
+manifest and its SHA-256 are recorded in the public provenance and retention
+registry.
 
 The historical run has provenance gaps for the exact workflow commit,
 container digest and final per-plot table transfer. Its retained aggregate is

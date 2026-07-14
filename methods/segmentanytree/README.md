@@ -96,6 +96,9 @@ and provenance are recorded in
 [`docs/final_results_20260711.md`](docs/final_results_20260711.md).
 The committed site table is
 [`examples/sat_completed_target_site_results_20260711.csv`](examples/sat_completed_target_site_results_20260711.csv).
+The committed 22-row per-plot source table is
+[`examples/sat_completed_target_plot_results_20260711.csv`](examples/sat_completed_target_plot_results_20260711.csv);
+each row records the SHA-256 of its frozen Barkla metrics JSON.
 
 On the 11 held-out plots, the retained historical from-scratch checkpoint has
 mean plot F1 `0.4825`

@@ -155,12 +155,12 @@ def test_cross_method_results_separate_comparable_groups_and_retain_predictions(
         retention = list(csv.DictReader(handle))
     retained = {(row["method_slug"], row["variant"]): row for row in retention}
     for key in (
-        ("treex", "external_training_only"),
+        ("treex", "unsupervised_parameterised"),
         ("segmentanytree", "published_pretrained"),
         ("segmentanytree", "fine_tuned_on_dev"),
         ("treelearn", "published_pretrained"),
         ("treelearn", "fine_tuned_checkpoint_sweep"),
-        ("treelearn", "fine_tuned_on_dev_long_epoch_35"),
+        ("treelearn", "fine_tuned_on_dev"),
     ):
         assert retained[key]["future_metrics_without_inference"] == "true"
     assert retained[("treelearn", "published_pretrained")]["run_id"] == (

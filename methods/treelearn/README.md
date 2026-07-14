@@ -146,6 +146,21 @@ The dependent CPU evaluation also requires the repository's existing
 
 ## Slurm Workflow
 
+The large workflow is divided by role. These names are retained because they
+are part of the frozen run evidence:
+
+| Role | Entrypoint | Status and use |
+| --- | --- | --- |
+| Canonical development-only training and freeze | [`submit_for_instance_finetune_long.sh`](slurm/submit_for_instance_finetune_long.sh) | Produced the frozen seed-42 epoch-35 checkpoint; no test access |
+| Canonical fine-tuned test evidence | [`submit_for_instance_finetuned_test.sh`](slurm/submit_for_instance_finetuned_test.sh) | Completed one authorised held-out run; historical reproduction record, not a selection route |
+| Canonical clean-checkpoint test evidence | [`submit_for_instance_pretrained_test.sh`](slurm/submit_for_instance_pretrained_test.sh) | Completed one authorised held-out run; historical reproduction record, not a selection route |
+| Development diagnostics | [`submit_for_instance_one_plot_smoke.sh`](slurm/submit_for_instance_one_plot_smoke.sh), [`submit_for_instance_development.sh`](slurm/submit_for_instance_development.sh) | Smoke and 21-plot development evidence only |
+| Rejected inherited-overlap route | [`submit_for_instance_finetune.sh`](slurm/submit_for_instance_finetune.sh), [`submit_for_instance_finetune_validation.sh`](slurm/submit_for_instance_finetune_validation.sh), [`for_instance_finetune.yml`](configs/for_instance_finetune.yml) | Preserved negative-result evidence; not eligible for the headline ranking |
+| Restricted historical recovery | [`submit_for_instance_pretrained_test_recovery.sh`](slurm/submit_for_instance_pretrained_test_recovery.sh) and matching `_recovery` jobs | One zero-cluster execution recovery for the frozen pretrained run; not a general rerun or tuning route |
+
+The two completed held-out routes and their recovery guard must not be
+resubmitted for model, checkpoint or post-processing selection.
+
 Use
 [`slurm/setup_treelearn_environment.sbatch`](slurm/setup_treelearn_environment.sbatch)
 only when prerequisites are absent. Submit the run through
@@ -219,6 +234,13 @@ predicted-tree points, maximum-cardinality one-to-one matching and IoU
 development summary aggregates TP, FP and FN counts before computing micro
 metrics and reports CULS, NIBIO, RMIT, SCION and TUWIEN separately. No
 prediction-size filtering or threshold selection is permitted.
+
+Public-safe 11-row source tables are retained for the
+[`published-pretrained`](examples/treelearn_pretrained_test_plot_results_20260714.csv)
+and
+[`development-fine-tuned`](examples/treelearn_finetuned_test_plot_results_20260713.csv)
+results. Each row records the SHA-256 of its frozen Barkla metrics JSON; the
+provenance files record the source plot-summary and retention-manifest hashes.
 
 ## Known Limitations
 

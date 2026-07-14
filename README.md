@@ -9,36 +9,31 @@ model files, predictions, logs and external repositories are not included.
 
 ## Current status
 
-Status last updated: 10 July 2026.
+Status last updated: 14 July 2026.
 
-- **TLS2trees on FRDR treeiso:** the 16-plot prediction and operational
-  benchmark is complete. FRDR does not contain individual-tree reference
-  labels, so this is not an accuracy benchmark and no precision, recall, F1 or
-  IoU is reported.
-- **SegmentAnyTree on FOR-instance:** the earlier 32-plot released-checkpoint
-  run is retained only as a provisional engineering diagnostic because its
-  final exports failed point-correspondence checks.
-- **SegmentAnyTree target comparison:** aligned evaluation of the released
-  pretrained checkpoint is pending. After it passes, the same released weights
-  will be fine-tuned on development data, selected on development validation
-  and evaluated on the held-out test split. No new from-scratch training is
-  planned.
-- **SegmentAnyTree historical result:** the development-selected checkpoint
-  `sat_for_quicktune_to49_20260706_140730` is retained. It reports mean plot F1
-  `0.537` on the five validation plots. On the 11
-  held-out test plots, mean plot F1 is `0.4825` and micro F1 is `0.4692`
-  (TP=202, FP=336, FN=121). The later `to55` continuation is rejected because
-  validation fell to `0.451`.
-- **TreeX on FOR-instance:** the unsupervised `pointtree` TreeX benchmark is
-  complete on the exact-path local subset of 21 development and 11 test plots.
-  The harmonised held-out result has mean plot F1 `0.3831` and micro F1
-  `0.3627`. Reference-labelled-mask mean plot F1 `0.5222` is retained only as
-  a diagnostic.
-- **TreeLearn on FOR-instance:** a guarded one-plot development smoke route is
-  scaffolded but has not been run. It is not an accuracy benchmark.
-- **Other combinations:** TLS2trees on FOR-instance, full TreeLearn evaluation
-  and the Wytham Woods benchmarks remain candidates rather than completed
-  studies.
+Three methods have completed comparable FOR-instance accuracy evaluation. All
+five headline rows use the same 11 held-out plots, 323 reference instances,
+point-aligned union-mask evaluation, IoU `>= 0.5` and maximum-cardinality
+one-to-one matching.
+
+| Method | Variant | Mean plot F1 | Micro F1 |
+| --- | --- | ---: | ---: |
+| SegmentAnyTree | Published pretrained | 0.453409 | 0.444245 |
+| SegmentAnyTree | Fine-tuned on development data | 0.544679 | 0.531987 |
+| TreeX | Unsupervised parameterised | 0.383108 | 0.362705 |
+| TreeLearn | Published pretrained | 0.078944 | 0.098694 |
+| TreeLearn | Fine-tuned on development data | 0.364685 | 0.331924 |
+
+TLS2trees has completed a 16-plot FRDR prediction and operational benchmark.
+FRDR has no individual-tree reference labels, so that work is not a
+FOR-instance accuracy result and reports no precision, recall, F1 or IoU.
+
+Historical and diagnostic results remain available but are excluded from the
+headline table: the provisional coordinate-rematched SegmentAnyTree run, the
+historical SegmentAnyTree `0.4825` mean plot F1 result, the TreeX
+reference-labelled-mask `0.5222` result, and all TreeLearn development smokes,
+overlap-affected runs and rejected validation checkpoints. TLS2trees on
+FOR-instance and the Wytham Woods benchmarks remain candidates.
 
 The [benchmark registry](BENCHMARKS.md) is the short status index. Each
 completed, provisional or candidate row records a dataset slug, method slug,
@@ -96,8 +91,9 @@ The public repository is organised primarily by method:
   TreeX benchmark using the `pointtree` API.
 - [`methods/tls2trees/README.md`](methods/tls2trees/README.md): completed FRDR
   workflow and candidate FOR-instance work.
-- [`methods/treelearn/README.md`](methods/treelearn/README.md): guarded
-  one-plot FOR-instance smoke route.
+- [`methods/treelearn/README.md`](methods/treelearn/README.md): completed
+  published-pretrained and development-fine-tuned FOR-instance workflows,
+  together with their preserved development and recovery routes.
 - [`datasets/README.md`](datasets/README.md): dataset-level configuration and
   suitability.
 - [`docs/protocols/for-instance.md`](docs/protocols/for-instance.md): fixed
@@ -128,7 +124,7 @@ Where an established method already uses more specific filenames, its README
 must name the current equivalents for preparation, inference, prediction
 adaptation, summarisation and evaluation.
 
-## Completed, pending and provisional results
+## Completed, diagnostic and provisional results
 
 The completed FRDR/TLS2trees per-plot operational summary is
 [`methods/tls2trees/examples/tls2trees_frdr_prediction_summary.csv`](methods/tls2trees/examples/tls2trees_frdr_prediction_summary.csv).
@@ -152,10 +148,10 @@ TUWIEN and RMIT as the weakest domain-transfer cases.
 
 The consolidated public workbook is
 [`outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx`](outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx).
-It includes TreeX, both completed SegmentAnyTree target variants, the published
-TreeLearn development result and the rejected TreeLearn fine-tuning validation
-result. Its source tables and metric definitions are the CSVs and protocol
-documents linked above; raw predictions are not embedded in the workbook.
+It includes the five completed held-out rows shown above. Public-safe per-plot,
+site and overall source tables independently reproduce every aggregate; raw
+predictions remain off Git under the paths and hashes recorded in the
+prediction-retention registry.
 
 ## Barkla environment
 

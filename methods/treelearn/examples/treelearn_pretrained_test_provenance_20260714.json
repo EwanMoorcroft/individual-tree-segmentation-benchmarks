@@ -49,6 +49,12 @@
     "test_result_may_be_replaced_by_development_tuning": false
   },
   "next_gate": "benchmark_complete",
+  "output_roots": {
+    "metadata": "results/metadata/treelearn_for_instance/pretrained_test_runs/treelearn_for-instance_published_pretrained_20260714_134109",
+    "predictions": "data/predictions/treelearn/for_instance_pretrained_test/treelearn_for-instance_published_pretrained_20260714_134109",
+    "retention_manifest": "results/tables/treelearn_for_instance/pretrained_test/treelearn_for-instance_published_pretrained_20260714_134109/retention_manifest.json",
+    "tables": "results/tables/treelearn_for_instance/pretrained_test/treelearn_for-instance_published_pretrained_20260714_134109"
+  },
   "plots": {
     "completed": 11,
     "expected": 11,
@@ -58,11 +64,14 @@
   "result_role": "completed_target_baseline",
   "result_status": "completed_aligned_pointwise_test",
   "result_table": "methods/treelearn/examples/treelearn_pretrained_test_results_20260714.csv",
+  "plot_result_table": "methods/treelearn/examples/treelearn_pretrained_test_plot_results_20260714.csv",
+  "source_plot_summary_sha256": "61831f26cb94b422dc55f7116934cfe6eeb5e5a9c9b8f335d47c7fe803c82852",
   "retention": {
     "complete_test_prediction_set_retained": true,
     "manifest_sha256": "e61b3413bc979eeba116eda4382fe2a5301b8460803ec1c521ca35aa96046a20",
     "status": "retention_verified",
-    "verified_prediction_file_count": 55
+    "verified_prediction_file_count": 55,
+    "verified_prediction_size_bytes": 4694894674
   },
   "run_id": "treelearn_for-instance_published_pretrained_20260714_134109",
   "run_summary_sha256": "d199c85706461abdfc1ae297e04654a15cc778c8ef1d4c42b93ef52b19381ef8",

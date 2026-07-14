@@ -152,7 +152,7 @@ label and one predicted instance label for every source point.
   SHA-256 values where the method workflow supports hashing. The final gate
   must fail when an expected prediction artefact is missing or has changed.
 - Add every accepted, rejected or diagnostic result used in reporting to
-  `outputs/sat_treex_benchmark_metrics/for_instance_prediction_retention_registry.csv`.
+  `outputs/for_instance_benchmark_metrics/for_instance_prediction_retention_registry.csv`.
   Retries use new run-specific roots and must not delete earlier evidence.
 - Record every ignored or unassigned prediction label.
 

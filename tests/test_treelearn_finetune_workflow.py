@@ -106,7 +106,10 @@ def test_completed_finetune_result_is_rejected_and_retained() -> None:
 
 
 def test_cross_method_results_separate_comparable_groups_and_retain_predictions() -> None:
-    results_path = ROOT / "outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_results.csv"
+    results_path = (
+        ROOT
+        / "outputs/for_instance_benchmark_metrics/for_instance_method_benchmark_results.csv"
+    )
     with results_path.open(encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
     assert len(rows) == 5
@@ -139,32 +142,50 @@ def test_cross_method_results_separate_comparable_groups_and_retain_predictions(
 
     diagnostics_path = (
         ROOT
-        / "outputs/sat_treex_benchmark_metrics/for_instance_method_development_diagnostics.csv"
+        / "outputs/for_instance_benchmark_metrics/for_instance_method_development_diagnostics.csv"
     )
     with diagnostics_path.open(encoding="utf-8", newline="") as handle:
         diagnostics = list(csv.DictReader(handle))
     assert len(diagnostics) == 3
     assert {row["method_slug"] for row in diagnostics} == {"treelearn"}
+    assert {row["variant"] for row in diagnostics} == {
+        "published_pretrained",
+        "fine_tuned_on_dev",
+    }
+    assert all(row["variant"] == row["training_mode"] for row in diagnostics)
     assert {row["evaluation_split"] for row in diagnostics} == {"dev", "dev_validation"}
     assert {int(row["plots"]) for row in diagnostics} == {5, 21}
     assert all(row["held_out_test_accessed"] == "false" for row in diagnostics)
     assert not any(row["comparable_group"] == "held_out_test_primary" for row in diagnostics)
 
-    retention_path = ROOT / "outputs/sat_treex_benchmark_metrics/for_instance_prediction_retention_registry.csv"
+    retention_path = (
+        ROOT
+        / "outputs/for_instance_benchmark_metrics/for_instance_prediction_retention_registry.csv"
+    )
     with retention_path.open(encoding="utf-8", newline="") as handle:
         retention = list(csv.DictReader(handle))
-    retained = {(row["method_slug"], row["variant"]): row for row in retention}
+    retained = {
+        (row["method_slug"], row["variant"], row["retention_profile"]): row
+        for row in retention
+    }
     for key in (
-        ("treex", "unsupervised_parameterised"),
-        ("segmentanytree", "published_pretrained"),
-        ("segmentanytree", "fine_tuned_on_dev"),
-        ("treelearn", "published_pretrained"),
-        ("treelearn", "fine_tuned_checkpoint_sweep"),
-        ("treelearn", "fine_tuned_on_dev"),
+        ("treex", "unsupervised_parameterised", "held_out_test"),
+        ("segmentanytree", "published_pretrained", "held_out_test"),
+        ("segmentanytree", "fine_tuned_on_dev", "held_out_test"),
+        ("treelearn", "published_pretrained", "held_out_test"),
+        ("treelearn", "fine_tuned_on_dev", "checkpoint_sweep"),
+        ("treelearn", "fine_tuned_on_dev", "held_out_test"),
     ):
         assert retained[key]["future_metrics_without_inference"] == "true"
-    assert retained[("treelearn", "published_pretrained")]["run_id"] == (
+    assert (
+        "treelearn",
+        "published_pretrained",
+        "development_diagnostic",
+    ) in retained
+    assert ("treelearn", "fine_tuned_on_dev", "epoch_70_validation") in retained
+    published = retained[("treelearn", "published_pretrained", "held_out_test")]
+    assert published["run_id"] == (
         "treelearn_for-instance_published_pretrained_20260714_134109"
     )
-    assert retained[("treelearn", "published_pretrained")]["evaluation_split"] == "test"
-    assert int(retained[("treelearn", "published_pretrained")]["retained_file_count"]) == 55
+    assert published["evaluation_split"] == "test"
+    assert int(published["retained_file_count"]) == 55

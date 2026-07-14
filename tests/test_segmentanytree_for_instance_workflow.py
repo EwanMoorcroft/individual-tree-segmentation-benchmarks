@@ -2892,7 +2892,7 @@ def test_completed_segmentanytree_public_site_results_reconcile() -> None:
 def test_cross_method_workbook_has_comparable_target_values() -> None:
     workbook = (
         ROOT
-        / "outputs/sat_treex_benchmark_metrics/"
+        / "outputs/for_instance_benchmark_metrics/"
         "for_instance_method_benchmark_tracker.xlsx"
     )
     with zipfile.ZipFile(workbook) as archive:

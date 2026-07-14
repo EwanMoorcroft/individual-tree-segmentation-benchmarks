@@ -272,7 +272,7 @@ paths:
   split_summary_csv: "results/tables/segmentanytree_for_instance_summary_by_split.csv"
   benchmark_summary_json: "results/metadata/segmentanytree_for_instance/benchmark_summary.json"
   public_results_root: "methods/segmentanytree/examples"
-  public_workbook: "outputs/sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx"
+  public_workbook: "outputs/for_instance_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx"
   provisional_released_checkpoint_workbook: "methods/segmentanytree/examples/provisional_released_checkpoint_results.xlsx"
   logs_root: "logs/segmentanytree_for_instance"
 

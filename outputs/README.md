@@ -6,7 +6,7 @@ checkpoints, containers, logs or machine-specific paths.
 
 ## FOR-instance Method Tracker
 
-[`sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx`](sat_treex_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx)
+[`for_instance_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx`](for_instance_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx)
 contains only the completed primary held-out-test results for SegmentAnyTree,
 TreeX and TreeLearn. Every result row uses the supplied 11-plot test split, 323
 reference instances and the same point-aligned evaluator. Its canonical
@@ -39,13 +39,16 @@ published-pretrained row used a documented execution-only zero-cluster
 recovery for one plot; it changed no model weights or settings and is recorded
 in the corresponding provenance file.
 
-[`sat_treex_benchmark_metrics/for_instance_method_development_diagnostics.csv`](sat_treex_benchmark_metrics/for_instance_method_development_diagnostics.csv)
+[`for_instance_benchmark_metrics/for_instance_method_development_diagnostics.csv`](for_instance_benchmark_metrics/for_instance_method_development_diagnostics.csv)
 preserves the three TreeLearn development-only diagnostics that were formerly
 mixed into the headline table. Their 21-plot and 5-plot scopes are not directly
 comparable with the primary 11-plot test results.
 
-[`sat_treex_benchmark_metrics/for_instance_prediction_retention_registry.csv`](sat_treex_benchmark_metrics/for_instance_prediction_retention_registry.csv)
+[`for_instance_benchmark_metrics/for_instance_prediction_retention_registry.csv`](for_instance_benchmark_metrics/for_instance_prediction_retention_registry.csv)
 records the off-Git prediction sets required for future metrics. A completed
 accuracy row is not publication-ready unless this registry says its prediction
 set remains retained. Headline rows include the exact prediction and metric
 roots, retention-manifest path and hash, and public evidence path.
+The `variant` column uses the same canonical method-variant slugs as the
+headline table; `retention_profile` distinguishes development diagnostics,
+checkpoint sweeps and completed held-out prediction sets.

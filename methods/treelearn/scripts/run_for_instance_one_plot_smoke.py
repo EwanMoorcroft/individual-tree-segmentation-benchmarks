@@ -347,15 +347,45 @@ def write_yaml(path: Path, payload: dict[str, Any]) -> None:
     )
 
 
-def run_pipeline(treelearn_repo: Path, pipeline_config: Path) -> None:
+def run_pipeline(
+    treelearn_repo: Path,
+    pipeline_config: Path,
+    *,
+    allow_empty_group_recovery: bool = False,
+    recovery_marker: Path | None = None,
+) -> dict[str, Any] | None:
     entrypoint = treelearn_repo / "tools" / "pipeline" / "pipeline.py"
     if not entrypoint.is_file():
         raise FileNotFoundError(f"TreeLearn pipeline entrypoint missing: {entrypoint}")
+    command = [sys.executable, str(entrypoint), "--config", str(pipeline_config)]
+    if allow_empty_group_recovery:
+        if recovery_marker is None:
+            raise ValueError("Empty-group recovery requires a marker path")
+        wrapper = ROOT / (
+            "methods/treelearn/scripts/"
+            "run_treelearn_pipeline_empty_group_guard.py"
+        )
+        command = [
+            sys.executable,
+            str(wrapper),
+            "--pipeline",
+            str(entrypoint),
+            "--config",
+            str(pipeline_config),
+            "--marker",
+            str(recovery_marker),
+        ]
     subprocess.run(
-        [sys.executable, str(entrypoint), "--config", str(pipeline_config)],
+        command,
         cwd=treelearn_repo,
         check=True,
     )
+    if not allow_empty_group_recovery:
+        return None
+    marker = json.loads(recovery_marker.read_text(encoding="utf-8"))
+    if marker.get("triggered") is not True:
+        raise ValueError("The authorized empty-group recovery was not triggered")
+    return marker
 
 
 def load_prediction_arrays(source_las: Path, raw_prediction_laz: Path) -> dict[str, Any]:
@@ -552,12 +582,43 @@ def build_metadata(
             ),
         },
         "command": [sys.executable, *sys.argv],
-        "upstream_command": [
-            sys.executable,
-            str(paths["treelearn_repo"] / "tools/pipeline/pipeline.py"),
-            "--config",
-            str(paths["pipeline_config"]),
-        ],
+        "upstream_command": (
+            [
+                sys.executable,
+                str(
+                    ROOT
+                    / "methods/treelearn/scripts/"
+                    "run_treelearn_pipeline_empty_group_guard.py"
+                ),
+                "--pipeline",
+                str(paths["treelearn_repo"] / "tools/pipeline/pipeline.py"),
+                "--config",
+                str(paths["pipeline_config"]),
+                "--marker",
+                str(paths["recovery_marker"]),
+            ]
+            if getattr(args, "allow_empty_group_recovery", False)
+            else [
+                sys.executable,
+                str(paths["treelearn_repo"] / "tools/pipeline/pipeline.py"),
+                "--config",
+                str(paths["pipeline_config"]),
+            ]
+        ),
+        "execution_recovery": {
+            "enabled": bool(getattr(args, "allow_empty_group_recovery", False)),
+            "policy": (
+                "map_all_unassigned_to_background_when_initial_grouping_is_empty"
+                if getattr(args, "allow_empty_group_recovery", False)
+                else None
+            ),
+            "marker": (
+                str(paths["recovery_marker"])
+                if getattr(args, "allow_empty_group_recovery", False)
+                else None
+            ),
+            "outcome": getattr(args, "execution_recovery_outcome", None),
+        },
         "dataset_validation": dataset_validation,
         "conversion": {
             "retained_points": dataset_validation.get("retained_points"),
@@ -586,6 +647,7 @@ def build_metadata(
                 "adapted_npz",
                 "adapted_las",
                 "metadata_json",
+                "recovery_marker",
             }
         },
         "retention": {
@@ -651,6 +713,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--safe-plot-id")
     parser.add_argument("--expected-split", default="dev")
     parser.add_argument("--held-out-test-authorized", action="store_true")
+    parser.add_argument("--allow-empty-group-recovery", action="store_true")
     parser.add_argument("--expected-point-count", type=int)
     parser.add_argument("--expected-reference-tree-count", type=int)
     parser.add_argument("--expected-input-sha256")
@@ -750,6 +813,7 @@ def main() -> int:
         predictions_root / f"{safe_plot_id}_treelearn_{artifact_label}_predictions.las"
     )
     metadata_json = metadata_root / f"{safe_plot_id}_inference.json"
+    recovery_marker = runtime_root / "empty_group_recovery.json"
 
     paths = {
         "dataset_root": dataset_root,
@@ -767,6 +831,7 @@ def main() -> int:
         "adapted_npz": adapted_npz,
         "adapted_las": adapted_las,
         "metadata_json": metadata_json,
+        "recovery_marker": recovery_marker,
         "tables_root": tables_root,
     }
 
@@ -824,7 +889,13 @@ def main() -> int:
             treelearn_pipeline_config(staged_las, checkpoint, config),
         )
 
-        run_pipeline(treelearn_repo, pipeline_config)
+        recovery_outcome = run_pipeline(
+            treelearn_repo,
+            pipeline_config,
+            allow_empty_group_recovery=args.allow_empty_group_recovery,
+            recovery_marker=recovery_marker,
+        )
+        args.execution_recovery_outcome = recovery_outcome
 
         if not raw_prediction_laz.is_file():
             raise FileNotFoundError(

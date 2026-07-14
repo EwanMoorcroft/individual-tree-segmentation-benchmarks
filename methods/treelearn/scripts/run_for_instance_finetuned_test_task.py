@@ -71,6 +71,7 @@ def main() -> int:
     parser.add_argument("--predictions-root", required=True)
     parser.add_argument("--metadata-root", required=True)
     parser.add_argument("--tables-root", required=True)
+    parser.add_argument("--allow-empty-group-recovery", action="store_true")
     args = parser.parse_args()
     row: dict[str, Any] | None = None
     training_mode: str | None = None
@@ -80,6 +81,12 @@ def main() -> int:
             Path(args.manifest).expanduser().resolve(), args.task_index, args.run_id
         )
         training_mode = str(manifest["training_mode"])
+        if args.allow_empty_group_recovery and not (
+            training_mode == "published_pretrained"
+            and args.task_index == 8
+            and row["relative_path"] == "SCION/plot_31_annotated.las"
+        ):
+            raise ValueError("Empty-group recovery is restricted to frozen test task 8")
         dataset_root = Path(args.dataset_root).expanduser().resolve()
         checkpoint = Path(args.checkpoint).expanduser().resolve()
         if (dataset_root / row["relative_path"]).resolve() != Path(
@@ -119,6 +126,8 @@ def main() -> int:
             "--expected-split-metadata-sha256", row["split_metadata_sha256"],
             "--evaluation-scope", "held_out_test",
         ]
+        if args.allow_empty_group_recovery:
+            command.append("--allow-empty-group-recovery")
         subprocess.run(command, cwd=runner.ROOT, check=True)
         return 0
     except Exception as exc:

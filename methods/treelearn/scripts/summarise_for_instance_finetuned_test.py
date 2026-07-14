@@ -50,6 +50,7 @@ def validate_inference(
     benchmark_commit: str,
     training_mode: str,
     checkpoint_source_md5: str,
+    execution_recovery: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     for field, expected in (
         ("method", "treelearn"),
@@ -80,6 +81,24 @@ def validate_inference(
         raise ValueError("TreeLearn upstream provenance differs from the frozen contract")
     if benchmark.get("commit") != benchmark_commit or benchmark.get("dirty") is not False:
         raise ValueError("Benchmark provenance differs from submission")
+    recovery = metadata.get("execution_recovery") or {}
+    if execution_recovery is None:
+        if recovery.get("enabled") is True:
+            raise ValueError("Unexpected execution recovery in test inference")
+    else:
+        expected_recovery = {
+            "enabled": True,
+            "policy": execution_recovery["policy"],
+        }
+        for field, value in expected_recovery.items():
+            require_equal(recovery.get(field), value, f"Execution recovery {field} mismatch")
+        outcome = recovery.get("outcome") or {}
+        for field, value in (
+            ("status", "empty_group_mapped_to_background"),
+            ("triggered", True),
+            ("reference_points", 0),
+        ):
+            require_equal(outcome.get(field), value, f"Execution recovery outcome {field} mismatch")
     dataset = metadata.get("dataset_validation") or {}
     for field in ("input_sha256", "split_metadata_sha256"):
         require_equal(dataset.get(field), row[field], f"Dataset {field} mismatch")
@@ -225,6 +244,7 @@ def summarise(
     metadata_root: Path,
     output_root: Path,
     expected_benchmark_commit: str,
+    recovery_manifest_path: Path | None = None,
 ) -> dict[str, Any]:
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", run_id):
         raise ValueError("Unsafe TreeLearn test run ID")
@@ -240,6 +260,32 @@ def summarise(
         raise ValueError("Test manifest checkpoint source differs from the clean contract")
     variant = str(manifest["variant"])
     training_mode = str(manifest["training_mode"])
+    execution_recovery: dict[str, Any] | None = None
+    if recovery_manifest_path is not None:
+        execution_recovery = load_object(recovery_manifest_path.resolve())
+        expected_recovery = {
+            "status": "prepared_single_execution_recovery",
+            "run_id": run_id,
+            "variant": variant,
+            "training_mode": training_mode,
+            "dataset_split": "test",
+            "held_out_test_accessed": True,
+            "repeat_test_for_setting_selection_permitted": False,
+            "model_or_parameter_selection_performed": False,
+            "task_index": 8,
+            "relative_path": "SCION/plot_31_annotated.las",
+            "checkpoint_sha256": checkpoint_sha256,
+            "recovery_benchmark_commit": expected_benchmark_commit,
+            "policy": "map_all_unassigned_to_background_when_initial_grouping_is_empty",
+        }
+        for field, value in expected_recovery.items():
+            require_equal(
+                execution_recovery.get(field), value, f"Recovery manifest {field} mismatch"
+            )
+        if not re.fullmatch(
+            r"[0-9a-f]{40}", str(execution_recovery.get("original_benchmark_commit", ""))
+        ):
+            raise ValueError("Recovery manifest original commit is invalid")
     evaluation_root = evaluation_root.resolve()
     metadata_root = metadata_root.resolve()
     output_root = output_root.resolve()
@@ -303,14 +349,23 @@ def summarise(
             })
             if failure.get("status") == "documented_evaluation_failure":
                 metadata = load_object(metadata_path)
+                row_commit = (
+                    str(execution_recovery["recovery_benchmark_commit"])
+                    if execution_recovery and row["task_index"] == execution_recovery["task_index"]
+                    else (
+                        str(execution_recovery["original_benchmark_commit"])
+                        if execution_recovery else expected_benchmark_commit
+                    )
+                )
                 retained = validate_inference(
                     metadata,
                     row,
                     run_id,
                     checkpoint_sha256,
-                    expected_benchmark_commit,
+                    row_commit,
                     training_mode,
                     checkpoint_source_md5,
+                    execution_recovery if execution_recovery and row["task_index"] == execution_recovery["task_index"] else None,
                 )
                 retention_records.append({
                     "task_index": row["task_index"], "plot_id": row["plot_id"],
@@ -325,14 +380,23 @@ def summarise(
         if not metrics_path.is_file() or not metadata_path.is_file():
             raise ValueError(f"Missing accounted test output for {row['relative_path']}")
         metadata = load_object(metadata_path)
+        row_commit = (
+            str(execution_recovery["recovery_benchmark_commit"])
+            if execution_recovery and row["task_index"] == execution_recovery["task_index"]
+            else (
+                str(execution_recovery["original_benchmark_commit"])
+                if execution_recovery else expected_benchmark_commit
+            )
+        )
         retained = validate_inference(
             metadata,
             row,
             run_id,
             checkpoint_sha256,
-            expected_benchmark_commit,
+            row_commit,
             training_mode,
             checkpoint_source_md5,
+            execution_recovery if execution_recovery and row["task_index"] == execution_recovery["task_index"] else None,
         )
         metrics = load_object(metrics_path)
         validate_metrics(metrics, metadata_path, retained, row, run_id)
@@ -401,6 +465,7 @@ def summarise(
         "verified_prediction_file_count": retained_files,
         "verified_prediction_size_bytes": retained_bytes,
         "complete_test_prediction_set_retained": len(retention_records) == len(rows),
+        "execution_recovery": execution_recovery,
         "plots": retention_records,
     }
     targets["retention_manifest"].write_text(json.dumps(retention, indent=2, sort_keys=True) + "\n")
@@ -416,6 +481,7 @@ def summarise(
         "expected_plots": len(rows), "completed_plots": completed_count,
         "documented_failures": len(failures), "retention_status": retention["status"],
         "site_counts": EXPECTED_TEST_SITE_COUNTS, "test_metrics": overall,
+        "execution_recovery": execution_recovery,
         "outputs": {key: artifact_entry(path) for key, path in targets.items() if key != "run_summary" and path.is_file()},
         "next_gate": "treelearn_benchmark_complete" if not failures else "resolve_test_execution_failures_without_model_selection",
     }
@@ -431,10 +497,12 @@ def main() -> int:
     parser.add_argument("--metadata-root", required=True)
     parser.add_argument("--output-root", required=True)
     parser.add_argument("--expected-benchmark-commit", required=True)
+    parser.add_argument("--recovery-manifest", type=Path)
     args = parser.parse_args()
     summary = summarise(
         Path(args.manifest), args.run_id, Path(args.evaluation_root),
         Path(args.metadata_root), Path(args.output_root), args.expected_benchmark_commit,
+        args.recovery_manifest,
     )
     print(f"status={summary['status']}")
     print(f"completed_plots={summary['completed_plots']}/{summary['expected_plots']}")

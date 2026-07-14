@@ -54,3 +54,43 @@ python -m json.tool "$TREELEARN_TEST_COMPLETION_GATE"
 Do not update the public tracker from partial array output. The fifth headline
 row is added only after the completion gate verifies all 11 plots and all 55
 retained prediction artefacts.
+
+## Execution-only recovery
+
+Run `treelearn_for-instance_published_pretrained_20260714_134109` completed ten
+plots, but the pinned upstream pipeline crashed on test task 8
+(`SCION/plot_31_annotated.las`) after producing no valid initial clusters. Its
+nearest-neighbour fallback cannot fit without a reference cluster. This is an
+execution fault, not permission to change the checkpoint, grouping parameters
+or evaluator.
+
+The guarded recovery route is restricted to that run and task. When initial
+grouping contains only TreeLearn's unassigned label, it maps those labels to
+TreeLearn's background label `0`. This records zero predicted instances for
+the plot instead of inventing a cluster. The route archives the original
+failure and partial aggregate evidence, removes only failed non-prediction
+intermediates, reruns task 8, then rebuilds the unchanged 11-plot summary and
+retention gate. The other ten predictions are not rerun.
+
+```bash
+cd "$HOME/scratch/tree-seg-benchmark"
+git pull --ff-only
+
+STATE_FILE="$HOME/fastscratch/treelearn_pretrained_test_treelearn_for-instance_published_pretrained_20260714_134109.env"
+
+TREELEARN_PRETRAINED_TEST_RECOVERY_CONFIRMED=1 \
+TREELEARN_PRETRAINED_TEST_STATE_FILE="$STATE_FILE" \
+  bash methods/treelearn/slurm/submit_for_instance_pretrained_test_recovery.sh
+```
+
+Monitor the recovery state file printed by the submitter:
+
+```bash
+RECOVERY_STATE_FILE=$(ls -t \
+  "$HOME"/fastscratch/treelearn_pretrained_test_recovery_treelearn_for-instance_published_pretrained_*.env \
+  | head -1)
+
+watch -n 15 bash \
+  methods/treelearn/slurm/monitor_for_instance_pretrained_test_recovery.sh \
+  "$RECOVERY_STATE_FILE"
+```

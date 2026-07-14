@@ -200,6 +200,11 @@ repeat test chains. Use
 and the [`pretrained test runbook`](docs/pretrained_test_evaluation.md). The
 public tracker must not add this row until its 11-plot completion and retention
 gate passes.
+Run `treelearn_for-instance_published_pretrained_20260714_134109` has one
+documented upstream empty-group execution failure on test task 8. The
+[`pretrained test runbook`](docs/pretrained_test_evaluation.md) defines the
+single-task, no-selection recovery; partial 10-plot metrics remain excluded
+from the headline tracker.
 
 ## Evaluation Route
 

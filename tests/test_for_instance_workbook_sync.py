@@ -129,6 +129,17 @@ PROTOCOL_ALIGNMENT_TEXT = {
         ),
     },
 }
+
+OPTIONAL_PROTOCOL_ALIGNMENT_TEXT = {
+    ("tls2trees", "published_default"): {
+        "Headline status": "Completed; separate scoring domain",
+        "Selection control": "No FOR-instance metric selection",
+        "Interpretation": (
+            "Publication-derived parameters; leaf-on excludes class-3 out-points "
+            "and was evaluated without FOR-instance metric selection."
+        ),
+    },
+}
 EXPECTED_SITES = {"CULS", "NIBIO", "RMIT", "SCION", "TUWIEN"}
 AVAILABLE_DEVELOPMENT_PLOTS = 21
 
@@ -869,14 +880,22 @@ def test_protocol_alignment_has_one_canonical_row_per_headline() -> None:
     canonical_keys = {
         (row["method_slug"], row["variant"]) for row in headlines
     }
-    assert set(PROTOCOL_ALIGNMENT_TEXT) == canonical_keys, (
+    narratives = dict(PROTOCOL_ALIGNMENT_TEXT)
+    narratives.update(
+        {
+            key: value
+            for key, value in OPTIONAL_PROTOCOL_ALIGNMENT_TEXT.items()
+            if key in canonical_keys
+        }
+    )
+    assert set(narratives) == canonical_keys, (
         "Protocol-alignment narrative expectations must cover every headline "
         "method/variant exactly"
     )
     for headline in headlines:
         key = _display_key(headline)
         row = workbook_rows[key]
-        narrative = PROTOCOL_ALIGNMENT_TEXT[
+        narrative = narratives[
             (headline["method_slug"], headline["variant"])
         ]
         for field, expected in narrative.items():

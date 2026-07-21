@@ -45,6 +45,7 @@ KNOWN_METHOD_SLUGS = {
 CANONICAL_RESULT_VARIANTS = {
     "development_tuned",
     "unsupervised_parameterised",
+    "published_default",
     "published_pretrained",
     "fine_tuned_on_dev",
 }
@@ -192,7 +193,7 @@ def test_cross_method_outputs_use_method_neutral_paths_and_canonical_variants() 
         row["variant"] == row["training_mode"]
         or (
             row["method_slug"] == "tls2trees"
-            and row["variant"] == "development_tuned"
+            and row["variant"] in {"development_tuned", "published_default"}
             and row["training_mode"] == "external_training_only"
         )
         for row in diagnostics

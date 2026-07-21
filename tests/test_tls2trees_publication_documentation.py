@@ -148,6 +148,9 @@ def test_published_default_completion_updates_every_public_index() -> None:
             "tls2trees_published_default_test_provenance.json",
             "tls2trees_published_default_prediction_retention_manifest.json",
         )
+    assert "its separate full-test workflow is ready" not in document_text(
+        "benchmark"
+    )
     for name in ("examples", "published_runbook"):
         assert_contains(
             document_text(name), run_id, mean_f1, micro_f1, *artifact_names

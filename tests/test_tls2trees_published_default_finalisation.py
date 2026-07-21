@@ -421,6 +421,9 @@ def test_finaliser_verifies_and_safely_upserts_public_evidence(tmp_path: Path) -
     assert provenance["inference_rerun"] is False
     assert provenance["benchmark_commit"] == "a" * 40
     assert provenance["publication_benchmark_commit"] == "b" * 40
+    assert provenance["source_retention_manifest_sha256"] == sha256(
+        args.source_retention_json
+    )
     assert provenance["retention_manifest_sha256"] == sha256(public_retention)
     assert provenance["public_retention_manifest_sha256"] == sha256(
         public_retention

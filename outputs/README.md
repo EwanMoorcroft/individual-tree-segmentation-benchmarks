@@ -59,7 +59,10 @@ file.
 preserves the three TreeLearn development-only diagnostics and the TLS2trees
 leaf-off target diagnostic. The TLS2trees development leaf-attachment screen
 is published separately as per-plot, candidate and provenance evidence under
-`methods/tls2trees/examples/`.
+`methods/tls2trees/examples/` in
+`tls2trees_development_leaf_screen_plot_results.csv`,
+`tls2trees_development_leaf_screen_candidate_results.csv` and
+`tls2trees_development_leaf_screen_provenance.json`.
 
 [`for_instance_benchmark_metrics/for_instance_prediction_retention_registry.csv`](for_instance_benchmark_metrics/for_instance_prediction_retention_registry.csv)
 records the off-Git prediction sets required for future metrics. A completed

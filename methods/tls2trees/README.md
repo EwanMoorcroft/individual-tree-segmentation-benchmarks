@@ -94,7 +94,12 @@ execution, immutable retained-prediction evaluation and prediction retention
 are implemented and validated on Barkla. The evaluation route excludes
 FOR-instance class-3 out-points from the scoring domain. The separate
 development leaf screen is diagnostic and cannot alter the tested
-configuration. The fixed full published-default test is submitted with
+configuration. Its public evidence is
+[`tls2trees_development_leaf_screen_plot_results.csv`](examples/tls2trees_development_leaf_screen_plot_results.csv),
+[`tls2trees_development_leaf_screen_candidate_results.csv`](examples/tls2trees_development_leaf_screen_candidate_results.csv)
+and
+[`tls2trees_development_leaf_screen_provenance.json`](examples/tls2trees_development_leaf_screen_provenance.json).
+The fixed full published-default test is submitted with
 [`slurm/for_instance/submit_published_default_held_out_test.sh`](slurm/for_instance/submit_published_default_held_out_test.sh)
 and monitored with
 [`slurm/for_instance/monitor_published_default_held_out_test.sh`](slurm/for_instance/monitor_published_default_held_out_test.sh).

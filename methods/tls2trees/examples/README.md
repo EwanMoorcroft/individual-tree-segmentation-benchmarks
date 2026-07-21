@@ -34,11 +34,14 @@ prediction files are hash-verified in the retention manifest.
 
 ## Development leaf-attachment screen
 
-The guarded finalisation route will write public leaf-screen plot, candidate
-and provenance files for the completed development-only nine-setting screen
-across five sites. All 45 metrics were valid and no held-out data were
-accessed. Publication verifies the retained Barkla summary before exporting
-the files.
+The completed development-only nine-setting screen across five sites is
+published in
+[`tls2trees_development_leaf_screen_plot_results.csv`](tls2trees_development_leaf_screen_plot_results.csv),
+[`tls2trees_development_leaf_screen_candidate_results.csv`](tls2trees_development_leaf_screen_candidate_results.csv)
+and
+[`tls2trees_development_leaf_screen_provenance.json`](tls2trees_development_leaf_screen_provenance.json).
+All 45 metrics were valid, all nine settings had identical aggregate accuracy,
+and no held-out data were accessed.
 
 ## Published-default FOR-instance result
 

@@ -381,7 +381,10 @@ job is pending. Complete publication in this order:
    the receipt-listed tracked bundle together with the synchronized workbook;
    and
 3. export the development-only leaf-screen evidence, verify the three-file
-   bundle and commit it.
+   bundle and commit
+   `tls2trees_development_leaf_screen_plot_results.csv`,
+   `tls2trees_development_leaf_screen_candidate_results.csv` and
+   `tls2trees_development_leaf_screen_provenance.json`.
 
 Each next finaliser starts only from a clean worktree. If a publication job is
 interrupted during its multi-file commit, rerun that same finaliser before
@@ -492,6 +495,16 @@ git status --short
 ```
 
 #### 3. Development leaf-screen publication
+
+The completed run
+`tls2trees_for-instance_development_tuned_leaf_screen_20260720_193825`
+produced 45/45 valid development metrics. All nine settings had identical aggregate accuracy.
+Its public evidence is
+`tls2trees_development_leaf_screen_plot_results.csv`,
+`tls2trees_development_leaf_screen_candidate_results.csv` and
+`tls2trees_development_leaf_screen_provenance.json`; the provenance confirms
+that held-out test data were not accessed and no final configuration was
+selected by this diagnostic.
 
 This finaliser is synchronous and therefore has no separate publication job to
 monitor. Confirm the source workflow first, then publish from its exact state:

@@ -40,6 +40,8 @@ LEAF_SCREEN_FILES = (
     "tls2trees_development_leaf_screen_provenance.json",
 )
 
+HEADLINE_RESULTS = OUTPUTS / "for_instance_method_benchmark_results.csv"
+
 
 def read_csv(path: Path) -> list[dict[str, str]]:
     with path.open(encoding="utf-8", newline="") as handle:
@@ -58,6 +60,14 @@ def one_result(variant: str, suffix: str) -> dict[str, str]:
     rows = read_csv(EXAMPLES / f"tls2trees_{variant}_{suffix}")
     assert len(rows) == 1
     return rows[0]
+
+
+def published_default_registry_present() -> bool:
+    return any(
+        row["method_slug"] == "tls2trees"
+        and row["variant"] == "published_default"
+        for row in read_csv(HEADLINE_RESULTS)
+    )
 
 
 def assert_contains(text: str, *tokens: str) -> None:
@@ -86,7 +96,8 @@ def test_published_default_completion_updates_every_public_index() -> None:
         EXAMPLES / f"tls2trees_published_default_{suffix}"
         for suffix in PUBLISHED_SUFFIXES
     ]
-    if not any(path.exists() for path in paths):
+    publication_required = published_default_registry_present()
+    if not publication_required and not any(path.exists() for path in paths):
         return
     assert all(path.is_file() for path in paths)
 
@@ -163,7 +174,10 @@ def test_published_default_completion_updates_every_public_index() -> None:
 
 def test_leaf_screen_completion_updates_its_public_indexes() -> None:
     paths = [EXAMPLES / name for name in LEAF_SCREEN_FILES]
-    if not any(path.exists() for path in paths):
+    publication_required = all(
+        name in document_text("registry") for name in LEAF_SCREEN_FILES
+    )
+    if not publication_required and not any(path.exists() for path in paths):
         return
     assert all(path.is_file() for path in paths)
 

@@ -876,6 +876,9 @@ def test_leaf_screen_publication_entrypoint_is_guarded_and_syntactically_valid(
     assert "TLS2TREES_LEAF_SCREEN_BENCHMARK_COMMIT" in source
     assert "PUBLICATION_BENCHMARK_COMMIT=$(git rev-parse HEAD)" in source
     assert "git merge-base --is-ancestor" in source
+    assert "TLS2TREES_LEAF_SCREEN_DIVERGED_SOURCE_COMMIT" in source
+    assert 'SOURCE_HISTORY_RELATION="reviewed_divergence"' in source
+    assert "source_history_relation=$SOURCE_HISTORY_RELATION" in source
     assert '--project-root "$PWD"' in source
     assert '--source-benchmark-commit "$SOURCE_BENCHMARK_COMMIT"' in source
     assert (
@@ -961,7 +964,10 @@ def test_leaf_screen_publication_recovery_is_explicit_and_rejects_symlinks(
         encoding="utf-8",
     )
 
-    def run(recovery: str | None) -> subprocess.CompletedProcess[str]:
+    def run(
+        recovery: str | None,
+        diverged_source_commit: str | None = None,
+    ) -> subprocess.CompletedProcess[str]:
         environment = os.environ.copy()
         environment.update(
             {
@@ -978,6 +984,14 @@ def test_leaf_screen_publication_recovery_is_explicit_and_rejects_symlinks(
             environment[
                 "TLS2TREES_LEAF_SCREEN_PUBLICATION_RECOVERY_CONFIRMED"
             ] = recovery
+        if diverged_source_commit is None:
+            environment.pop(
+                "TLS2TREES_LEAF_SCREEN_DIVERGED_SOURCE_COMMIT", None
+            )
+        else:
+            environment["TLS2TREES_LEAF_SCREEN_DIVERGED_SOURCE_COMMIT"] = (
+                diverged_source_commit
+            )
         return subprocess.run(
             ["bash", str(PUBLICATION_SCRIPT), str(state)],
             cwd=repository,
@@ -988,6 +1002,45 @@ def test_leaf_screen_publication_recovery_is_explicit_and_rejects_symlinks(
 
     assert run(None).returncode == 0
     assert run("unexpected").returncode == 2
+
+    empty_tree = subprocess.run(
+        ["git", "-C", str(repository), "hash-object", "-t", "tree", "/dev/null"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    unrelated_commit = subprocess.run(
+        [
+            "git", "-C", str(repository), "-c", "user.name=Test",
+            "-c", "user.email=test@example.invalid", "commit-tree", empty_tree,
+        ],
+        input="unrelated source\n",
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    state_values["TLS2TREES_LEAF_SCREEN_BENCHMARK_COMMIT"] = unrelated_commit
+    state.write_text(
+        "".join(
+            f"{key}={json.dumps(value)}\n"
+            for key, value in state_values.items()
+        ),
+        encoding="utf-8",
+    )
+    rejected_divergence = run(None)
+    assert rejected_divergence.returncode == 2
+    assert "not an ancestor" in rejected_divergence.stderr
+    assert run(None, "0" * 40).returncode == 2
+    assert run(None, unrelated_commit).returncode == 0
+
+    state_values["TLS2TREES_LEAF_SCREEN_BENCHMARK_COMMIT"] = commit
+    state.write_text(
+        "".join(
+            f"{key}={json.dumps(value)}\n"
+            for key, value in state_values.items()
+        ),
+        encoding="utf-8",
+    )
 
     public = repository / (
         "methods/tls2trees/examples/"

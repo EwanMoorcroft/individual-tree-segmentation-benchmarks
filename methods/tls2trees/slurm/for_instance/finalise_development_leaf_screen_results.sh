@@ -73,8 +73,22 @@ cd "$PROJECT_ROOT"
 test -d .git
 git cat-file -e "${SOURCE_BENCHMARK_COMMIT}^{commit}"
 PUBLICATION_BENCHMARK_COMMIT=$(git rev-parse HEAD)
-git merge-base --is-ancestor \
-  "$SOURCE_BENCHMARK_COMMIT" "$PUBLICATION_BENCHMARK_COMMIT"
+if git merge-base --is-ancestor \
+  "$SOURCE_BENCHMARK_COMMIT" "$PUBLICATION_BENCHMARK_COMMIT"; then
+  SOURCE_HISTORY_RELATION="ancestor"
+else
+  DIVERGED_SOURCE_COMMIT="${TLS2TREES_LEAF_SCREEN_DIVERGED_SOURCE_COMMIT:-}"
+  if [[ "$DIVERGED_SOURCE_COMMIT" != "$SOURCE_BENCHMARK_COMMIT" ]]; then
+    echo "Leaf-screen source commit is not an ancestor of the publication commit." >&2
+    echo "source_benchmark_commit=$SOURCE_BENCHMARK_COMMIT" >&2
+    echo "publication_benchmark_commit=$PUBLICATION_BENCHMARK_COMMIT" >&2
+    echo "If this is the reviewed closure branch, set" >&2
+    echo "TLS2TREES_LEAF_SCREEN_DIVERGED_SOURCE_COMMIT=$SOURCE_BENCHMARK_COMMIT" >&2
+    echo "to approve only this exact frozen source commit." >&2
+    exit 2
+  fi
+  SOURCE_HISTORY_RELATION="reviewed_divergence"
+fi
 
 FINALISER="methods/tls2trees/scripts/evaluation/finalise_tls2trees_development_leaf_screen.py"
 CANDIDATE_CONFIG="methods/tls2trees/configs/for_instance_development_tuned_leaf_screen.yml"
@@ -147,6 +161,7 @@ echo "source_state=$STATE_FILE"
 echo "source_state_sha256=$SOURCE_STATE_SHA256"
 echo "source_benchmark_commit=$SOURCE_BENCHMARK_COMMIT"
 echo "publication_benchmark_commit=$PUBLICATION_BENCHMARK_COMMIT"
+echo "source_history_relation=$SOURCE_HISTORY_RELATION"
 echo "recovery_confirmed=$RECOVERY_CONFIRMED"
 echo "summary_job=$SUMMARY_JOB"
 git status --short -- "$OUTPUT_DIR/tls2trees_development_leaf_screen_"'*'

@@ -1,4 +1,5 @@
 {
+  "benchmark_commit": "c75c2ff93d67eb083b03ea73d452bd0a04b7591d",
   "canonical_target": "leaf_on",
   "configuration_changed_after_test": false,
   "dataset": "FOR-instance",
@@ -31,8 +32,12 @@
     "variant": "development_tuned"
   },
   "diagnostic_target": "leaf_off",
+  "evaluation_benchmark_commit": "ad6eed71cd58cac6211e088ad26645fc5bda6adb",
   "evaluation_evaluator": "for_instance_tls2trees_source_row_class3_ignore",
-  "evaluation_summary_sha256": "dd2a051ba5c1a1c4873033daf7627e84a037a3af3d355667faeda5665921b754",
+  "evaluation_evaluator_sha256": "76612e52f9e5ab5c2e9a890befd3e9c0119153a01d9513a3e75f0c495f3fea0d",
+  "evaluation_plan_sha256": "18659eaa49d3e00dadbbd1e865b652c5076207c39590cb02fc2213f8d28de639",
+  "evaluation_run_id": "tls2trees_for-instance_retained_evaluation_20260721_121638",
+  "evaluation_summary_sha256": "497e920c834b5c6dd5ec11c497cf65943f6fc0fb6bbe7c951dac6c85d1f43cfe",
   "final_selection_sha256": "bd7e2b6615a53a4a395d5548061957d73299594733ef5fca4df4fb77828d4b2f",
   "held_out_test_accessed": true,
   "inference_rerun": false,

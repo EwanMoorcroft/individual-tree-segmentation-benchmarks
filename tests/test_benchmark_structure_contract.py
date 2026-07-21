@@ -43,6 +43,7 @@ KNOWN_METHOD_SLUGS = {
     "segmentanytreev2",
 }
 CANONICAL_RESULT_VARIANTS = {
+    "development_tuned",
     "unsupervised_parameterised",
     "published_pretrained",
     "fine_tuned_on_dev",
@@ -187,7 +188,15 @@ def test_cross_method_outputs_use_method_neutral_paths_and_canonical_variants() 
         diagnostics = list(csv.DictReader(handle))
     assert diagnostics
     assert {row["variant"] for row in diagnostics} <= CANONICAL_RESULT_VARIANTS
-    assert all(row["variant"] == row["training_mode"] for row in diagnostics)
+    assert all(
+        row["variant"] == row["training_mode"]
+        or (
+            row["method_slug"] == "tls2trees"
+            and row["variant"] == "development_tuned"
+            and row["training_mode"] == "external_training_only"
+        )
+        for row in diagnostics
+    )
 
     with (output_root / "for_instance_prediction_retention_registry.csv").open(
         encoding="utf-8", newline=""
@@ -260,7 +269,115 @@ def test_tracked_repository_excludes_private_or_large_runtime_artifacts() -> Non
     public_text = "\n".join(
         (ROOT / path).read_text(encoding="utf-8", errors="strict")
         for path in tracked
-        if (ROOT / path).suffix in text_suffixes
+        if (ROOT / path).is_file() and (ROOT / path).suffix in text_suffixes
     )
     assert re.search(r"/Users/[A-Za-z0-9._-]+/", public_text) is None
     assert "pending_pointwise_" + "revalidation" not in public_text
+
+
+def test_tls2trees_public_surface_uses_neutral_current_terminology() -> None:
+    completed = subprocess.run(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    repository_paths = [
+        Path(value) for value in completed.stdout.splitlines() if value
+    ]
+    text_suffixes = {
+        ".csv",
+        ".json",
+        ".md",
+        ".py",
+        ".sbatch",
+        ".sh",
+        ".txt",
+        ".yaml",
+        ".yml",
+    }
+    tls2trees_paths = [
+        path
+        for path in repository_paths
+        if path.parts[:2] == ("methods", "tls2trees")
+        and (ROOT / path).is_file()
+    ]
+    assert tls2trees_paths
+
+    migration_path_pattern = re.compile(
+        r"(?:^|[/_.-])(?:v[0-9]+|rescor(?:e|ed|ing)?|correct(?:ed|ion)|"
+        r"supersed(?:e|ed|es|ing)|invalidat(?:e|ed|ion|ing))(?:[/_.-]|$)",
+        flags=re.IGNORECASE,
+    )
+    assert not [
+        path.as_posix()
+        for path in tls2trees_paths
+        if migration_path_pattern.search(
+            re.sub(
+                r"\bleaf_v[0-9]+_e[0-9]+\b",
+                "leaf_parameter_candidate",
+                path.as_posix(),
+                flags=re.IGNORECASE,
+            )
+        )
+    ]
+
+    forbidden_content_patterns = (
+        re.compile(
+            r"for_instance_(?:pointwise|tls2trees_source_row)_v[0-9]+",
+            flags=re.IGNORECASE,
+        ),
+        re.compile(
+            r"\b(?:rescor(?:e|ed|ing)?|corrected|correction|"
+            r"supersed(?:e|ed|es|ing)|invalidat(?:e|ed|ion|ing))\b",
+            flags=re.IGNORECASE,
+        ),
+        re.compile(
+            r"\b(?:protocol|evaluator|evaluation|result|retention|alignment|"
+            r"metric|prediction)[-_ ]*v[0-9]+\b",
+            flags=re.IGNORECASE,
+        ),
+    )
+    private_path_patterns = (
+        re.compile(r"/(?:Users|users|home)/[A-Za-z0-9._-]+/"),
+        re.compile(r"/mnt/(?:scratch/)?users/[A-Za-z0-9._-]+/"),
+    )
+
+    violations: list[str] = []
+    for relative_path in repository_paths:
+        path = ROOT / relative_path
+        if not path.is_file() or path.suffix.lower() not in text_suffixes:
+            continue
+        text = path.read_text(encoding="utf-8", errors="strict")
+        if relative_path.parts[:2] == ("methods", "tls2trees"):
+            scoped_text = text
+        else:
+            is_public_result_or_documentation = (
+                relative_path.as_posix() in {"README.md", "BENCHMARKS.md"}
+                or relative_path.parts[:1] in {("datasets",), ("docs",), ("outputs",)}
+            )
+            if not is_public_result_or_documentation:
+                continue
+            scoped_text = "\n".join(
+                line for line in text.splitlines() if "tls2trees" in line.lower()
+            )
+            if not scoped_text:
+                continue
+
+        # Candidate IDs encode voxel and edge lengths, not protocol generations.
+        scoped_text = re.sub(
+            r"\bleaf_v[0-9]+_e[0-9]+\b",
+            "leaf_parameter_candidate",
+            scoped_text,
+            flags=re.IGNORECASE,
+        )
+        for pattern in (*forbidden_content_patterns, *private_path_patterns):
+            match = pattern.search(scoped_text)
+            if match:
+                violations.append(
+                    f"{relative_path.as_posix()}: {match.group(0)!r}"
+                )
+    assert not violations, "TLS2trees public-surface violations:\n" + "\n".join(
+        violations
+    )

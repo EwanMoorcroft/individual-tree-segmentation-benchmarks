@@ -2901,16 +2901,19 @@ def test_cross_method_workbook_has_comparable_target_values() -> None:
             for name in archive.namelist()
             if name.endswith(".xml")
         )
-    assert "FOR-instance Comparable Held-out Results" in text
+    assert "FOR-instance Held-out Results" in text
     assert "SegmentAnyTree" in text
     assert "TreeX" in text
     assert "TreeLearn" in text
     assert "Published pretrained" in text
     assert "Fine-tuned" in text
-    assert "Five completed headline results" in text
+    assert "the evaluation protocol column preserves scoring-domain differences" in text
+    assert "TLS2trees" in text
+    assert "Development tuned" in text
     assert "Prediction Retention" in text
-    assert "same supplied 11-plot test split" in text
-    assert "Completed comparable" in text
+    assert "Leaf-on result excludes class-3 out-points" in text
+    assert "Legacy-v1 reported" in text
+    assert "for_instance_pointwise_class3_ignore" in text
     assert "treelearn_for-instance_published_pretrained_20260714_134109" in text
     assert "trees above 10 m" in text
     assert "Not evaluated comparably" not in text

@@ -2,8 +2,8 @@ project:
   name: tree-seg-benchmark
   dataset_slug: for-instance
   method_slug: tls2trees
-  mode: for_instance_tls2trees_leaf_off_accuracy_pilot
-  status: candidate_compatibility_test
+  mode: legacy_for_instance_tls2trees_leaf_off_oracle_semantic_pilot
+  status: legacy_diagnostic_not_target_row
   barkla_root: "~/scratch/tree-seg-benchmark"
 
 environment:
@@ -58,7 +58,7 @@ method:
   tested_commit: "ca12cb73b2c736d80b020e8025f8d975d42e6f01"
   require_tested_commit: true
   patched_instance_script: "methods/tls2trees/scripts/runtime/patches/instance_patched.py"
-  compatibility_note: "FOR-instance is UAV laser scanning data; this pilot tests compatibility with the TLS2trees instance stage."
+  compatibility_note: "Legacy oracle-semantic instance-stage diagnostic only; not a published_default or development_tuned benchmark row."
   instance_parameters:
     n_tiles: 1
     n_zeros: 3

@@ -1,0 +1,88 @@
+schema_version: 1
+
+project:
+  status: stage2_candidate_set_frozen_execution_ready
+  dataset_slug: for-instance
+  method_slug: tls2trees
+
+dataset:
+  slug: for-instance
+  allowed_split: development
+  exact_plot_count: 21
+  held_out_test_accessed: false
+
+method:
+  slug: tls2trees
+  variant: development_tuned
+  training_mode: external_training_only
+  semantic_config: methods/tls2trees/configs/for_instance_published_default.yml
+  candidate_config: methods/tls2trees/configs/for_instance_development_tuned_stage1.yml
+
+scope:
+  phase: full_development_stage2
+  targets: [leaf_off, leaf_on]
+  reference_labels_accessed_for_development_evaluation: true
+  development_accuracy_metrics_permitted: true
+  selection_uses_held_out_test_metrics: false
+  held_out_test_accessed: false
+  final_configuration_selected: false
+
+selection:
+  source_phase: cross_site_development_stage1
+  selected_candidate_count: 2
+  selected_candidates:
+    - stage2_candidate_index: 0
+      stage1_candidate_index: 2
+      candidate_id: p04_min_points_50_lower_band
+      targets: [leaf_off, leaf_on]
+      role: stage1_accuracy_resource_leader
+    - stage2_candidate_index: 1
+      stage1_candidate_index: 0
+      candidate_id: p02_min_points_50
+      targets: [leaf_off, leaf_on]
+      role: closest_to_published_comparator
+  excluded_candidates:
+    - candidate_id: p03_min_points_50_radius_015
+      reason: identical_stage1_accuracy_and_site_profile_to_p02_with_extra_radius_change
+    - candidate_id: p05_min_points_50_graph_3_gap_5
+      reason: identical_stage1_accuracy_to_p02_with_extra_graph_changes_and_leaf_off_undersegmentation
+  decision_basis:
+    - target_specific_micro_f1
+    - target_specific_mean_plot_f1
+    - per_site_f1
+    - precision_recall_balance
+    - prediction_count
+    - oversegmentation
+    - undersegmentation
+    - runtime
+    - peak_memory
+    - distance_from_published_default
+  rationale: >-
+    p04 ranked first for both targets, preserved the same Stage 1 true-positive
+    evidence with fewer false predictions, used substantially less runtime and
+    memory, and reduced leaf-on over- and under-segmentation. p02 is retained
+    because the five-site screen is sparse and it is the least-modified viable
+    comparator to the published/default parameters.
+
+execution:
+  semantic_plot_count: 21
+  selected_candidate_count: 2
+  candidate_plot_task_count: 42
+  target_metric_count: 84
+  semantic_gpu_concurrency: 2
+  candidate_cpu_concurrency: 4
+  semantic_cache_reused_across_candidates: true
+  immutable_run_roots: true
+
+evaluation:
+  iou_threshold: 0.5
+  matching: maximum_cardinality_one_to_one
+  coordinate_tolerance_m: 0.001
+  compare_targets_separately: true
+  automatic_final_selection: false
+
+run_gate:
+  runnable: true
+  full_development_runnable: true
+  held_out_test_runnable: false
+  next_gate: review_full_development_metrics_then_freeze_one_candidate_per_target

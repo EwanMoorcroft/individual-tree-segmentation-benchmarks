@@ -1,0 +1,120 @@
+schema_version: 1
+
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: tls2trees
+  mode: for_instance_tls2trees_published_default_test
+  status: published_default_configuration_frozen
+
+dataset:
+  slug: for-instance
+  split: test
+  expected_plot_count: 11
+  expected_point_count: 49709922
+  expected_reference_tree_count: 323
+  exact_relative_paths:
+    - CULS/plot_2_annotated.las
+    - NIBIO/plot_17_annotated.las
+    - NIBIO/plot_18_annotated.las
+    - NIBIO/plot_1_annotated.las
+    - NIBIO/plot_22_annotated.las
+    - NIBIO/plot_23_annotated.las
+    - NIBIO/plot_5_annotated.las
+    - RMIT/test.las
+    - SCION/plot_31_annotated.las
+    - SCION/plot_61_annotated.las
+    - TUWIEN/test.las
+
+method:
+  slug: tls2trees
+  variant: published_default
+  source_config: methods/tls2trees/configs/for_instance_published_default.yml
+  configuration_source: publication_appendix_and_official_readme
+  selected_from_for_instance_metrics: false
+  configuration_changes_after_test_permitted: false
+
+frozen_semantic_parameters:
+  source: bundled_default_fsct_model
+  use_reference_semantic_labels_as_method_input: false
+  buffer_m: 5.0
+  batch_size: 10
+  num_processes: 10
+  is_wood_probability_threshold: 1.0
+  output_format: ply
+  operational_defaults:
+    step: 3
+    redo: null
+    zeros: 3
+    keep_npy: false
+  hidden_fixed_values:
+    buffer_tile_neighbours: 9
+    box_dimensions_m: [6.0, 6.0, 8.0]
+    box_overlap_fraction: [0.5, 0.5, 0.25]
+    min_points_per_box: 1000
+    max_points_per_box: 20000
+    internal_subsampling_enabled: true
+    internal_subsampling_min_spacing_m: 0.01
+    dtm_grid_resolution_m: 0.5
+    ground_height_threshold_m: 0.1
+    terrain_neighbours: 5
+    max_distance_between_tiles_m: .inf
+    inference_probability_neighbours: 16
+    inference_probability_aggregation: median
+    inactive_in_current_preprocessing_and_inference_route:
+      noise_class: 4
+      slice_thickness_m: 0.2
+      slice_increment_m: 0.05
+      min_tree_cylinders: 10
+    class_ids:
+      terrain: 0
+      leaf: 1
+      coarse_woody_debris: 2
+      wood: 3
+
+frozen_instance_parameters:
+  n_tiles: 5
+  n_tiles_provenance: official_readme_example_with_paper_permitting_3_5_or_7
+  n_zeros: 3
+  overlap: false
+  slice_thickness_m: 0.5
+  find_stems_boundary_m: [2.0, 2.5]
+  find_stems_min_radius_m: 0.025
+  find_stems_min_points: 200
+  graph_edge_length_m: 2.0
+  graph_maximum_cumulative_gap_m: 3.0
+  min_points_per_tree: 200
+  add_leaves: true
+  add_leaves_voxel_length_m: 0.5
+  add_leaves_edge_length_m: 1.0
+  save_diameter_class: false
+  ignore_missing_tiles: false
+  pandarallel: false
+  verbose: true
+
+targets:
+  - leaf_off
+  - leaf_on
+
+semantic_cache:
+  reuse_permitted: true
+  required_exact_matches:
+    - manifest_sha256
+    - input_las_sha256
+    - published_config_sha256
+    - bundled_model_sha256
+    - conversion_tile_index_sha256
+    - conversion_source_map_sha256
+    - every_semantic_output_sha256
+  fallback: dedicated_gpu_semantic_task
+
+evaluation:
+  iou_threshold: 0.5
+  expected_metric_count: 22
+  valid_empty_predictions_are_evaluated_as_zero: true
+  configuration_changed_after_test: false
+
+retention:
+  retained_artifact: source_row_predictions.npz
+  expected_file_count: 22
+  hash_algorithm: sha256

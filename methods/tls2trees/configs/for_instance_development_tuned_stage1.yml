@@ -1,0 +1,106 @@
+schema_version: 1
+
+project:
+  status: stage1_candidates_frozen_execution_ready
+  dataset_slug: for-instance
+  method_slug: tls2trees
+
+dataset:
+  slug: for-instance
+  allowed_split: development
+  stage0_plot_count: 5
+  required_collections: [CULS, NIBIO, RMIT, SCION, TUWIEN]
+  held_out_test_accessed: false
+
+method:
+  slug: tls2trees
+  variant: development_tuned
+  training_mode: external_training_only
+  semantic_config: methods/tls2trees/configs/for_instance_published_default.yml
+
+scope:
+  phase: cross_site_development_stage1
+  targets: [leaf_off, leaf_on]
+  reference_labels_accessed_for_development_evaluation: true
+  development_accuracy_metrics_permitted: true
+  selection_uses_held_out_test_metrics: false
+  held_out_test_accessed: false
+  final_configuration_selected: false
+
+probe_promotion:
+  source_manifest: methods/tls2trees/configs/for_instance_development_tuned_compatibility_probe.yml
+  required_probe_status: viable_candidates_found
+  required_viable_candidate_ids:
+    - p02_min_points_50
+    - p03_min_points_50_radius_015
+    - p04_min_points_50_lower_band
+    - p05_min_points_50_graph_3_gap_5
+  promotion_rule: all_nonempty_probe_candidates_without_metric_selection
+  add_leaves_change: false_to_true_for_required_leaf_on_benchmark_target
+
+candidate_generation:
+  ordering_frozen_before_stage1_metrics: true
+  seed: 42
+
+candidates:
+  - candidate_index: 0
+    candidate_id: p02_min_points_50
+    parameters: &p02
+      n_tiles: 5
+      n_zeros: 3
+      overlap: false
+      slice_thickness: 0.5
+      find_stems_boundary: [2.0, 2.5]
+      find_stems_min_radius: 0.025
+      find_stems_min_points: 50
+      graph_edge_length: 2.0
+      graph_maximum_cumulative_gap: 3.0
+      min_points_per_tree: 50
+      add_leaves: true
+      add_leaves_voxel_length: 0.5
+      add_leaves_edge_length: 1.0
+      save_diameter_class: false
+      ignore_missing_tiles: false
+      pandarallel: false
+      verbose: true
+
+  - candidate_index: 1
+    candidate_id: p03_min_points_50_radius_015
+    parameters:
+      <<: *p02
+      find_stems_min_radius: 0.015
+
+  - candidate_index: 2
+    candidate_id: p04_min_points_50_lower_band
+    parameters:
+      <<: *p02
+      find_stems_boundary: [1.5, 2.0]
+
+  - candidate_index: 3
+    candidate_id: p05_min_points_50_graph_3_gap_5
+    parameters:
+      <<: *p02
+      graph_edge_length: 3.0
+      graph_maximum_cumulative_gap: 5.0
+
+evaluation:
+  iou_threshold: 0.5
+  matching: maximum_cardinality_one_to_one
+  coordinate_tolerance_m: 0.001
+  aggregate_metrics:
+    - micro_precision
+    - micro_recall
+    - micro_f1
+    - mean_plot_f1
+    - per_site_f1
+    - failed_or_invalid_plot_count
+    - runtime_seconds
+  compare_targets_separately: true
+  automatic_final_selection: false
+
+run_gate:
+  runnable: true
+  stage1_task_count: 20
+  full_development_runnable: false
+  held_out_test_runnable: false
+  next_gate: review_five_site_metrics_then_freeze_at_most_three_candidates_per_target

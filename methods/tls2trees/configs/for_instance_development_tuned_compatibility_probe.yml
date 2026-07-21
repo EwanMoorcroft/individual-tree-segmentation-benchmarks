@@ -1,0 +1,143 @@
+schema_version: 1
+
+project:
+  status: compatibility_probe_candidates_frozen
+  dataset_slug: for-instance
+  method_slug: tls2trees
+
+dataset:
+  slug: for-instance
+  allowed_split: development
+  held_out_test_accessed: false
+
+method:
+  slug: tls2trees
+  variant: development_tuned
+  training_mode: external_training_only
+
+scope:
+  variant: development_tuned
+  split: development
+  probe_target: leaf_off
+  held_out_test_accessed: false
+  reference_labels_accessed: false
+  accuracy_metrics_accessed: false
+  selection_uses_accuracy_metrics: false
+  benchmark_result: false
+  purpose: >-
+    Determine whether exposed TLS2trees instance parameters can emit any
+    stem-based instances from the immutable published-default semantic output.
+
+source:
+  baseline_config: methods/tls2trees/configs/for_instance_published_default.yml
+  upstream_commit: ca12cb73b2c736d80b020e8025f8d975d42e6f01
+  model_sha256: 1a8bb6372394600f7c4b15f76beb98c32cb47ed25f8f729a84117ccfa410e72b
+  semantic_reuse_policy: immutable_sha256_verified_published_default_development_output
+  observed_failure: no_graph_connected_stem_bases
+
+candidate_generation:
+  algorithm: mechanism_directed_frozen
+  seed: 42
+  generated_before_development_tuned_accuracy_metrics: true
+  ordering_frozen: true
+  rationale: >-
+    Change one stem acceptance mechanism at a time, then one graph-connectivity
+    mechanism, while retaining all other published values. The probe turns leaf
+    attachment off so non-empty stem viability is measured without a second
+    target-dependent operation.
+
+fixed_parameters:
+  n_tiles: 5
+  n_zeros: 3
+  overlap: false
+  slice_thickness: 0.5
+  find_stems_boundary: [2.0, 2.5]
+  find_stems_min_radius: 0.025
+  find_stems_min_points: 200
+  graph_edge_length: 2.0
+  graph_maximum_cumulative_gap: 3.0
+  min_points_per_tree: 200
+  add_leaves: false
+  add_leaves_voxel_length: 0.5
+  add_leaves_edge_length: 1.0
+  save_diameter_class: false
+  ignore_missing_tiles: false
+  pandarallel: false
+  verbose: true
+
+candidates:
+  - candidate_index: 0
+    candidate_id: p00_published_instance_leaf_off_control
+    changed_from_published: [add_leaves]
+    parameters: &baseline_probe
+      n_tiles: 5
+      n_zeros: 3
+      overlap: false
+      slice_thickness: 0.5
+      find_stems_boundary: [2.0, 2.5]
+      find_stems_min_radius: 0.025
+      find_stems_min_points: 200
+      graph_edge_length: 2.0
+      graph_maximum_cumulative_gap: 3.0
+      min_points_per_tree: 200
+      add_leaves: false
+      add_leaves_voxel_length: 0.5
+      add_leaves_edge_length: 1.0
+      save_diameter_class: false
+      ignore_missing_tiles: false
+      pandarallel: false
+      verbose: true
+
+  - candidate_index: 1
+    candidate_id: p01_min_points_100
+    changed_from_published: [find_stems_min_points, min_points_per_tree, add_leaves]
+    parameters:
+      <<: *baseline_probe
+      find_stems_min_points: 100
+      min_points_per_tree: 100
+
+  - candidate_index: 2
+    candidate_id: p02_min_points_50
+    changed_from_published: [find_stems_min_points, min_points_per_tree, add_leaves]
+    parameters:
+      <<: *baseline_probe
+      find_stems_min_points: 50
+      min_points_per_tree: 50
+
+  - candidate_index: 3
+    candidate_id: p03_min_points_50_radius_015
+    changed_from_published:
+      [find_stems_min_radius, find_stems_min_points, min_points_per_tree, add_leaves]
+    parameters:
+      <<: *baseline_probe
+      find_stems_min_radius: 0.015
+      find_stems_min_points: 50
+      min_points_per_tree: 50
+
+  - candidate_index: 4
+    candidate_id: p04_min_points_50_lower_band
+    changed_from_published:
+      [find_stems_boundary, find_stems_min_points, min_points_per_tree, add_leaves]
+    parameters:
+      <<: *baseline_probe
+      find_stems_boundary: [1.5, 2.0]
+      find_stems_min_points: 50
+      min_points_per_tree: 50
+
+  - candidate_index: 5
+    candidate_id: p05_min_points_50_graph_3_gap_5
+    changed_from_published:
+      [find_stems_min_points, graph_edge_length, graph_maximum_cumulative_gap, min_points_per_tree, add_leaves]
+    parameters:
+      <<: *baseline_probe
+      find_stems_min_points: 50
+      graph_edge_length: 3.0
+      graph_maximum_cumulative_gap: 5.0
+      min_points_per_tree: 50
+
+decision_gate:
+  viable_when: leaf_off_prediction_file_count_greater_than_zero
+  select_final_configuration: false
+  next_action_if_viable: cross_site_development_stage0_with_both_leaf_targets
+  next_action_if_none_viable: stop_and_review_hidden_cylinder_acceptance_boundary
+  held_out_test_runnable: false

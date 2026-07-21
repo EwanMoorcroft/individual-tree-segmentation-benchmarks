@@ -169,22 +169,29 @@ def test_cross_method_results_separate_comparable_groups_and_retain_predictions(
     )
     with diagnostics_path.open(encoding="utf-8", newline="") as handle:
         diagnostics = list(csv.DictReader(handle))
-    assert len(diagnostics) == 4 + int(published_default_tls2trees)
+    assert len(diagnostics) == 5 + int(published_default_tls2trees)
     assert {row["method_slug"] for row in diagnostics} == {
         "treelearn",
         "tls2trees",
+        "treex",
     }
     assert {row["variant"] for row in diagnostics} == {
         "published_pretrained",
         "fine_tuned_on_dev",
         "development_tuned",
+        "unsupervised_parameterised",
         *({"published_default"} if published_default_tls2trees else set()),
     }
     assert all(
         row["variant"] == row["training_mode"]
         or (
-            row["method_slug"] == "tls2trees"
-            and row["variant"] in {"development_tuned", "published_default"}
+            row["method_slug"] in {"tls2trees", "treex"}
+            and row["variant"]
+            in {
+                "development_tuned",
+                "published_default",
+                "unsupervised_parameterised",
+            }
             and row["training_mode"] == "external_training_only"
         )
         for row in diagnostics

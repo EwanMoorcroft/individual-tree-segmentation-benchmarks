@@ -4,12 +4,14 @@ This assessment separates completed prediction work from candidate datasets
 that can support individual-tree accuracy evaluation. Dataset files remain
 outside this repository.
 
+Status date: 21 July 2026.
+
 ## Summary
 
 | Dataset | Inspection status | Instance labels | Accuracy status | Recommended role |
 | --- | --- | --- | --- | --- |
 | FRDR treeiso TLS | Downloaded; 16-plot TLS2trees run completed | Not present in the benchmark LAZ inputs | F1/IoU unavailable from `woods` | Completed prediction and operational benchmark |
-| FOR-instance | Downloaded and inventoried; SegmentAnyTree, TreeX and TreeLearn runs evaluated | `treeID` in annotated LAS files | Five comparable held-out rows are complete: two SegmentAnyTree, one TreeX and two TreeLearn variants | Primary cross-method accuracy benchmark |
+| FOR-instance | Downloaded and inventoried; SegmentAnyTree, TreeX, TreeLearn and TLS2trees held-out runs evaluated | `treeID` in annotated LAS files | Five shared-protocol rows are complete; two additional TLS2trees rows are complete under a separate class-3-ignore mask | Primary cross-method accuracy benchmark with explicit protocol groups |
 | Wytham Woods | Downloaded, unpacked and inventoried | One segmented tree per file | F1/IoU feasible after scene reconstruction | TLS accuracy benchmark candidate |
 
 ## FRDR Treeiso TLS
@@ -38,7 +40,7 @@ outside this repository.
 | Annotation | Plot-wise `treeID` plus semantic `classification` values |
 | Individual-tree labels | Available for positive `treeID` values |
 | Accuracy feasibility | One-to-one matched precision, recall, F1 and IoU are feasible |
-| Compatible methods | SegmentAnyTree; TreeLearn and other deep learning methods; traditional baselines; TLS2trees compatibility test |
+| Compatible methods | SegmentAnyTree; TreeLearn and other deep learning methods; traditional baselines; completed TLS2trees UAV-to-terrestrial compatibility workflows |
 | Preprocessing | Respect `data_split_metadata.csv`; retain reference IDs separately; build method-specific inputs and prediction adapters |
 | Risks and limitations | Collection and sensor heterogeneity; class imbalance; potential test-set leakage; confirm positive IDs before use |
 | Recommended role | Primary cross-method accuracy benchmark under the point-wise protocol |
@@ -59,23 +61,31 @@ positive reference tree IDs. Semantic classes are:
 The SegmentAnyTree workflow uses tree-material classes `4`, `5` and `6`, with
 classes `0`, `1`, `2` and `3` ignored. An early released-checkpoint route
 completed inference for all 32 plots, but its 11 test exports failed
-point-correspondence checks and remain provisional. The historical checkpoint
+point-correspondence checks; the route is rejected from accepted accuracy
+reporting while its evidence is retained. The historical checkpoint
 `sat_for_quicktune_to49_20260706_140730` and rejected `to55` continuation are
-also retained outside the headline comparison. The completed target comparison
+also retained outside the ranked comparison. The completed target comparison
 instead evaluates the released checkpoint unchanged and a separate checkpoint
 fine-tuned on 16 development plots and selected on five development-validation
 plots before one held-out evaluation. The protocol is in
 [`for-instance.md`](protocols/for-instance.md)
-and the provisional values are documented in
+and the earlier provisional evidence is documented in
 [`provisional_released_checkpoint_results.md`](../methods/segmentanytree/docs/provisional_released_checkpoint_results.md).
-The TreeX deterministic baseline and both TreeLearn headline variants have
+The TreeX deterministic baseline and both TreeLearn held-out variants
 completed the same exact-path 11-plot test subset. Each TreeLearn variant retained and
 hash-verified 55 raw and aligned prediction artefacts. The clean authors'
-released L1W checkpoint is the comparable TreeLearn published-pretrained row;
+released L1W checkpoint is the comparable TreeLearn published-checkpoint row;
 the separate December 2024 default checkpoint remains development-only because
-of documented FOR-instance training overlap. The TLS2trees compatibility pilot
-retains its leaf-off `4` and `6` filter and is not a completed FOR-instance
-accuracy benchmark.
+of documented FOR-instance training overlap.
+
+TLS2trees also completed independent development-tuned and published-default
+held-out workflows. Their leaf-on results use reference classes `4,5,6` but
+exclude class-3 out-points before the union mask, so they are valid within a
+separate protocol group rather than the five-row shared ranking. The two
+leaf-off `4,6` results remain target-specific diagnostics. “Leaf-on” and
+“leaf-off” here describe scoring/prediction material, not acquisition season.
+The legacy one-plot oracle-semantic pilot remains a diagnostic and is not one
+of the completed held-out rows.
 
 ## Wytham Woods
 

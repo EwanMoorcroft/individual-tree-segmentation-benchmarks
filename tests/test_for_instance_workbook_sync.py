@@ -86,57 +86,56 @@ MATCHING_POLICY_LABELS = {
 }
 PROTOCOL_ALIGNMENT_TEXT = {
     ("treex", "unsupervised_parameterised"): {
-        "Headline status": "Legacy-v1 reported",
+        "Headline status": "Shared-protocol baseline",
         "Selection control": "No test-based selection",
         "Interpretation": (
-            "Deterministic non-learning method; no fine-tuned variant applies."
+            "Unsupervised method; development-parameterised and no fitted checkpoint."
         ),
     },
     ("segmentanytree", "published_pretrained"): {
-        "Headline status": "Legacy-v1 reported",
+        "Headline status": "Shared-protocol baseline",
         "Selection control": "No test-based selection",
         "Interpretation": "Published weights; no FOR-instance fine-tuning.",
     },
     ("segmentanytree", "fine_tuned_on_dev"): {
-        "Headline status": "Legacy-v1 reported",
+        "Headline status": "Shared-protocol primary",
         "Selection control": "Frozen before one test evaluation",
         "Interpretation": (
             "Fine-tuned on development only; frozen checkpoint evaluated once."
         ),
     },
     ("treelearn", "published_pretrained"): {
-        "Headline status": "Legacy-v1 reported",
+        "Headline status": "Shared-protocol baseline",
         "Selection control": "No test-based selection",
         "Interpretation": (
-            "Unchanged clean authors-released checkpoint; documented detection "
+            "Clean authors-released checkpoint; documented detection "
             "scope is trees above 10 m."
         ),
     },
     ("treelearn", "fine_tuned_on_dev"): {
-        "Headline status": "Legacy-v1 reported",
+        "Headline status": "Shared-protocol primary",
         "Selection control": "Frozen before one test evaluation",
         "Interpretation": (
             "Fine-tuned on development only; frozen checkpoint evaluated once."
         ),
     },
     ("tls2trees", "development_tuned"): {
-        "Headline status": "Completed; separate scoring domain",
+        "Headline status": "Primary; separate scoring domain",
         "Selection control": "Frozen on development before held-out test",
         "Interpretation": (
-            "Leaf-on result excludes class-3 out-points; low accuracy indicates "
-            "weak transfer from terrestrial to UAV laser scanning for this frozen "
-            "pipeline."
+            "Leaf-on result excludes class-3 out-points and is not ranked with "
+            "the shared mask."
         ),
     },
 }
 
 OPTIONAL_PROTOCOL_ALIGNMENT_TEXT = {
     ("tls2trees", "published_default"): {
-        "Headline status": "Completed; separate scoring domain",
+        "Headline status": "Baseline; separate scoring domain",
         "Selection control": "No FOR-instance metric selection",
         "Interpretation": (
-            "Publication-derived parameters; leaf-on excludes class-3 out-points "
-            "and was evaluated without FOR-instance metric selection."
+            "Publication-derived parameters; class-3-ignore result is reported "
+            "separately."
         ),
     },
 }

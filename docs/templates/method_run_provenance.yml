@@ -1,0 +1,72 @@
+# Copy this public-safe template into run-scoped metadata and replace every
+# unknown value only from recorded evidence. Do not put credentials, private
+# absolute paths, raw predictions or scheduler logs in a committed copy.
+
+schema_version: method_run_provenance_v1
+method: unknown
+variant: unknown
+run_id: unknown
+evidence_path: unknown
+
+upstream_repository: unknown
+upstream_commit: unknown
+upstream_dirty_state: unknown
+
+container_uri: unknown
+container_digest: unknown
+python_version: unknown
+cuda_version: unknown
+pytorch_version: unknown
+minkowski_engine_version: unknown
+
+checkpoint_source: unknown
+checkpoint_sha256: unknown
+checkpoint_training_datasets: unknown
+
+result_governance:
+  # This is a run-scoped overlay, not a replacement row for
+  # benchmark_result_registry.csv. Copy the identity/context fields below into
+  # that registry when publishing a result.
+  dataset_slug: unknown
+  method_slug: unknown
+  variant: unknown
+  run_id: unknown
+  canonical_run_id_alias: unknown
+  training_mode: unknown
+  evaluation_mode: unknown
+  result_status: candidate
+  completion_state: pending
+  ranking_eligible: false
+  exclusion_reason: incomplete
+  status_description: Pending run provenance; replace from recorded evidence
+  learning_regime: unknown
+  dataset_exposure: unknown
+  prediction_material: unknown
+  reference_scoring_mask: unknown
+  leaf_attachment: unknown
+
+evaluation:
+  dataset: unknown
+  split: unknown
+  protocol_id: unknown
+  matching_policy: unknown
+  iou_threshold: unknown
+  threshold_operator: unknown
+  point_correspondence: unknown
+
+retention:
+  prediction_manifest: unknown
+  prediction_manifest_sha256: unknown
+  predictions_verified: unknown
+
+test_exposure:
+  date: unknown
+  method: unknown
+  run_id: unknown
+  test_job_executed: unknown
+  metrics_viewed: unknown
+  predictions_visualised: unknown
+  configuration_changed_afterwards: unknown
+  decision_or_change: unknown
+  notes: Pending exposure record; replace from recorded evidence
+  evidence_path: unknown

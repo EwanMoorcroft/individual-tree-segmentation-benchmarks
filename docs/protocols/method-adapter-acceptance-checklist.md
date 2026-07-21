@@ -7,6 +7,9 @@ must wait until each required gate below has evidence.
 
 Protocol identifier: `for_instance_method_adapter_acceptance_v1`.
 
+Result roles and future run IDs also follow
+[`result-governance.md`](result-governance.md).
+
 ## Acceptance Record
 
 Create one acceptance record per method and run profile before full evaluation.
@@ -14,14 +17,29 @@ The record may be a method configuration, run metadata JSON, or implementation
 note, but it must include:
 
 - method slug, dataset slug and run ID;
+- for future runs, a canonical ID in the form
+  `<method>__<dataset>__<training-mode>__<selection-mode>__<split>__<YYYYMMDDTHHMMSS>`;
 - upstream repository URL, citation and pinned commit or package version;
 - training mode: `published_pretrained`, `fine_tuned_on_dev`,
   `retrained_from_dev` or `external_training_only`;
+- controlled result status, completion state, ranking eligibility and any
+  exclusion reason;
+- learning regime and dataset exposure, recorded separately from the legacy
+  training mode;
+- prediction material, reference scoring mask, explicit reference classes and
+  leaf-attachment state;
 - checkpoint filename and SHA-256 checksum, or a clear statement that the
   method has no fitted checkpoint;
-- Barkla environment, command entrypoints and Slurm resources;
+- upstream dirty state, container identity/digest, Python/CUDA/framework
+  versions, checkpoint source and stated checkpoint training datasets, using
+  [`the provenance template`](../templates/method_run_provenance.yml);
+- method-specific environment, command entrypoints and Slurm resources;
 - prediction root, metadata root and table root;
 - evaluation mode, point-correspondence mode and IoU threshold operator.
+
+Historical run IDs remain unchanged. If a historical ID is non-canonical, add
+a canonical alias in governance metadata rather than renaming files or hashed
+evidence.
 
 ## Required Gates
 
@@ -36,6 +54,9 @@ note, but it must include:
   stopping, threshold selection, visual tuning, checkpoint selection or repeated
   adapter debugging. Development validation and held-out test results remain
   separate.
+- [ ] **Exposure record.** Any known held-out execution, metric viewing,
+  prediction visualisation and subsequent configuration change is recorded as
+  a separate evidence-backed field in the public-safe test-exposure ledger.
 - [ ] **Reference contract.** The adapter records `treeID` as the reference
   instance field, `classification` as the semantic field, tree classes `4`, `5`
   and `6`, ignored semantic classes `0`, `1`, `2` and `3`, and ignored instance
@@ -53,6 +74,10 @@ note, but it must include:
 - [ ] **Prediction metadata.** Run metadata records the Barkla-relative prediction
   directory, harmonised prediction artefact paths, command, return code, runtime,
   peak memory, method version, checkpoint checksum and status for every plot.
+- [ ] **Environment provenance.** The exact upstream commit/dirty state,
+  method-specific container or environment, available dependency versions and
+  checkpoint training-data declaration are recorded. Missing evidence is
+  explicit and is not copied from the shared utility environment.
 - [ ] **Point correspondence.** The preferred adapter output has one predicted
   instance label and one reference `treeID` for each evaluated source point,
   using source row order or a stable source-point identifier. Coordinate-based
@@ -77,6 +102,13 @@ note, but it must include:
 - [ ] **Required result tables.** Full evaluation writes per-plot, per-collection,
   split-level, matched-pair, unmatched-prediction and unmatched-reference tables,
   plus run metadata for the same run ID.
+- [ ] **Diagnostic availability.** The result records whether additional IoU
+  thresholds, plot bootstrap intervals, semantic error decomposition and
+  split/merge diagnostics are supported by its retained artefacts. Unsupported
+  values remain explicit and do not block the canonical point estimate.
+- [ ] **Development budget.** Configurations, validation evaluations,
+  checkpoints, epochs, optimiser steps, manual inspection, hyperparameter
+  source and evidence-backed compute hours are recorded without guessing.
 - [ ] **Documented failures.** Every expected full-evaluation plot has either a
   completed result or a documented failure with status, error summary and output
   paths.
@@ -105,6 +137,12 @@ Each adapter must add synthetic tests for:
 - exported point cloud validation failure, when exported clouds are supported;
 - coordinate-fallback labelling, when coordinate matching is supported;
 - result-table schema and metadata fields.
+
+At least one lightweight integration test must use a generated LAS/LAZ fixture
+with synthetic XYZ, `classification`, `treeID` and `source_index` fields. It
+must exercise dataset adaptation, prediction normalisation, source-row
+alignment, evaluation and aggregate output without Barkla, a GPU or private
+data.
 
 Synthetic fixtures must stay small and must not include raw benchmark LAS, LAZ,
 PLY, NPZ or checkpoint files.

@@ -1,5 +1,12 @@
 # Labelled Accuracy Benchmark Status
 
+> **Historical planning/status record.** This document preserves the
+> SegmentAnyTree execution sequence and decisions at that stage of the project.
+> It is not the current result registry or ranking definition. As of 21 July
+> 2026, use [`BENCHMARKS.md`](../../BENCHMARKS.md), the
+> [`canonical output index`](../../outputs/README.md) and the
+> [`result-governance protocol`](../protocols/result-governance.md).
+
 ## Primary Benchmark
 
 SegmentAnyTree on FOR-instance is the primary labelled accuracy benchmark.
@@ -79,12 +86,15 @@ The historical run has provenance gaps for the exact workflow commit,
 container digest and final per-plot table transfer. Its retained aggregate is
 valid historical evidence, but it does not close any current target gate.
 
-## Other Candidate Work
+## Historical Candidate Notes And Current Disposition
 
-TLS2trees on FOR-instance remains a compatibility experiment rather than the
-current priority because the dataset is UAV laser scanning. Its leaf-off pilot
-uses classes `4` and `6`, which must not replace the SegmentAnyTree class
-definition.
+At the time of this planning sequence, TLS2trees on FOR-instance was a
+compatibility experiment because the dataset is UAV laser scanning. It has
+since completed development-tuned and published-default held-out workflows
+under a class-3-ignore scoring domain. Those two leaf-on rows remain separate
+from the five shared-protocol rows, and their leaf-off class-`4,6` targets are
+diagnostics. The earlier one-plot pilot remains legacy diagnostic evidence and
+must not replace the shared class-`4,5,6` definition.
 
 Wytham Woods remains a future TLS accuracy candidate. Its 876 per-tree PLY files
 must first be reconstructed into a documented plot scene with preserved

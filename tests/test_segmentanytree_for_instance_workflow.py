@@ -2901,18 +2901,25 @@ def test_cross_method_workbook_has_comparable_target_values() -> None:
             for name in archive.namelist()
             if name.endswith(".xml")
         )
-    assert "FOR-instance Held-out Results" in text
+    assert "FOR-instance Shared-Protocol Leaderboard" in text
+    assert "Differently Scoped Held-out Results" in text
+    assert "FOR-instance All Held-out Results" in text
     assert "SegmentAnyTree" in text
     assert "TreeX" in text
     assert "TreeLearn" in text
     assert "Published pretrained" in text
     assert "Fine-tuned" in text
-    assert "the evaluation protocol column preserves scoring-domain differences" in text
+    assert "Only ranking-eligible rows using the classes 4/5/6 shared pointwise protocol are shown." in text
+    assert "These accepted TLS2trees results use the class-3-ignore scoring mask and are not ranked with the shared protocol." in text
     assert "TLS2trees" in text
     assert "Development tuned" in text
     assert "Prediction Retention" in text
     assert "Leaf-on result excludes class-3 out-points" in text
-    assert "Legacy-v1 reported" in text
+    assert "Shared-protocol primary" in text
+    assert "Shared-protocol baseline" in text
+    assert "Primary; separate scoring domain" in text
+    assert "Baseline; separate scoring domain" in text
+    assert "Legacy-v1 reported" not in text
     assert "for_instance_pointwise_class3_ignore" in text
     assert "treelearn_for-instance_published_pretrained_20260714_134109" in text
     assert "trees above 10 m" in text

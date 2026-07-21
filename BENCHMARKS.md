@@ -4,6 +4,34 @@ This repository is structured to hold multiple individual tree segmentation
 benchmarks. Each benchmark should provide a reproducible configuration, input
 adapter, method runner, scheduler workflow, metadata outputs and focused tests.
 
+Status date: 21 July 2026.
+
+The machine-readable source for result roles is
+[`benchmark_result_registry.csv`](outputs/for_instance_benchmark_metrics/benchmark_result_registry.csv).
+It adds controlled `result_status`, `completion_state`, `ranking_eligible`,
+`exclusion_reason`, learning/exposure and material/mask fields while preserving
+the historical IDs and human descriptions shown below. The controlled values
+and future run-ID format are defined in the
+[`result-governance protocol`](docs/protocols/result-governance.md).
+
+Current reporting separates:
+
+- two primary harmonised held-out results: development-fine-tuned
+  SegmentAnyTree and TreeLearn;
+- three shared-protocol baselines: published SegmentAnyTree, TreeX and the
+  clean published TreeLearn checkpoint;
+- two complete TLS2trees held-out rows: development-tuned primary and
+  published-default baseline within the class-3-ignore protocol, both excluded
+  from the shared-mask ranking;
+- completed development, smoke, alternate-material and error-analysis
+  diagnostics;
+- historical evidence that is no longer a target;
+- configurations rejected by validation or governance gates;
+- operational-only work without instance references; and
+- pending candidate methods/datasets.
+
+Completion does not change a row's scientific role or ranking eligibility.
+
 ## Benchmark Registry
 
 Registry rows describe dataset-method runs or explicit candidates. A completed
@@ -14,13 +42,14 @@ rows may use `pending` for run-specific fields until a run is scheduled.
 | Dataset slug | Method slug | Run label | Training mode | Evaluation mode | Status | Evidence |
 | --- | --- | --- | --- | --- | --- | --- |
 | frdr-treeiso | tls2trees | tls2trees_frdr_prediction_benchmark | external_training_only | operational_prediction | Prediction benchmark completed | [`frdr_benchmark.yml`](methods/tls2trees/configs/frdr_benchmark.yml); [`tls2trees_frdr_prediction_summary.csv`](methods/tls2trees/examples/tls2trees_frdr_prediction_summary.csv) |
-| for-instance | segmentanytree | released_checkpoint_coordinate_rematch | published_pretrained | provisional_coordinate_rematched | Provisional inference-only run completed; export audit failed | [`for_instance_benchmark.yml`](methods/segmentanytree/configs/for_instance_benchmark.yml); [`provisional_released_checkpoint_results.md`](methods/segmentanytree/docs/provisional_released_checkpoint_results.md) |
+| for-instance | segmentanytree | released_checkpoint_coordinate_rematch | published_pretrained | provisional_coordinate_rematched | Rejected from accepted accuracy reporting; inference-only run completed but export audit failed | [`for_instance_benchmark.yml`](methods/segmentanytree/configs/for_instance_benchmark.yml); [`provisional_released_checkpoint_results.md`](methods/segmentanytree/docs/provisional_released_checkpoint_results.md) |
 | for-instance | segmentanytree | segmentanytree_for-instance_published_pretrained_20260710_231601 | published_pretrained | harmonised_pointwise_test | Completed target baseline; test mean plot F1 0.4534, micro F1 0.4442 | [`per-plot results`](methods/segmentanytree/examples/sat_completed_target_plot_results_20260711.csv); [`overall results`](methods/segmentanytree/examples/sat_completed_target_results_20260711.csv); [`site results`](methods/segmentanytree/examples/sat_completed_target_site_results_20260711.csv); [`final result note`](methods/segmentanytree/docs/final_results_20260711.md) |
 | for-instance | segmentanytree | segmentanytree_for-instance_fine_tuned_on_dev_20260711_002931 | fine_tuned_on_dev | harmonised_pointwise_test | Completed primary result; test mean plot F1 0.5447, micro F1 0.5320 | [`per-plot results`](methods/segmentanytree/examples/sat_completed_target_plot_results_20260711.csv); [`overall results`](methods/segmentanytree/examples/sat_completed_target_results_20260711.csv); [`site results`](methods/segmentanytree/examples/sat_completed_target_site_results_20260711.csv); [`final result note`](methods/segmentanytree/docs/final_results_20260711.md) |
 | for-instance | segmentanytree | sat_for_quicktune_to49_20260706_140730 | retrained_from_dev | harmonised_pointwise_test | Completed historical result retained; test mean plot F1 0.4825, micro F1 0.4692 | [`sat_final_test_aligned_summary_sat_for_quicktune_to49_20260706_140730.csv`](methods/segmentanytree/examples/sat_final_test_aligned_summary_sat_for_quicktune_to49_20260706_140730.csv); [`provenance manifest`](methods/segmentanytree/examples/sat_final_test_aligned_provenance_sat_for_quicktune_to49_20260706_140730.json) |
 | for-instance | segmentanytree | sat_for_quicktune_to55_20260707_214305 | retrained_from_dev | development_validation | Rejected validation regression | [`training_progress_20260706.md`](methods/segmentanytree/docs/training_progress_20260706.md) |
 | for-instance | segmentanytree | segmentanytree_for-instance_fine_tuned_on_dev_20260708_215054_full | fine_tuned_on_dev | diagnostic_held_out_subset | Rejected; produced semantic tree predictions but zero instance predictions | [`training_progress_20260706.md`](methods/segmentanytree/docs/training_progress_20260706.md) |
 | for-instance | treex | treex_for_instance_exact_path_subset | external_training_only | harmonised_pointwise_test | Completed and frozen unsupervised parameterised baseline; test mean plot F1 0.3831, micro F1 0.3627 | [`per-plot results`](methods/treex/examples/treex_combined_dev_test_summary.csv); [`split summary`](methods/treex/examples/treex_split_summary.csv); [`retention manifest`](methods/treex/examples/treex_prediction_retention_manifest.json) |
+| for-instance | treex | treex_for_instance_exact_path_subset | external_training_only | reference_labelled_mask_diagnostic | Completed differently scoped diagnostic; test mean plot F1 0.5222, micro F1 0.5047; not ranking eligible | [`split summary`](methods/treex/examples/treex_split_summary.csv); [`benchmark note`](methods/treex/docs/for_instance_benchmark.md); [`retention manifest`](methods/treex/examples/treex_prediction_retention_manifest.json) |
 | for-instance | tls2trees | tls2trees_for_instance_leaf_off_pilot | external_training_only | legacy_oracle_semantic_coordinate_fallback | Legacy one-plot instance-stage diagnostic; not a target benchmark row | [`for_instance_accuracy.yml`](methods/tls2trees/configs/for_instance_accuracy.yml); [`for_instance_pilot.md`](methods/tls2trees/docs/for_instance_pilot.md) |
 | for-instance | tls2trees | tls2trees_for-instance_published_default_held_out_test_20260721_122448 | external_training_only | class3_ignore_leaf_off_diagnostic | Completed target-specific diagnostic; 3 predictions, 323 references, zero matches | [`per-plot diagnostic`](methods/tls2trees/examples/tls2trees_published_default_leaf_off_test_plot_diagnostic.csv); [`site diagnostic`](methods/tls2trees/examples/tls2trees_published_default_leaf_off_test_site_diagnostic.csv); [`overall diagnostic`](methods/tls2trees/examples/tls2trees_published_default_leaf_off_test_diagnostic.csv); [`provenance`](methods/tls2trees/examples/tls2trees_published_default_test_provenance.json); [`retention manifest`](methods/tls2trees/examples/tls2trees_published_default_prediction_retention_manifest.json) |
 | for-instance | tls2trees | tls2trees_for-instance_development_tuned_held_out_test_20260719_110219 | external_training_only | class3_ignore_leaf_off_diagnostic | Completed target-specific diagnostic; 22 predictions, 323 references, zero matches | [`per-plot diagnostic`](methods/tls2trees/examples/tls2trees_development_tuned_leaf_off_test_plot_diagnostic.csv); [`overall diagnostic`](methods/tls2trees/examples/tls2trees_development_tuned_leaf_off_test_diagnostic.csv); [`retention manifest`](methods/tls2trees/examples/tls2trees_development_tuned_prediction_retention_manifest.json) |
@@ -29,7 +58,9 @@ rows may use `pending` for run-specific fields until a run is scheduled.
 | for-instance | tls2trees | tls2trees_for-instance_development_tuned_leaf_screen_20260720_193825 | external_training_only | development_leaf_attachment_screen | Completed development-only diagnostic; 45/45 valid metrics and identical aggregate accuracy across nine settings | [`plot results`](methods/tls2trees/examples/tls2trees_development_leaf_screen_plot_results.csv); [`candidate results`](methods/tls2trees/examples/tls2trees_development_leaf_screen_candidate_results.csv); [`provenance`](methods/tls2trees/examples/tls2trees_development_leaf_screen_provenance.json) |
 | for-instance | treelearn | treelearn_for-instance_published_pretrained_dev_smoke_20260712_135205 | published_pretrained | development_smoke_harmonised_pointwise | Accepted adapter diagnostic; one CULS development plot F1 0.7059 | [`accepted smoke`](methods/treelearn/examples/accepted_development_smoke_20260712.json); [`runbook`](methods/treelearn/docs/one_plot_smoke.md) |
 | for-instance | treelearn | treelearn_for-instance_published_pretrained_development_20260712_150030 | published_pretrained | full_development_harmonised_pointwise | Completed published-checkpoint development diagnostic with documented FOR-instance training overlap; mean plot F1 0.5156, micro F1 0.5108; excluded from leakage-free ranking | [`overall results`](methods/treelearn/examples/treelearn_completed_development_results_20260712.csv); [`site results`](methods/treelearn/examples/treelearn_completed_development_site_results_20260712.csv); [`result note`](methods/treelearn/docs/development_results_20260712.md) |
+| for-instance | treelearn | treelearn_for-instance_published_pretrained_development_20260712_150030 | published_pretrained | matched_internal_development_validation | Completed matched five-plot development-validation baseline with documented FOR-instance overlap; mean plot F1 0.5588, micro F1 0.5475; comparable only with the inherited-overlap fine-tune diagnostic | [`development diagnostics`](outputs/for_instance_benchmark_metrics/for_instance_method_development_diagnostics.csv); [`result note`](methods/treelearn/docs/finetune_validation_results_20260712.md) |
 | for-instance | treelearn | treelearn_for-instance_fine_tuned_on_dev_20260712_164057 | fine_tuned_on_dev | internal_development_validation | Completed negative result; best checkpoint mean plot F1 0.4905 versus matched published baseline 0.5588; rejected before test | [`validation results`](methods/treelearn/examples/treelearn_finetune_validation_results_20260712.csv); [`result note`](methods/treelearn/docs/finetune_validation_results_20260712.md) |
+| for-instance | treelearn | treelearn_for-instance_fine_tuned_on_dev_20260712_164057_epoch_70_validation_20260712_203249 | fine_tuned_on_dev | matched_internal_development_validation | Rejected exact retained checkpoint diagnostic; mean plot F1 0.4905, micro F1 0.4214; inherited checkpoint overlap and underperformed the matched baseline | [`development diagnostics`](outputs/for_instance_benchmark_metrics/for_instance_method_development_diagnostics.csv); [`result note`](methods/treelearn/docs/finetune_validation_results_20260712.md) |
 | for-instance | treelearn | treelearn_for-instance_published_pretrained_20260714_134109 | published_pretrained | harmonised_pointwise_test | Completed clean authors-released baseline; test mean plot F1 0.0789, micro F1 0.0987 | [`per-plot results`](methods/treelearn/examples/treelearn_pretrained_test_plot_results_20260714.csv); [`overall results`](methods/treelearn/examples/treelearn_pretrained_test_results_20260714.csv); [`site results`](methods/treelearn/examples/treelearn_pretrained_test_site_results_20260714.csv); [`provenance`](methods/treelearn/examples/treelearn_pretrained_test_provenance_20260714.json); [`result note`](methods/treelearn/docs/pretrained_test_results_20260714.md) |
 | for-instance | treelearn | treelearn_for-instance_fine_tuned_on_dev_long_20260712_233227 | fine_tuned_on_dev | harmonised_pointwise_test | Completed leakage-controlled primary result; test mean plot F1 0.3647, micro F1 0.3319 | [`per-plot results`](methods/treelearn/examples/treelearn_finetuned_test_plot_results_20260713.csv); [`overall results`](methods/treelearn/examples/treelearn_finetuned_test_results_20260713.csv); [`site results`](methods/treelearn/examples/treelearn_finetuned_test_site_results_20260713.csv); [`result note`](methods/treelearn/docs/finetuned_test_results_20260713.md) |
 | for-instance | randlanet | pending | pending | harmonised_pointwise_test | Candidate accuracy benchmark | Add only with a method folder, adapter, runbook and synthetic tests. |
@@ -55,19 +86,20 @@ No candidate accuracy row indicates a completed method run or a reported
 accuracy result. Dataset readiness and remaining preprocessing are documented
 in [`docs/dataset_feasibility.md`](docs/dataset_feasibility.md).
 
-The FOR-instance headline tracker contains five rows using the established
-shared pointwise protocol and two completed TLS2trees rows using the explicit
-class-3-ignore scoring domain. All use the supplied 11-plot
-test split, 323 reference instances, IoU `>= 0.5` and maximum-cardinality
-one-to-one matching. Protocol and mask fields remain visible, so results with
-different scoring domains are not silently ranked together. TreeX has no
-fine-tuning stage. TreeLearn development and checkpoint-sweep results and the
-TLS2trees leaf-off targets remain in the diagnostics table. Each TLS2trees
-variant retains both target prediction sets as 22 hash-verified source-row
-files.
+The accepted held-out metric table contains seven rows. Five use the
+established shared pointwise protocol: two primary development-selected rows
+and three baselines. Two complete TLS2trees rows use the explicit
+class-3-ignore scoring domain and form a separate within-method comparison.
+All seven use the supplied 11-plot test split, 323 reference instances, IoU
+`>= 0.5` and maximum-cardinality one-to-one matching. Protocol, mask and
+ranking fields remain visible, so different scoring domains are not silently
+ranked together. TreeX has no fine-tuning stage. TreeLearn development and
+checkpoint-sweep results and both TLS2trees leaf-off targets remain in the
+diagnostics table. Each TLS2trees variant retains both target prediction sets
+as 22 hash-verified source-row files.
 
 The accepted TreeLearn smoke is adapter evidence from one CULS development
-plot, not a headline benchmark result. It preserved the source row count and
+plot, not a ranked benchmark result. It preserved the source row count and
 order across 1,816,672 points, retained all five raw and aligned prediction
 artefacts and obtained F1 `0.705882` under the shared point-wise protocol. It
 authorised only the frozen 21-plot development route. That route subsequently
@@ -108,12 +140,16 @@ The permitted training mode values for completed or provisional runs are
 `external_training_only`. For deterministic or rule-based methods that do not
 fit weights, `external_training_only` records that no FOR-instance development
 or test data were used for training; the method-specific configuration should
-also record the non-learning method mode.
+also record the non-learning method mode. New governance rows separately record
+`learning_regime` and `dataset_exposure`; this is necessary because TreeX and
+development-tuned TLS2trees were parameterised on development evidence even
+though neither fits FOR-instance model weights.
 
 The first SegmentAnyTree workflow completed inference for all 32 FOR-instance
 LAS files with the released checkpoint. Its coordinate-rematched metrics are
-provisional because they do not preserve point alignment. The completed target
-comparison evaluated the released checkpoint with aligned point-wise outputs,
+retained but rejected from accepted accuracy reporting because they do not
+preserve point alignment. The completed target comparison evaluated the
+released checkpoint with aligned point-wise outputs,
 then fine-tuned those weights on FOR-instance development data and evaluated
 the frozen selected checkpoint once. The primary fine-tuned result has mean
 plot F1 `0.5447` and micro F1 `0.5320`; the released baseline has mean plot F1
@@ -136,6 +172,11 @@ See the
 [`final result`](methods/segmentanytree/docs/final_results_20260711.md).
 
 ## Adding A Benchmark
+
+Future run IDs use
+`<method>__<dataset>__<training-mode>__<selection-mode>__<split>__<YYYYMMDDTHHMMSS>`
+with lower-case hyphenated semantic fields and a UTC timestamp. Historical IDs
+must not be renamed; add a canonical alias when needed.
 
 Additions should include:
 

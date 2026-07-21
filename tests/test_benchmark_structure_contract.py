@@ -192,8 +192,13 @@ def test_cross_method_outputs_use_method_neutral_paths_and_canonical_variants() 
     assert all(
         row["variant"] == row["training_mode"]
         or (
-            row["method_slug"] == "tls2trees"
-            and row["variant"] in {"development_tuned", "published_default"}
+            row["method_slug"] in {"tls2trees", "treex"}
+            and row["variant"]
+            in {
+                "development_tuned",
+                "published_default",
+                "unsupervised_parameterised",
+            }
             and row["training_mode"] == "external_training_only"
         )
         for row in diagnostics

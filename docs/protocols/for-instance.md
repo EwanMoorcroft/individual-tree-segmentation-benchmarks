@@ -9,6 +9,11 @@ used across methods.
 
 Protocol identifier: `for_instance_pointwise_v1`.
 
+Result roles, ranking eligibility, test-exposure records, development budgets
+and future run identities are controlled by the companion
+[`result-governance protocol`](result-governance.md). Governance metadata does
+not alter this evaluation protocol or any frozen score.
+
 Primary sources:
 
 - FOR-instance dataset:
@@ -59,7 +64,8 @@ Every run must declare one of these training modes:
   weights;
 - `retrained_from_dev`: train from initial weights using only FOR-instance
   development data;
-- `external_training_only`: train without FOR-instance;
+- `external_training_only`: fit no model weights on FOR-instance, whether the
+  method was trained externally or has no fitted weights;
 - `fine_tuned_on_dev`: start from a pretrained checkpoint and update weights
   using only FOR-instance development data.
 
@@ -67,6 +73,19 @@ For deterministic or rule-based methods without fitted weights, record
 `external_training_only` to indicate that no FOR-instance development or test
 data were used for model fitting, and record the method-specific mode
 separately, for example `unsupervised_parameterised`.
+
+New runs must also separate:
+
+- `learning_regime`: `supervised`, `self_supervised`, `unsupervised`,
+  `deterministic` or `rule_based`; and
+- `dataset_exposure`: `published_checkpoint`, `external_only`,
+  `development_tuned`, `development_trained` or `none`.
+
+These fields do not replace the legacy training mode. They prevent
+parameter-tuned unsupervised methods from being described as untouched
+external baselines merely because no model weights were updated. The current
+method mapping is maintained in
+[`result-governance.md`](result-governance.md#learning-regime-and-dataset-exposure).
 
 For every checkpoint, record:
 
@@ -81,6 +100,15 @@ FOR-instance test files must not be used for training, early stopping,
 threshold selection, visual parameter adjustment or repeated debugging.
 Development results may be reported for diagnostics, but the primary
 comparable accuracy result is calculated on the supplied test split.
+
+Every known held-out exposure must be appended to the public-safe
+[`test-exposure ledger`](../../outputs/for_instance_benchmark_metrics/test_exposure_ledger.csv).
+The record distinguishes a test job executing, metrics being viewed,
+predictions being visualised and any configuration change afterwards. Earlier
+exploratory exposure remains visible; it is not erased by a later freeze.
+Unknown dates, viewing events or decisions remain `unknown`; use
+`not_applicable` only when an event field genuinely cannot apply. Values must
+not be inferred.
 
 The discarded SegmentAnyTree coordinate-rematching run included test outputs
 before this protocol was frozen. Those values must not guide the corrected
@@ -98,7 +126,7 @@ augmentations, architectures and optimisation schedules remain part of each
 method's documented reproduction rather than being forced to be identical.
 
 For the current SegmentAnyTree and TreeLearn development fine-tunes, the
-headline schedule is 35 epochs. Each method must also record examples per
+declared schedule is 35 epochs. Each method must also record examples per
 epoch, batch size, total examples and optimizer steps because an epoch does not
 represent equal work across architectures. TreeX is deterministic and has no
 optimizer or epoch count. Cross-method comparability is defined by the frozen
@@ -106,13 +134,27 @@ development/test boundary, validation-only selection, one-time 11-plot test,
 point-aligned prediction contract and identical evaluator—not by hiding
 method-specific training exposure.
 
-The public headline result table must contain only `held_out_test_primary`
-rows. Each such row must use the supplied 11-plot test split, all 323 reference
-instances and `for_instance_pointwise_v1` with maximum-cardinality one-to-one
-matching. Development, smoke, checkpoint-sweep and overlap-affected results
-must be stored in a separate diagnostics table and must never occupy headline
-ranking rows. Missing method variants are reported as gaps rather than being
-filled with a differently scoped result.
+The public shared-protocol ranking must contain only `held_out_test_primary`
+comparison rows. Each ranked row must use the supplied 11-plot test split, all
+323 reference instances and this shared protocol with maximum-cardinality
+one-to-one matching. Within that group, development-selected target rows use
+`result_status=primary` and declared comparison settings use
+`result_status=baseline`. A baseline may be development-parameterised only
+when that exposure is explicit. The current ranked group contains two primary
+rows and three baselines. The two complete class-3-ignore TLS2trees rows remain
+accepted held-out evidence in a separate protocol group; their shared-ranking
+eligibility is false because the reference scoring mask differs. Development,
+smoke, checkpoint-sweep, alternate-material and overlap-affected results must
+be stored as diagnostics and must never occupy ranked rows. Missing method
+variants are reported as gaps rather than filled with a differently scoped
+result.
+
+Method-development effort is recorded separately in
+[`method_development_budget.csv`](../../outputs/for_instance_benchmark_metrics/method_development_budget.csv).
+Where supported, record configurations, validation evaluations, checkpoints,
+epochs, optimiser steps, GPU/CPU hours, manual inspection and hyperparameter
+source. Do not infer compute hours from Slurm resource requests. Identical
+accuracy evaluation does not imply equal optimisation effort.
 
 ## Reference Definition
 
@@ -127,6 +169,15 @@ The reference instance field is `treeID`.
 The tree-material definition matches the binary tree class used by
 SegmentAnyTree: stems, live branches and woody branches are tree points;
 terrain, low vegetation, out-points and unclassified points are non-tree.
+
+Result metadata must distinguish prediction material, reference scoring mask
+and leaf attachment. Shared rows use `prediction_material=full_tree_material`,
+`reference_scoring_mask=classes_4_5_6` and
+`leaf_attachment=not_applicable`. A woody-only target, a woody-plus-leaf
+target and a distinct attachment stage must be named separately. These fields
+describe processing/scoring material and must not overwrite genuine
+acquisition-season metadata. Explicit included and ignored semantic classes
+remain required when a short mask slug is insufficient.
 
 ## Prediction Contract
 
@@ -205,6 +256,29 @@ Also report:
 - semantic tree/non-tree accuracy where the method predicts semantics;
 - all accepted and unmatched instance identifiers.
 
+Diagnostic evaluation may additionally report precision, recall and F1 at IoU
+thresholds `0.25`, `0.50` and `0.75`; median plot F1 and interquartile range;
+zero-F1 plot count; per-site macro summaries; over-/under-segmentation
+indicators; and unmatched counts. These values are never used for selection
+and never replace the IoU `>= 0.5` point estimate.
+
+Where method outputs contain independent semantic labels, error decomposition
+may report semantic omission/commission, instance splitting/merging,
+unassigned reference-tree points, semantic-commission points,
+positive-instance points on reference background and unmatched instances. A
+semantic label derived only from a positive instance ID cannot isolate
+semantic-model errors from grouping errors. Unsupported fields must remain
+explicit.
+
+Bootstrap confidence intervals resample plots rather than individual trees,
+use default seed `20260721` and `10000` configurable iterations, and are
+emitted separately from canonical point estimates. Optional site-stratified
+resampling must be labelled carefully: the test subset has only 11 plots and
+several sites have one plot, so the interval is not a broad population
+estimate.
+Availability for each accepted row is recorded in
+[`diagnostic_metric_availability.csv`](../../outputs/for_instance_benchmark_metrics/diagnostic_metric_availability.csv).
+
 Aggregate counts before calculating micro precision, recall and F1. Report
 per-plot values, collection summaries, development/test summaries and the
 test-only primary result. Do not average collection F1 values to produce the
@@ -231,7 +305,13 @@ A method result is not accepted as comparable until all gates pass:
 10. results are compared with the paper by collection; and
 11. an absolute F1 difference greater than 0.10 from a directly comparable
     published result triggers investigation before the result is described as
-    a successful reproduction.
+    a successful reproduction;
+12. result role, completion state, ranking eligibility and any exclusion reason
+    are recorded;
+13. learning regime, dataset exposure and material/mask fields are recorded;
+    and
+14. method-specific upstream, environment and checkpoint provenance is
+    recorded or explicitly unknown.
 
 The comparison gate is a diagnostic, not a target to optimise against.
 Published scores must never be used to tune test predictions.
@@ -252,8 +332,9 @@ For paper-aligned evaluation:
    determine whether the final LAZ is row-preserving; and
 6. do not use the final LAZ for accuracy when the export audit fails.
 
-The earlier coordinate-rematched result set is retained only as a provisional
-workflow diagnostic. It is not the accepted SegmentAnyTree reproduction.
+The earlier coordinate-rematched result set is retained as rejected workflow
+evidence after its export audit failed. Its historically provisional values
+are not an accepted SegmentAnyTree reproduction.
 
 The current SegmentAnyTree comparison evaluates the released checkpoint as
 `published_pretrained`, then starts a separate `fine_tuned_on_dev` run from
@@ -278,6 +359,20 @@ For each dataset-method combination, publish:
 - a prediction-retention registry row that identifies the reusable off-Git
   prediction set;
 - failures, deviations and known limitations.
+
+Canonical benchmark data are CSV tables under
+`outputs/for_instance_benchmark_metrics/`. The workbook is a generated review
+artefact built deterministically with
+`python scripts/reporting/build_for_instance_workbook.py`; it must not become
+an independently edited source of truth. Derived site, plot-distribution and
+bootstrap-CI diagnostic summaries are built with
+`python scripts/reporting/build_for_instance_governance_outputs.py`; that
+command does not author the evidence-led governance ledgers.
+
+Future run IDs use
+`<method>__<dataset>__<training-mode>__<selection-mode>__<split>__<YYYYMMDDTHHMMSS>`.
+Historical run IDs and hash-linked paths remain unchanged; use a canonical
+alias instead of renaming evidence.
 
 Raw datasets, checkpoints, predictions, full logs and machine-specific
 metadata remain outside Git.

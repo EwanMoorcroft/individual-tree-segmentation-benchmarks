@@ -27,6 +27,23 @@ def test_project_root_cannot_be_a_publication_target(tmp_path: Path) -> None:
         publication.publication_path(project, project)
 
 
+def test_publication_accepts_equivalent_barkla_mount_alias(tmp_path: Path) -> None:
+    physical_parent = tmp_path / "mnt/scratch/user"
+    physical_project = physical_parent / "tree-seg-benchmark"
+    physical_project.mkdir(parents=True)
+    alias_parent = tmp_path / "users/user/scratch"
+    alias_parent.parent.mkdir(parents=True)
+    alias_parent.symlink_to(physical_parent, target_is_directory=True)
+    aliased_target = (
+        alias_parent
+        / "tree-seg-benchmark/results/metadata/tls2trees/receipt.json"
+    )
+
+    assert publication.publication_path(
+        aliased_target, physical_project
+    ) == publication.lexical_absolute(aliased_target)
+
+
 def test_text_publication_rejects_target_symlink_without_external_write(
     tmp_path: Path,
 ) -> None:

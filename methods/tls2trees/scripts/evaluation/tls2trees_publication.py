@@ -27,21 +27,30 @@ def publication_path(path: Path, project_root: Path) -> Path:
 
     root = lexical_absolute(project_root)
     candidate = lexical_absolute(path)
+    root_resolved = root.resolve(strict=True)
+    # Resolve parent aliases for containment, but deliberately do not follow
+    # the final component: require_regular_or_missing must still see and
+    # reject a publication target that is itself a symlink.
+    candidate_resolved = candidate.parent.resolve(strict=False) / candidate.name
     try:
-        candidate.relative_to(root)
+        candidate_resolved.relative_to(root_resolved)
     except ValueError as exc:
         raise ValueError(
             f"Publication target is outside the project root: {candidate}"
         ) from exc
-    if candidate == root:
+    if candidate_resolved == root_resolved:
         raise ValueError("Publication target cannot be the project root")
 
     parent = candidate.parent
-    while parent != root:
+    while parent.resolve(strict=False) != root_resolved:
         if parent.is_symlink():
             raise ValueError(f"Publication parent is a symlink: {parent}")
         if parent.exists() and not parent.is_dir():
             raise ValueError(f"Publication parent is not a directory: {parent}")
+        if parent == parent.parent:
+            raise ValueError(
+                f"Publication target is outside the project root: {candidate}"
+            )
         parent = parent.parent
     if root.is_symlink() or not root.is_dir():
         raise ValueError(f"Invalid publication project root: {root}")

@@ -525,6 +525,7 @@ receipt exists. Then run:
 python -m pytest -q \
   tests/test_for_instance_workbook_sync.py \
   tests/test_for_instance_public_result_gate.py \
+  tests/test_tls2trees_publication_documentation.py \
   tests/test_benchmark_structure_contract.py
 git diff --check
 ```

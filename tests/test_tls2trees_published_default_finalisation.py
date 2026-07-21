@@ -111,7 +111,9 @@ def make_fixture(
     benchmark_path.write_text("evaluation: neutral\n")
 
     point_counts = [1] * 10 + [49_709_912]
-    reference_counts = [29] * 10 + [33]
+    # Match the frozen test manifest's exact per-plot inventory so artifacts
+    # produced by this fixture also satisfy the public site-level contract.
+    reference_counts = [20, 30, 27, 37, 20, 28, 19, 64, 25, 18, 35]
     plots = []
     for task, relative_path in enumerate(
         workflow["dataset"]["exact_relative_paths"]
@@ -379,6 +381,28 @@ def test_finaliser_verifies_and_safely_upserts_public_evidence(tmp_path: Path) -
     assert len(matching_rows(paths["diagnostics"], diagnostic_match)) == 1
     assert len(matching_rows(paths["retention"], retention_match)) == 1
     assert matching_rows(paths["results"], {"method_slug": "treelearn"})
+
+    with (
+        paths["examples"]
+        / "tls2trees_published_default_test_site_results.csv"
+    ).open(newline="", encoding="utf-8") as handle:
+        site_rows = list(csv.DictReader(handle))
+    assert {row["site"]: int(row["plots"]) for row in site_rows} == {
+        "CULS": 1,
+        "NIBIO": 6,
+        "RMIT": 1,
+        "SCION": 2,
+        "TUWIEN": 1,
+    }
+    assert {
+        row["site"]: int(row["reference_instances"]) for row in site_rows
+    } == {
+        "CULS": 20,
+        "NIBIO": 161,
+        "RMIT": 64,
+        "SCION": 43,
+        "TUWIEN": 35,
+    }
 
     provenance = json.loads(
         (

@@ -250,6 +250,46 @@ def summarise(
                 raise ValueError(f"Published-default metric provenance mismatch: {metric_path}")
             if not aligned.is_file() or not alignment.is_file():
                 raise FileNotFoundError(f"Aligned prediction evidence is missing: {aligned}")
+            prediction_sha256 = sha256(aligned)
+            alignment_sha256 = sha256(alignment)
+            alignment_metadata, _ = load_json(alignment)
+            alignment_prediction = alignment_metadata.get(
+                "aligned_prediction_npz"
+            )
+            if (
+                alignment_metadata.get("status") != "passed"
+                or alignment_metadata.get("target") != target
+                or not isinstance(alignment_prediction, str)
+                or Path(alignment_prediction).expanduser().resolve()
+                != aligned.resolve()
+                or alignment_metadata.get("aligned_prediction_npz_sha256")
+                != prediction_sha256
+            ):
+                raise ValueError(
+                    "Published-default alignment metadata does not bind the "
+                    f"retained prediction: {alignment}"
+                )
+            metric_prediction = metrics.get("aligned_predictions_npz")
+            metric_alignment = metrics.get("alignment_metadata_json")
+            metric_prediction_sha256 = metrics.get(
+                "aligned_predictions_npz_sha256"
+            )
+            if (
+                not isinstance(metric_prediction, str)
+                or not isinstance(metric_alignment, str)
+                or Path(metric_prediction).expanduser().resolve() != aligned.resolve()
+                or (
+                    metric_prediction_sha256 is not None
+                    and metric_prediction_sha256 != prediction_sha256
+                )
+                or Path(metric_alignment).expanduser().resolve()
+                != alignment.resolve()
+                or metrics.get("alignment_metadata_sha256") != alignment_sha256
+            ):
+                raise ValueError(
+                    "Published-default metric retained-evidence mismatch: "
+                    f"{metric_path}"
+                )
             if int(metrics["prediction_instance_count"]) == 0 and (
                 int(metrics["true_positives"]) != 0
                 or int(metrics["false_positives"]) != 0
@@ -292,8 +332,8 @@ def summarise(
                 "metrics_path": str(metric_path),
                 "metrics_sha256": sha256(metric_path),
                 "prediction_path": str(aligned),
-                "prediction_sha256": sha256(aligned),
-                "alignment_metadata_sha256": sha256(alignment),
+                "prediction_sha256": prediction_sha256,
+                "alignment_metadata_sha256": alignment_sha256,
             }
             rows.append(row)
             retained.append(

@@ -1344,6 +1344,9 @@ def main() -> int:
             "aligned_predictions_npz": (
                 str(aligned_predictions) if aligned_predictions else None
             ),
+            "aligned_predictions_npz_sha256": (
+                sha256_file(aligned_predictions) if aligned_predictions else None
+            ),
             "reference_source": str(reference_source),
             "alignment_metadata_json": str(alignment_metadata_path),
             "alignment_metadata_sha256": sha256_file(alignment_metadata_path),

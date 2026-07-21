@@ -13,10 +13,14 @@ TLS2trees is an external dependency and is not vendored here. The tested
 repository URL and commit are recorded in
 [`configs/frdr_benchmark.yml`](configs/frdr_benchmark.yml) and
 the legacy [`configs/for_instance_accuracy.yml`](configs/for_instance_accuracy.yml).
-The draft published/default provenance is recorded separately in
-[`configs/for_instance_published_default.yml`](configs/for_instance_published_default.yml). Cite
-the [`TLS2trees` paper](https://doi.org/10.1111/2041-210X.14233) when using the
-method.
+The publication-derived method parameters and executable provenance are
+recorded in
+[`configs/for_instance_published_default.yml`](configs/for_instance_published_default.yml).
+The independently frozen held-out route, exact split and target contract are
+recorded in
+[`configs/for_instance_published_default_test.yml`](configs/for_instance_published_default_test.yml).
+Cite the [`TLS2trees` paper](https://doi.org/10.1111/2041-210X.14233) when using
+the method.
 
 ## Training Mode Support
 

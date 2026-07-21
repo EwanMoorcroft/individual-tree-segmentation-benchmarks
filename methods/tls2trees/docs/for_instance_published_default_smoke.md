@@ -372,7 +372,23 @@ finalise_published_default_results.sh \
   "$STATE_FILE"
 ```
 
+The command prints the submitted job ID and stores it in
+`logs/tls2trees_for_instance/latest_published_default_finalisation_job_id.txt`.
+Use the exact job monitor and receipt check in the
+[`Final publication order`](for_instance_benchmark.md#final-publication-order)
+section; do not pull or edit the checkout while that job is pending.
+
+Run this finaliser only after any earlier tracked-result publication has been
+verified and committed. If its Slurm job is interrupted after writing only part
+of the exact public bundle, rerun the same command with
+`TLS2TREES_PUBLISHED_DEFAULT_RESULTS_RECOVERY_CONFIRMED=1`. Recovery validates a
+narrow allowlist of finaliser-owned files and refuses staged, deleted, renamed
+or unrelated worktree changes.
+
 The finalisation job writes eight small public artifacts under
 `methods/tls2trees/examples/` and strictly upserts one headline, one leaf-off
 diagnostic and one retention-registry row. Raw point clouds, predictions, state
-files and Barkla paths remain outside Git.
+files, receipts and Barkla paths remain outside Git. The receipt verifies the
+tracked bundle but is not committed. A changed headline also requires the
+public workbook rebuild, four-sheet visual check and synchronization test
+specified in the final-publication runbook before commit.

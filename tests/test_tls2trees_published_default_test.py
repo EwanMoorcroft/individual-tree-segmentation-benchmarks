@@ -306,7 +306,7 @@ def test_semantic_cache_mismatch_falls_back_before_creating_destination(
     assert not destination.exists()
 
 
-def test_published_default_summary_accepts_22_valid_empty_metrics(
+def test_published_default_summary_accepts_db4051d_metrics_and_rejects_tampering(
     tmp_path: Path,
 ) -> None:
     summary_module = load_module(
@@ -415,9 +415,21 @@ def test_published_default_summary_accepts_22_valid_empty_metrics(
         for target in ("leaf_off", "leaf_on"):
             aligned = plot_root / "predictions/aligned" / target
             aligned.mkdir(parents=True)
-            (aligned / "source_row_predictions.npz").write_bytes(b"empty prediction")
-            (aligned / "alignment_metadata.json").write_text(
-                json.dumps({"schema_version": "tls2trees_for_instance_alignment"}),
+            prediction_path = aligned / "source_row_predictions.npz"
+            alignment_path = aligned / "alignment_metadata.json"
+            prediction_path.write_bytes(b"empty prediction")
+            alignment_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "tls2trees_for_instance_alignment",
+                        "status": "passed",
+                        "target": target,
+                        "aligned_prediction_npz": str(prediction_path.resolve()),
+                        "aligned_prediction_npz_sha256": summary_module.sha256(
+                            prediction_path
+                        ),
+                    }
+                ),
                 encoding="utf-8",
             )
             evaluation = plot_root / "evaluation" / target
@@ -440,6 +452,11 @@ def test_published_default_summary_accepts_22_valid_empty_metrics(
                         },
                         "status": "evaluated",
                         "safe_for_scoring": True,
+                        "aligned_predictions_npz": str(prediction_path.resolve()),
+                        "alignment_metadata_json": str(alignment_path.resolve()),
+                        "alignment_metadata_sha256": summary_module.sha256(
+                            alignment_path
+                        ),
                         "prediction_instance_count": 0,
                         "reference_instance_count": plot["reference_tree_count"],
                         "true_positives": 0,
@@ -476,6 +493,139 @@ def test_published_default_summary_accepts_22_valid_empty_metrics(
     assert retention["status"] == "retention_verified"
     assert retention["verified_prediction_files"] == 22
     assert all(not Path(row["relative_path"]).is_absolute() for row in retention["files"])
+
+    first_metric = (
+        output_root
+        / "tls2trees/for_instance/published_default/test"
+        / run_id
+        / plots[0]["safe_plot_id"]
+        / "evaluation/leaf_off/plot_metrics.json"
+    )
+    assert "aligned_predictions_npz_sha256" not in json.loads(
+        first_metric.read_text(encoding="utf-8")
+    )
+
+    first_aligned = (
+        output_root
+        / "tls2trees/for_instance/published_default/test"
+        / run_id
+        / plots[0]["safe_plot_id"]
+        / "predictions/aligned/leaf_off"
+    )
+    prediction_path = first_aligned / "source_row_predictions.npz"
+    original_prediction = prediction_path.read_bytes()
+    prediction_path.write_bytes(b"replaced after evaluation")
+    with pytest.raises(ValueError, match="alignment metadata"):
+        summary_module.summarise(
+            project_root=tmp_path,
+            output_root=output_root,
+            run_id=run_id,
+            manifest_path=manifest_path,
+            manifest_sha256=summary_module.sha256(manifest_path),
+            workflow_config_path=workflow_path,
+            workflow_config_sha256=summary_module.sha256(workflow_path),
+            published_config_path=published_path,
+            published_config_sha256=summary_module.sha256(published_path),
+            benchmark_config_path=benchmark_path,
+            benchmark_config_sha256=summary_module.sha256(benchmark_path),
+        )
+    prediction_path.write_bytes(original_prediction)
+
+    metric = json.loads(first_metric.read_text(encoding="utf-8"))
+    metric["aligned_predictions_npz_sha256"] = "0" * 64
+    first_metric.write_text(json.dumps(metric), encoding="utf-8")
+    with pytest.raises(ValueError, match="metric retained-evidence mismatch"):
+        summary_module.summarise(
+            project_root=tmp_path,
+            output_root=output_root,
+            run_id=run_id,
+            manifest_path=manifest_path,
+            manifest_sha256=summary_module.sha256(manifest_path),
+            workflow_config_path=workflow_path,
+            workflow_config_sha256=summary_module.sha256(workflow_path),
+            published_config_path=published_path,
+            published_config_sha256=summary_module.sha256(published_path),
+            benchmark_config_path=benchmark_path,
+            benchmark_config_sha256=summary_module.sha256(benchmark_path),
+        )
+    del metric["aligned_predictions_npz_sha256"]
+    first_metric.write_text(json.dumps(metric), encoding="utf-8")
+
+    alignment_path = first_aligned / "alignment_metadata.json"
+    alignment_path.write_text('{"changed": true}\n', encoding="utf-8")
+    with pytest.raises(ValueError, match="alignment metadata"):
+        summary_module.summarise(
+            project_root=tmp_path,
+            output_root=output_root,
+            run_id=run_id,
+            manifest_path=manifest_path,
+            manifest_sha256=summary_module.sha256(manifest_path),
+            workflow_config_path=workflow_path,
+            workflow_config_sha256=summary_module.sha256(workflow_path),
+            published_config_path=published_path,
+            published_config_sha256=summary_module.sha256(published_path),
+            benchmark_config_path=benchmark_path,
+            benchmark_config_sha256=summary_module.sha256(benchmark_path),
+        )
+
+
+def test_aligned_evaluator_records_exact_prediction_and_alignment_hashes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    evaluator = load_module(
+        EVALUATION / "evaluate_for_instance_tls2trees_plot.py",
+        "published_default_evaluator_evidence_contract",
+    )
+    prediction = tmp_path / "source_row_predictions.npz"
+    alignment = tmp_path / "alignment_metadata.json"
+    reference = tmp_path / "source.las"
+    output = tmp_path / "evaluation/plot_metrics.json"
+    prediction.write_bytes(b"aligned prediction")
+    alignment.write_text("{}\n", encoding="utf-8")
+    reference.write_bytes(b"reference")
+    monkeypatch.setattr(
+        evaluator,
+        "evaluate_aligned_plot",
+        lambda **_: {
+            "status": "evaluated",
+            "safe_for_scoring": True,
+            "matches": [],
+            "unmatched_predictions": [],
+            "unmatched_references": [],
+        },
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            str(EVALUATION / "evaluate_for_instance_tls2trees_plot.py"),
+            "--target",
+            "leaf_on",
+            "--aligned-predictions-npz",
+            str(prediction),
+            "--reference-labelled-point-cloud",
+            str(reference),
+            "--alignment-metadata-json",
+            str(alignment),
+            "--plot-id",
+            "plot",
+            "--relative-path",
+            "SITE/plot.las",
+            "--split",
+            "test",
+            "--output-json",
+            str(output),
+        ],
+    )
+
+    assert evaluator.main() == 0
+    metrics = json.loads(output.read_text(encoding="utf-8"))
+    assert metrics["aligned_predictions_npz"] == str(prediction.resolve())
+    assert metrics["aligned_predictions_npz_sha256"] == evaluator.sha256_file(
+        prediction
+    )
+    assert metrics["alignment_metadata_json"] == str(alignment.resolve())
+    assert metrics["alignment_metadata_sha256"] == evaluator.sha256_file(alignment)
 
 
 def test_published_default_slurm_chain_is_guarded_and_barkla_sized() -> None:

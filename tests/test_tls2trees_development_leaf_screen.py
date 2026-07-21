@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import itertools
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -403,6 +404,35 @@ def all_strings(value: object) -> list[str]:
     return [value] if isinstance(value, str) else []
 
 
+def run_leaf_screen_finaliser(
+    finaliser: ModuleType,
+    payload: dict[str, object],
+    summary_path: Path,
+    plot_path: Path,
+    candidate_path: Path,
+    output_dir: Path,
+) -> dict[str, object]:
+    return finaliser.finalise(
+        summary_path=summary_path,
+        source_plot_csv=plot_path,
+        source_candidate_csv=candidate_path,
+        candidate_config_path=LEAF_CONFIG,
+        output_dir=output_dir,
+        project_root=output_dir.parent,
+        source_state_sha256="a" * 64,
+        expected_run_id=str(payload["workflow_run_id"]),
+        expected_source_run_id=str(payload["development_evidence_run_id"]),
+        expected_semantic_cache_run_id="semantic_cache_run",
+        expected_manifest_sha256=str(payload["manifest_sha256"]),
+        expected_source_config_sha256=str(payload["candidate_config_sha256"]),
+        expected_development_evidence_sha256=str(
+            payload["development_evidence_sha256"]
+        ),
+        source_benchmark_commit="a" * 40,
+        publication_benchmark_commit="b" * 40,
+    )
+
+
 def test_leaf_screen_finaliser_writes_exact_public_safe_evidence(
     tmp_path: Path,
 ) -> None:
@@ -425,6 +455,7 @@ def test_leaf_screen_finaliser_writes_exact_public_safe_evidence(
         source_candidate_csv=candidate_path,
         candidate_config_path=LEAF_CONFIG,
         output_dir=output_dir,
+        project_root=output_dir.parent,
         source_state_sha256="a" * 64,
         expected_run_id=str(payload["workflow_run_id"]),
         expected_source_run_id=str(payload["development_evidence_run_id"]),
@@ -434,6 +465,8 @@ def test_leaf_screen_finaliser_writes_exact_public_safe_evidence(
         expected_development_evidence_sha256=str(
             payload["development_evidence_sha256"]
         ),
+        source_benchmark_commit="a" * 40,
+        publication_benchmark_commit="b" * 40,
     )
 
     public_plot = output_dir / finaliser.PUBLIC_PLOT_NAME
@@ -442,6 +475,10 @@ def test_leaf_screen_finaliser_writes_exact_public_safe_evidence(
     assert public_plot.is_file()
     assert public_candidate.is_file()
     assert public_provenance.is_file()
+    assert all(
+        path.stat().st_nlink == 1
+        for path in (public_plot, public_candidate, public_provenance)
+    )
     with public_plot.open(encoding="utf-8", newline="") as handle:
         plot_reader = csv.DictReader(handle)
         plot_rows = list(plot_reader)
@@ -490,6 +527,8 @@ def test_leaf_screen_finaliser_writes_exact_public_safe_evidence(
     assert provenance["candidate_count"] == 9
     assert provenance["held_out_test_accessed"] is False
     assert provenance["final_configuration_selected"] is False
+    assert provenance["source_benchmark_commit"] == "a" * 40
+    assert provenance["publication_benchmark_commit"] == "b" * 40
     assert provenance["evaluation_protocol"] == (
         "for_instance_tls2trees_source_row_class3_ignore"
     )
@@ -535,6 +574,7 @@ def test_leaf_screen_finaliser_rejects_tampering_and_test_access(
             source_candidate_csv=candidate_path,
             candidate_config_path=LEAF_CONFIG,
             output_dir=tmp_path / "tampered-public",
+            project_root=tmp_path,
             source_state_sha256="a" * 64,
             expected_run_id=str(payload["workflow_run_id"]),
             expected_source_run_id=str(payload["development_evidence_run_id"]),
@@ -544,6 +584,8 @@ def test_leaf_screen_finaliser_rejects_tampering_and_test_access(
             expected_development_evidence_sha256=str(
                 payload["development_evidence_sha256"]
             ),
+            source_benchmark_commit="a" * 40,
+            publication_benchmark_commit="b" * 40,
         )
 
     payload["held_out_test_accessed"] = True
@@ -555,6 +597,7 @@ def test_leaf_screen_finaliser_rejects_tampering_and_test_access(
             source_candidate_csv=candidate_path,
             candidate_config_path=LEAF_CONFIG,
             output_dir=tmp_path / "test-access-public",
+            project_root=tmp_path,
             source_state_sha256="a" * 64,
             expected_run_id=str(payload["workflow_run_id"]),
             expected_source_run_id=str(payload["development_evidence_run_id"]),
@@ -564,22 +607,405 @@ def test_leaf_screen_finaliser_rejects_tampering_and_test_access(
             expected_development_evidence_sha256=str(
                 payload["development_evidence_sha256"]
             ),
+            source_benchmark_commit="a" * 40,
+            publication_benchmark_commit="b" * 40,
         )
+
+
+def test_leaf_screen_finaliser_normal_rerun_completes_interrupted_bundle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    payload, summary_path, plot_path, candidate_path = (
+        write_leaf_screen_summary_artifacts(tmp_path)
+    )
+    finaliser = load_script(
+        FINALISER_SCRIPT, "tls2trees_leaf_screen_interrupted_publication"
+    )
+    output_dir = tmp_path / "interrupted-public"
+    real_link = finaliser.os.link
+    successful_links = 0
+
+    def interrupt_after_first_link(source: Path, target: Path) -> None:
+        nonlocal successful_links
+        if successful_links == 1:
+            raise RuntimeError("simulated publication interruption")
+        real_link(source, target)
+        successful_links += 1
+
+    monkeypatch.setattr(finaliser.os, "link", interrupt_after_first_link)
+    with pytest.raises(RuntimeError, match="simulated publication interruption"):
+        run_leaf_screen_finaliser(
+            finaliser,
+            payload,
+            summary_path,
+            plot_path,
+            candidate_path,
+            output_dir,
+        )
+
+    plot_output = output_dir / finaliser.PUBLIC_PLOT_NAME
+    candidate_output = output_dir / finaliser.PUBLIC_CANDIDATE_NAME
+    provenance_output = output_dir / finaliser.PUBLIC_PROVENANCE_NAME
+    stage_dir = output_dir / finaliser.PUBLICATION_STAGE_NAME
+    assert plot_output.is_file()
+    assert not candidate_output.exists()
+    assert not provenance_output.exists()
+    assert not stage_dir.exists()
+
+    monkeypatch.setattr(finaliser.os, "link", real_link)
+    run_leaf_screen_finaliser(
+        finaliser,
+        payload,
+        summary_path,
+        plot_path,
+        candidate_path,
+        output_dir,
+    )
+    retry_output = capsys.readouterr().out
+    assert "publication_outputs_created=2" in retry_output
+    assert "publication_outputs_retained=1" in retry_output
+    outputs = (plot_output, candidate_output, provenance_output)
+    before = {path: (path.stat().st_ino, path.read_bytes()) for path in outputs}
+
+    run_leaf_screen_finaliser(
+        finaliser,
+        payload,
+        summary_path,
+        plot_path,
+        candidate_path,
+        output_dir,
+    )
+    idempotent_output = capsys.readouterr().out
+    assert "publication_outputs_created=0" in idempotent_output
+    assert "publication_outputs_retained=3" in idempotent_output
+    assert before == {
+        path: (path.stat().st_ino, path.read_bytes()) for path in outputs
+    }
+    assert not stage_dir.exists()
+
+
+def test_leaf_screen_publication_preserves_target_changed_between_links(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload, summary_path, plot_path, candidate_path = (
+        write_leaf_screen_summary_artifacts(tmp_path)
+    )
+    finaliser = load_script(
+        FINALISER_SCRIPT, "tls2trees_leaf_screen_concurrent_target_change"
+    )
+    output_dir = tmp_path / "concurrent-target-public"
+    real_link = finaliser.os.link
+    links = 0
+
+    def change_next_target(source: Path, target: Path) -> None:
+        nonlocal links
+        real_link(source, target)
+        links += 1
+        if links == 1:
+            (output_dir / finaliser.PUBLIC_CANDIDATE_NAME).write_bytes(
+                b"concurrent manual edit\n"
+            )
+
+    monkeypatch.setattr(finaliser.os, "link", change_next_target)
+    with pytest.raises(FileExistsError, match="conflicts with rendered bundle"):
+        run_leaf_screen_finaliser(
+            finaliser,
+            payload,
+            summary_path,
+            plot_path,
+            candidate_path,
+            output_dir,
+        )
+
+    assert (output_dir / finaliser.PUBLIC_CANDIDATE_NAME).read_bytes() == (
+        b"concurrent manual edit\n"
+    )
+
+
+def test_leaf_screen_publication_verifies_complete_bundle_before_return(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload, summary_path, plot_path, candidate_path = (
+        write_leaf_screen_summary_artifacts(tmp_path)
+    )
+    finaliser = load_script(
+        FINALISER_SCRIPT, "tls2trees_leaf_screen_complete_bundle_verification"
+    )
+    output_dir = tmp_path / "post-publication-change"
+    real_link = finaliser.os.link
+    links = 0
+
+    def change_first_target_after_last_link(source: Path, target: Path) -> None:
+        nonlocal links
+        real_link(source, target)
+        links += 1
+        if links == 3:
+            (output_dir / finaliser.PUBLIC_PLOT_NAME).write_bytes(
+                b"changed after publication\n"
+            )
+
+    monkeypatch.setattr(finaliser.os, "link", change_first_target_after_last_link)
+    with pytest.raises(FileExistsError, match="conflicts with rendered bundle"):
+        run_leaf_screen_finaliser(
+            finaliser,
+            payload,
+            summary_path,
+            plot_path,
+            candidate_path,
+            output_dir,
+        )
+
+
+def test_leaf_screen_finaliser_rejects_conflict_before_filling_bundle(
+    tmp_path: Path,
+) -> None:
+    payload, summary_path, plot_path, candidate_path = (
+        write_leaf_screen_summary_artifacts(tmp_path)
+    )
+    finaliser = load_script(
+        FINALISER_SCRIPT, "tls2trees_leaf_screen_publication_conflict"
+    )
+    output_dir = tmp_path / "conflicting-public"
+    run_leaf_screen_finaliser(
+        finaliser,
+        payload,
+        summary_path,
+        plot_path,
+        candidate_path,
+        output_dir,
+    )
+    plot_output = output_dir / finaliser.PUBLIC_PLOT_NAME
+    candidate_output = output_dir / finaliser.PUBLIC_CANDIDATE_NAME
+    provenance_output = output_dir / finaliser.PUBLIC_PROVENANCE_NAME
+    exact_plot = plot_output.read_bytes()
+    candidate_output.write_bytes(b"conflicting candidate evidence\n")
+    provenance_output.unlink()
+    stage_dir = output_dir / finaliser.PUBLICATION_STAGE_NAME
+    stage_dir.mkdir()
+    # Model a process killed after linking a staged member into the public
+    # bundle but before its finally block removed the staging name.
+    finaliser.os.link(
+        candidate_output,
+        stage_dir / finaliser.PUBLIC_CANDIDATE_NAME,
+    )
+
+    with pytest.raises(FileExistsError, match="staging content conflicts"):
+        run_leaf_screen_finaliser(
+            finaliser,
+            payload,
+            summary_path,
+            plot_path,
+            candidate_path,
+            output_dir,
+        )
+    assert plot_output.read_bytes() == exact_plot
+    assert candidate_output.read_bytes() == b"conflicting candidate evidence\n"
+    assert not provenance_output.exists()
+    preserved_stage = stage_dir / finaliser.PUBLIC_CANDIDATE_NAME
+    assert preserved_stage.is_file()
+    assert preserved_stage.read_bytes() == b"conflicting candidate evidence\n"
+
+
+def test_leaf_screen_finaliser_validates_full_stage_before_publication(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload, summary_path, plot_path, candidate_path = (
+        write_leaf_screen_summary_artifacts(tmp_path)
+    )
+    finaliser = load_script(
+        FINALISER_SCRIPT, "tls2trees_leaf_screen_staged_validation"
+    )
+    output_dir = tmp_path / "invalid-stage-public"
+
+    def reject_staged_bundle(**_: object) -> None:
+        raise ValueError("simulated staged-bundle validation failure")
+
+    monkeypatch.setattr(finaliser, "validate_staged_bundle", reject_staged_bundle)
+    with pytest.raises(ValueError, match="staged-bundle validation failure"):
+        run_leaf_screen_finaliser(
+            finaliser,
+            payload,
+            summary_path,
+            plot_path,
+            candidate_path,
+            output_dir,
+        )
+    assert not any(
+        (output_dir / name).exists()
+        for name in (
+            finaliser.PUBLIC_PLOT_NAME,
+            finaliser.PUBLIC_CANDIDATE_NAME,
+            finaliser.PUBLIC_PROVENANCE_NAME,
+        )
+    )
+    assert not (output_dir / finaliser.PUBLICATION_STAGE_NAME).exists()
 
 
 def test_leaf_screen_publication_entrypoint_is_guarded_and_syntactically_valid(
 ) -> None:
     source = PUBLICATION_SCRIPT.read_text(encoding="utf-8")
     assert "TLS2TREES_LEAF_SCREEN_PUBLICATION_CONFIRMED" in source
+    assert "TLS2TREES_LEAF_SCREEN_PUBLICATION_RECOVERY_CONFIRMED" in source
+    assert '[[ "$RECOVERY_CONFIRMED" == "0" ]]' in source
     assert "latest_leaf_screen_state_file.txt" in source
     assert "development_leaf_screen_chain_submitted" in source
     assert "SUMMARY_STATE" in source and '"COMPLETED"' in source
     assert "SOURCE_STATE_SHA256" in source
+    assert "STATE_SNAPSHOT" in source
+    assert "POST_SOURCE_STATE_SHA256" in source
+    assert 'source "$STATE_SNAPSHOT"' in source
     assert "TLS2TREES_LEAF_SCREEN_MANIFEST_SHA256" in source
     assert "TLS2TREES_LEAF_SCREEN_CONFIG_SHA256" in source
     assert "TLS2TREES_LEAF_SCREEN_DEVELOPMENT_EVIDENCE_SHA256" in source
+    assert "PUBLIC_OUTPUTS=(" in source
+    assert "RECOVERY_PATHS=(\"${PUBLIC_OUTPUTS[@]}\")" in source
+    assert "--porcelain=v1 -z --untracked-files=all" in source
+    assert '[[ "$STATUS" != " M" && "$STATUS" != "??" ]]' in source
+    assert '[[ "$PATHNAME" == "$ALLOWED_PATH" ]]' in source
+    assert '[[ -L "$PATHNAME" ]]' in source
+    assert "WORKTREE_VIOLATIONS" in source
+    assert ":(exclude)" not in source
+    assert ".tls2trees_development_leaf_screen_publication.staging" in source
+    assert "test ! -e" not in source
     assert "--allow-held-out-test" not in source
+    assert "TLS2TREES_LEAF_SCREEN_BENCHMARK_COMMIT" in source
+    assert "PUBLICATION_BENCHMARK_COMMIT=$(git rev-parse HEAD)" in source
+    assert "git merge-base --is-ancestor" in source
+    assert '--project-root "$PWD"' in source
+    assert '--source-benchmark-commit "$SOURCE_BENCHMARK_COMMIT"' in source
+    assert (
+        '--publication-benchmark-commit "$PUBLICATION_BENCHMARK_COMMIT"'
+        in source
+    )
+    assert '--recovery-confirmed "$RECOVERY_CONFIRMED"' in source
     subprocess.run(["bash", "-n", str(PUBLICATION_SCRIPT)], check=True)
+
+
+def test_leaf_screen_publication_recovery_is_explicit_and_rejects_symlinks(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    fake_bin = tmp_path / "bin"
+    treebench = tmp_path / "treebench"
+    for path in (repository, fake_bin, treebench / "bin"):
+        path.mkdir(parents=True)
+
+    finaliser = repository / (
+        "methods/tls2trees/scripts/evaluation/"
+        "finalise_tls2trees_development_leaf_screen.py"
+    )
+    config = repository / (
+        "methods/tls2trees/configs/"
+        "for_instance_development_tuned_leaf_screen.yml"
+    )
+    for path in (finaliser, config):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("fixture\n", encoding="utf-8")
+
+    fake_python = treebench / "bin/python"
+    fake_python.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    fake_python.chmod(0o755)
+    fake_sacct = fake_bin / "sacct"
+    fake_sacct.write_text(
+        "#!/usr/bin/env bash\nprintf '123|COMPLETED|\\n'\n",
+        encoding="utf-8",
+    )
+    fake_sacct.chmod(0o755)
+
+    subprocess.run(["git", "init", "-q", str(repository)], check=True)
+    subprocess.run(["git", "-C", str(repository), "add", "."], check=True)
+    subprocess.run(
+        [
+            "git", "-C", str(repository), "-c", "user.name=Test",
+            "-c", "user.email=test@example.invalid", "commit", "-qm", "fixture",
+        ],
+        check=True,
+    )
+    commit = subprocess.run(
+        ["git", "-C", str(repository), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    evidence_paths = {
+        "TLS2TREES_LEAF_SCREEN_SUMMARY_JSON": tmp_path / "summary.json",
+        "TLS2TREES_LEAF_SCREEN_PLOT_CSV": tmp_path / "plot.csv",
+        "TLS2TREES_LEAF_SCREEN_AGGREGATE_CSV": tmp_path / "candidate.csv",
+    }
+    for path in evidence_paths.values():
+        path.write_text("fixture\n", encoding="utf-8")
+    state = tmp_path / "state.env"
+    state_values = {
+        "TLS2TREES_LEAF_SCREEN_RUN_ID": "leaf_run",
+        "TLS2TREES_LEAF_SCREEN_SUBMISSION_STATUS": (
+            "development_leaf_screen_chain_submitted"
+        ),
+        "TLS2TREES_LEAF_SCREEN_SUMMARY_JOB": "123",
+        "TLS2TREES_LEAF_SCREEN_SOURCE_RUN_ID": "source_run",
+        "TLS2TREES_LEAF_SCREEN_SOURCE_SEMANTIC_CACHE_RUN_ID": "semantic_run",
+        "TLS2TREES_LEAF_SCREEN_MANIFEST_SHA256": "a" * 64,
+        "TLS2TREES_LEAF_SCREEN_CONFIG_SHA256": "b" * 64,
+        "TLS2TREES_LEAF_SCREEN_DEVELOPMENT_EVIDENCE_SHA256": "c" * 64,
+        "TLS2TREES_LEAF_SCREEN_BENCHMARK_COMMIT": commit,
+        "TLS2TREES_LEAF_SCREEN_TREEBENCH_ENV": str(treebench),
+        **{key: str(path) for key, path in evidence_paths.items()},
+    }
+    state.write_text(
+        "".join(f"{key}={json.dumps(value)}\n" for key, value in state_values.items()),
+        encoding="utf-8",
+    )
+
+    def run(recovery: str | None) -> subprocess.CompletedProcess[str]:
+        environment = os.environ.copy()
+        environment.update(
+            {
+                "PATH": f"{fake_bin}:{environment['PATH']}",
+                "TLS2TREES_PROJECT_ROOT": str(repository),
+                "TLS2TREES_LEAF_SCREEN_PUBLICATION_CONFIRMED": "1",
+            }
+        )
+        if recovery is None:
+            environment.pop(
+                "TLS2TREES_LEAF_SCREEN_PUBLICATION_RECOVERY_CONFIRMED", None
+            )
+        else:
+            environment[
+                "TLS2TREES_LEAF_SCREEN_PUBLICATION_RECOVERY_CONFIRMED"
+            ] = recovery
+        return subprocess.run(
+            ["bash", str(PUBLICATION_SCRIPT), str(state)],
+            cwd=repository,
+            env=environment,
+            capture_output=True,
+            text=True,
+        )
+
+    assert run(None).returncode == 0
+    assert run("unexpected").returncode == 2
+
+    public = repository / (
+        "methods/tls2trees/examples/"
+        "tls2trees_development_leaf_screen_plot_results.csv"
+    )
+    public.parent.mkdir(parents=True, exist_ok=True)
+    public.write_text("interrupted publication\n", encoding="utf-8")
+    assert run(None).returncode == 2
+    assert run("1").returncode == 0
+
+    public.unlink()
+    external = tmp_path / "external-publication-target.txt"
+    external.write_text("must remain external\n", encoding="utf-8")
+    public.symlink_to(external)
+    rejected = run("1")
+    assert rejected.returncode == 2
+    assert "symlink" in rejected.stderr
+    assert external.read_text(encoding="utf-8") == "must remain external\n"
 
 
 def test_leaf_screen_slurm_reuses_semantics_and_submits_no_semantic_job() -> None:

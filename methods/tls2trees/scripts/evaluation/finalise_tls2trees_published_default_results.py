@@ -22,13 +22,22 @@ from typing import Any, Iterable
 
 ROOT = Path(__file__).resolve().parents[4]
 RUNTIME = ROOT / "methods/tls2trees/scripts/runtime"
+EVALUATION = Path(__file__).resolve().parent
 if str(RUNTIME) not in sys.path:
     sys.path.insert(0, str(RUNTIME))
+if str(EVALUATION) not in sys.path:
+    sys.path.insert(0, str(EVALUATION))
 
 from published_default_test_common import (  # noqa: E402
     TARGETS,
     validate_exact_manifest,
     validate_frozen_configuration,
+)
+from tls2trees_publication import (  # noqa: E402
+    preflight_text_target,
+    publication_lock,
+    publish_text_bundle,
+    validate_git_worktree,
 )
 
 
@@ -127,11 +136,23 @@ def read_csv(path: Path, fields: list[str]) -> list[dict[str, str]]:
         return list(reader)
 
 
-def atomic_write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.tmp")
-    temporary.write_text(text, encoding="utf-8", newline="")
-    os.replace(temporary, path)
+def publish_writes(
+    writes: dict[Path, str],
+    *,
+    project_root: Path,
+    enforce_head_baseline: bool,
+    expected_head: str | None,
+) -> None:
+    """Commit a deterministic, symlink-safe publication while locked."""
+
+    publish_text_bundle(
+        writes,
+        project_root=project_root,
+        staging_suffix=".tls2trees-published-default-finalisation.tmp",
+        replace=os.replace,
+        enforce_head_baseline=enforce_head_baseline,
+        expected_head=expected_head,
+    )
 
 
 def require_hash(path: Path, expected: str, label: str) -> None:
@@ -212,6 +233,84 @@ def aggregate(rows: list[dict[str, Any]], site: str) -> dict[str, Any]:
 
 def equal_number(actual: Any, expected: Any) -> bool:
     return abs(float(actual) - float(expected)) <= 1e-12
+
+
+def reconcile_summary_metric(
+    *,
+    source: dict[str, Any],
+    metrics: dict[str, Any],
+    target: str,
+    task: int,
+    plot: dict[str, Any],
+) -> None:
+    """Bind the copied summary row to its exact hashed metric evidence."""
+
+    context = f"{target}:{task}"
+    expected_identity = {
+        "split": "test",
+        "target": target,
+        "plot_id": plot["safe_plot_id"],
+        "relative_path": plot["relative_path"],
+        "status": source.get("status"),
+        "safe_for_scoring": source.get("safe_for_scoring"),
+    }
+    for field, expected in expected_identity.items():
+        if metrics.get(field) != expected:
+            raise ValueError(
+                "Published-default summary/metric evidence mismatch: "
+                f"{context}:{field}"
+            )
+
+    count_fields = (
+        "prediction_instance_count",
+        "reference_instance_count",
+        "true_positives",
+        "false_positives",
+        "false_negatives",
+        "oversegmented_reference_count",
+        "undersegmented_prediction_count",
+    )
+    for field in count_fields:
+        summary_value = source.get(field)
+        metric_value = metrics.get(field)
+        if (
+            type(summary_value) is not int
+            or type(metric_value) is not int
+            or summary_value != metric_value
+        ):
+            raise ValueError(
+                "Published-default summary/metric evidence mismatch: "
+                f"{context}:{field}"
+            )
+
+    summary_raw = source.get("raw_prediction_instance_count")
+    metric_raw = metrics.get("semantic_ignore", {}).get(
+        "raw_prediction_instance_count"
+    )
+    if (
+        type(summary_raw) is not int
+        or type(metric_raw) is not int
+        or summary_raw != metric_raw
+    ):
+        raise ValueError(
+            "Published-default summary/metric evidence mismatch: "
+            f"{context}:raw_prediction_instance_count"
+        )
+
+    for field in ("precision", "recall", "f1", "mean_matched_iou"):
+        summary_value = source.get(field)
+        metric_value = metrics.get(field)
+        if (
+            type(summary_value) not in (int, float)
+            or type(metric_value) not in (int, float)
+            or not (-float("inf") < float(summary_value) < float("inf"))
+            or not (-float("inf") < float(metric_value) < float("inf"))
+            or summary_value != metric_value
+        ):
+            raise ValueError(
+                "Published-default summary/metric evidence mismatch: "
+                f"{context}:{field}"
+            )
 
 
 def verify_source_tables(
@@ -328,6 +427,13 @@ def collect_results(
             or metrics.get("safe_for_scoring") is not True
         ):
             raise ValueError(f"Metric protocol changed: {metrics_path}")
+        reconcile_summary_metric(
+            source=source,
+            metrics=metrics,
+            target=target,
+            task=task,
+            plot=plot,
+        )
         record = retained_by_key.get(key)
         if record is None:
             raise ValueError(f"Retained prediction is missing: {key}")
@@ -339,6 +445,35 @@ def collect_results(
             str(record["alignment_metadata_sha256"]),
             "alignment metadata",
         )
+        alignment_metadata = load_object(alignment)
+        alignment_prediction = alignment_metadata.get("aligned_prediction_npz")
+        if (
+            alignment_metadata.get("status") != "passed"
+            or alignment_metadata.get("target") != target
+            or not isinstance(alignment_prediction, str)
+            or Path(alignment_prediction).expanduser().resolve()
+            != prediction.resolve()
+            or alignment_metadata.get("aligned_prediction_npz_sha256")
+            != digest(prediction)
+        ):
+            raise ValueError(
+                f"Alignment metadata retained-evidence binding changed: {key}"
+            )
+        metric_prediction = metrics.get("aligned_predictions_npz")
+        metric_alignment = metrics.get("alignment_metadata_json")
+        metric_prediction_sha256 = metrics.get("aligned_predictions_npz_sha256")
+        if (
+            not isinstance(metric_prediction, str)
+            or not isinstance(metric_alignment, str)
+            or Path(metric_prediction).expanduser().resolve() != prediction.resolve()
+            or (
+                metric_prediction_sha256 is not None
+                and metric_prediction_sha256 != digest(prediction)
+            )
+            or Path(metric_alignment).expanduser().resolve() != alignment.resolve()
+            or metrics.get("alignment_metadata_sha256") != digest(alignment)
+        ):
+            raise ValueError(f"Metric retained-evidence binding changed: {key}")
         if (
             prediction.resolve() != Path(str(source["prediction_path"])).resolve()
             or digest(prediction) != source.get("prediction_sha256")
@@ -362,21 +497,21 @@ def collect_results(
             "relative_path": plot["relative_path"],
             "collection": plot["collection"],
             "point_count": int(plot["point_count"]),
-            "predicted_instances": int(source["prediction_instance_count"]),
-            "reference_instances": int(source["reference_instance_count"]),
-            "true_positives": int(source["true_positives"]),
-            "false_positives": int(source["false_positives"]),
-            "false_negatives": int(source["false_negatives"]),
-            "precision": float(source["precision"]),
-            "recall": float(source["recall"]),
-            "f1": float(source["f1"]),
-            "mean_matched_iou": source["mean_matched_iou"],
+            "predicted_instances": int(metrics["prediction_instance_count"]),
+            "reference_instances": int(metrics["reference_instance_count"]),
+            "true_positives": int(metrics["true_positives"]),
+            "false_positives": int(metrics["false_positives"]),
+            "false_negatives": int(metrics["false_negatives"]),
+            "precision": float(metrics["precision"]),
+            "recall": float(metrics["recall"]),
+            "f1": float(metrics["f1"]),
+            "mean_matched_iou": float(metrics["mean_matched_iou"]),
             "evaluation_protocol": PROTOCOL,
             "matching_policy": MATCHING,
             "evaluation_mask": PUBLIC_MASK,
             "iou_threshold": IOU_THRESHOLD,
-            "source_metrics_sha256": source["metrics_sha256"],
-            "aligned_prediction_sha256": source["prediction_sha256"],
+            "source_metrics_sha256": digest(metrics_path),
+            "aligned_prediction_sha256": digest(prediction),
         }
         rows_by_target[target].append(row)
         public_retained.append(
@@ -472,7 +607,7 @@ def reject_private_text(writes: dict[Path, str], project_root: Path) -> None:
                 raise ValueError(f"Private path or host token in public output {path}")
 
 
-def finalise(args: argparse.Namespace) -> dict[str, Any]:
+def _finalise_locked(args: argparse.Namespace) -> dict[str, Any]:
     project_root = args.project_root.expanduser().resolve()
     workflow_config = args.workflow_config.expanduser().resolve()
     published_config = args.published_config.expanduser().resolve()
@@ -608,11 +743,15 @@ def finalise(args: argparse.Namespace) -> dict[str, Any]:
         "diagnostic_target": "leaf_off",
         "evaluation_evaluator": EVALUATOR,
         "evaluation_protocol": PROTOCOL,
+        "inference_executed": True,
+        "inference_execution_scope": "dedicated_published_default_held_out_test",
+        "inference_rerun": False,
         "held_out_test_accessed": True,
         "configuration_selected_from_for_instance_metrics": False,
         "configuration_changed_after_test": False,
         "repeat_test_for_setting_selection_permitted": False,
         "benchmark_commit": args.benchmark_commit,
+        "publication_benchmark_commit": args.publication_benchmark_commit,
         "upstream_commit": args.upstream_commit,
         "bundled_model_sha256": args.model_sha256,
         "workflow_config_sha256": args.workflow_config_sha256,
@@ -624,6 +763,7 @@ def finalise(args: argparse.Namespace) -> dict[str, Any]:
         "target_summary_sha256": digest(target_csv),
         "source_retention_manifest_sha256": digest(source_retention_path),
         "public_retention_manifest_sha256": retention_sha256,
+        "retention_manifest_sha256": retention_sha256,
         "verified_prediction_files": len(retained),
         "public_result": overall["leaf_on"],
         "diagnostic_result": overall["leaf_off"],
@@ -726,8 +866,16 @@ def finalise(args: argparse.Namespace) -> dict[str, Any]:
             },
         ),
     }
-    for path, text in writes.items():
-        atomic_write(path, text)
+    publish_writes(
+        writes,
+        project_root=project_root,
+        enforce_head_baseline=bool(getattr(args, "validate_worktree", False)),
+        expected_head=(
+            args.publication_benchmark_commit
+            if getattr(args, "validate_worktree", False)
+            else None
+        ),
+    )
     return {
         "status": "tls2trees_published_default_results_finalised",
         "run_id": args.run_id,
@@ -740,11 +888,74 @@ def finalise(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def finalise(args: argparse.Namespace) -> dict[str, Any]:
+    """Validate, render, publish, and receipt one locked public transaction."""
+
+    project_root = args.project_root.expanduser().resolve()
+    with publication_lock(project_root):
+        preflight_text_target(
+            args.receipt_json,
+            project_root=project_root,
+            staging_suffix=".tls2trees-published-default-receipt.tmp",
+        )
+        if getattr(args, "validate_worktree", False):
+            public_paths = (
+                "methods/tls2trees/examples/"
+                "tls2trees_published_default_test_plot_results.csv",
+                "methods/tls2trees/examples/"
+                "tls2trees_published_default_test_site_results.csv",
+                "methods/tls2trees/examples/"
+                "tls2trees_published_default_test_results.csv",
+                "methods/tls2trees/examples/"
+                "tls2trees_published_default_leaf_off_test_plot_diagnostic.csv",
+                "methods/tls2trees/examples/"
+                "tls2trees_published_default_leaf_off_test_site_diagnostic.csv",
+                "methods/tls2trees/examples/"
+                "tls2trees_published_default_leaf_off_test_diagnostic.csv",
+                "methods/tls2trees/examples/"
+                "tls2trees_published_default_prediction_retention_manifest.json",
+                "methods/tls2trees/examples/"
+                "tls2trees_published_default_test_provenance.json",
+                "outputs/for_instance_benchmark_metrics/"
+                "for_instance_method_benchmark_results.csv",
+                "outputs/for_instance_benchmark_metrics/"
+                "for_instance_method_development_diagnostics.csv",
+                "outputs/for_instance_benchmark_metrics/"
+                "for_instance_prediction_retention_registry.csv",
+            )
+            recovery_paths = set(public_paths)
+            for path in public_paths:
+                parent, name = path.rsplit("/", 1)
+                recovery_paths.add(
+                    f"{parent}/.{name}.tls2trees-published-default-finalisation.tmp"
+                )
+            validate_git_worktree(
+                project_root,
+                recovery_confirmed=bool(args.recovery_confirmed),
+                recovery_paths=recovery_paths,
+                expected_head=args.publication_benchmark_commit,
+            )
+        payload = _finalise_locked(args)
+        publish_text_bundle(
+            {args.receipt_json: json_text(payload)},
+            project_root=project_root,
+            staging_suffix=".tls2trees-published-default-receipt.tmp",
+            replace=os.replace,
+            expected_head=(
+                args.publication_benchmark_commit
+                if getattr(args, "validate_worktree", False)
+                else None
+            ),
+        )
+        return payload
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", type=Path, required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--benchmark-commit", required=True)
+    parser.add_argument("--publication-benchmark-commit", required=True)
     parser.add_argument("--upstream-commit", required=True)
     parser.add_argument("--model-sha256", required=True)
     parser.add_argument("--workflow-config", type=Path, required=True)
@@ -764,13 +975,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--diagnostics-csv", type=Path, required=True)
     parser.add_argument("--retention-registry", type=Path, required=True)
     parser.add_argument("--receipt-json", type=Path, required=True)
+    parser.add_argument("--recovery-confirmed", type=int, choices=(0, 1), default=0)
+    parser.set_defaults(validate_worktree=True)
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     payload = finalise(args)
-    atomic_write(args.receipt_json, json_text(payload))
     result = payload["canonical_result"]
     print(f"status={payload['status']}")
     print(f"run_id={payload['run_id']}")

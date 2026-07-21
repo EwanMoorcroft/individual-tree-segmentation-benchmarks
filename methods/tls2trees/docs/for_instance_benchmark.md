@@ -358,6 +358,179 @@ the development-tuned selection. That workflow must retain both leaf targets,
 evaluate valid empty predictions as zero and write its own public summaries and
 retention manifest.
 
+### Final publication order
+
+The three public finalisers must run sequentially because they write tracked
+evidence and, for the two held-out routes, the same three result registries.
+Do not submit them concurrently, pull or edit the checkout while a finalisation
+job is pending. Complete publication in this order:
+
+1. finalise the neutral retained-prediction evaluation, wait for the Slurm job,
+   verify its off-Git receipt and commit any receipt-listed tracked changes;
+2. finalise the independent `published_default` held-out result, wait for its
+   Slurm job, verify its off-Git receipt, rebuild the public workbook and commit
+   the receipt-listed tracked bundle together with the synchronized workbook;
+   and
+3. export the development-only leaf-screen evidence, verify the three-file
+   bundle and commit it.
+
+Each next finaliser starts only from a clean worktree. If a publication job is
+interrupted during its multi-file commit, rerun that same finaliser before
+starting another one. Tuned-result recovery additionally requires
+`TLS2TREES_FINALIZE_RESULTS_RECOVERY_CONFIRMED=1`; published-default recovery
+requires `TLS2TREES_PUBLISHED_DEFAULT_RESULTS_RECOVERY_CONFIRMED=1`. Recovery
+for the leaf screen requires
+`TLS2TREES_LEAF_SCREEN_PUBLICATION_RECOVERY_CONFIRMED=1`. Recovery accepts only
+the exact finaliser-owned output, registry and staging paths and must never be
+used to bypass unrelated worktree changes. All three Python finalisers also
+hold one repository-wide publication lock and repeat the clean/recovery
+worktree check while that lock is held.
+
+The neutral retained-prediction finaliser also requires the exact evaluation
+run ID, plan path and SHA-256, and historical evaluator path and SHA-256 from
+the immutable evaluation state; internally consistent replacements are not a
+valid recovery route.
+
+Receipts live below ignored run-scoped `results/metadata/` paths. They verify a
+publication but are not themselves committed. Commit only the tracked paths in
+the receipt's `written_files` list, plus the synchronized workbook and the
+public documentation updates required after a new headline result.
+
+#### 1. Neutral retained-prediction finalisation
+
+Start from the completed final-evaluation state and a clean checkout:
+
+```bash
+cd "$HOME/scratch/tree-seg-benchmark"
+
+FINAL_EVALUATION_STATE="$(
+  tr -d '\r\n' \
+    < logs/tls2trees_for_instance/latest_final_evaluation_state_file.txt
+)"
+test -s "$FINAL_EVALUATION_STATE"
+
+TLS2TREES_FINALIZE_RESULTS_CONFIRMED=1 \
+  bash methods/tls2trees/slurm/for_instance/\
+submit_held_out_results_finalisation.sh \
+    "$FINAL_EVALUATION_STATE"
+```
+
+Monitor the exact finalisation state written by submission:
+
+```bash
+FINALISATION_STATE="$(
+  tr -d '\r\n' \
+    < logs/tls2trees_for_instance/latest_finalisation_state_file.txt
+)"
+test -s "$FINALISATION_STATE"
+
+watch -n 30 \
+  "bash methods/tls2trees/slurm/for_instance/monitor_held_out_results_finalisation.sh '$FINALISATION_STATE'"
+```
+
+Stop `watch` after it reports `accounting_state=COMPLETED` and
+`TLS2TREES_RESULTS_READY_TO_COMMIT`, then verify the ignored receipt and inspect
+the tracked bundle:
+
+```bash
+# shellcheck disable=SC1090
+source "$FINALISATION_STATE"
+test -s "$TLS2TREES_FINALIZE_RECEIPT_JSON"
+git status --short
+```
+
+If the receipt is valid but no tracked file changed, no empty result commit is
+required.
+
+#### 2. Published-default finalisation
+
+The independent test submission, workflow monitor and result-finalisation
+command are specified in
+[`for_instance_published_default_smoke.md`](for_instance_published_default_smoke.md).
+After submitting that result finaliser, monitor its exact Slurm job:
+
+```bash
+PUBLISHED_FINALISATION_JOB="$(
+  tr -d '\r\n' \
+    < logs/tls2trees_for_instance/latest_published_default_finalisation_job_id.txt
+)"
+test -n "$PUBLISHED_FINALISATION_JOB"
+
+watch -n 30 \
+  "squeue -j '$PUBLISHED_FINALISATION_JOB' -o '%.18i %.30j %.10T %.10M %.10L %.30R'; sacct -X -j '$PUBLISHED_FINALISATION_JOB' --format=JobID,JobName%30,State,Elapsed,ExitCode"
+```
+
+After accounting reports `COMPLETED`, inspect only that job's logs and verify
+the ignored receipt derived from the immutable published-default state:
+
+```bash
+tail -n 80 \
+  "logs/tls2trees_for_instance/tls2trees_pd_finalise_${PUBLISHED_FINALISATION_JOB}.out"
+tail -n 80 \
+  "logs/tls2trees_for_instance/tls2trees_pd_finalise_${PUBLISHED_FINALISATION_JOB}.err"
+
+PUBLISHED_STATE="$(
+  tr -d '\r\n' \
+    < logs/tls2trees_for_instance/latest_published_default_test_state_file.txt
+)"
+# shellcheck disable=SC1090
+source "$PUBLISHED_STATE"
+PUBLISHED_RECEIPT="$(
+  dirname "$TLS2TREES_PD_TEST_SUMMARY_JSON"
+)/published_default_publication_receipt.json"
+test -s "$PUBLISHED_RECEIPT"
+git status --short
+```
+
+#### 3. Development leaf-screen publication
+
+This finaliser is synchronous and therefore has no separate publication job to
+monitor. Confirm the source workflow first, then publish from its exact state:
+
+```bash
+LEAF_SCREEN_STATE="$(
+  tr -d '\r\n' \
+    < logs/tls2trees_for_instance/latest_leaf_screen_state_file.txt
+)"
+test -s "$LEAF_SCREEN_STATE"
+
+bash methods/tls2trees/slurm/for_instance/\
+monitor_development_leaf_screen.sh \
+  "$LEAF_SCREEN_STATE"
+
+TLS2TREES_LEAF_SCREEN_PUBLICATION_CONFIRMED=1 \
+  bash methods/tls2trees/slurm/for_instance/\
+finalise_development_leaf_screen_results.sh \
+    "$LEAF_SCREEN_STATE"
+
+git status --short -- \
+  methods/tls2trees/examples/tls2trees_development_leaf_screen_\*
+```
+
+#### Workbook and documentation closure
+
+Whenever a held-out finaliser changes the canonical headline, site or retention
+registries, rebuild
+`outputs/for_instance_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx`
+from those canonical public sources. Expand all four Excel tables, render and
+visually inspect the `Comparable Results`, `Site Breakdown`,
+`Protocol Alignment` and `Prediction Retention` sheets, and check that no
+formula error, clipping, private path or external runtime link is present.
+
+Before committing, update the public result indexes and narrative from the
+observed final metrics; do not replace a pending claim before the corresponding
+receipt exists. Then run:
+
+```bash
+python -m pytest -q \
+  tests/test_for_instance_workbook_sync.py \
+  tests/test_for_instance_public_result_gate.py \
+  tests/test_benchmark_structure_contract.py
+git diff --check
+```
+
+The full test suite must also pass before the result branch is merged.
+
 ## Risks And Open Ambiguities
 
 - TLS2trees was designed for terrestrial laser-scanning inputs, while

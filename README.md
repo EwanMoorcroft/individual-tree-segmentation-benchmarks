@@ -101,8 +101,9 @@ The public repository is organised primarily by method:
   current FOR-instance training, inference and evaluation workflow.
 - [`methods/treex/README.md`](methods/treex/README.md): completed FOR-instance
   TreeX benchmark using the `pointtree` API.
-- [`methods/tls2trees/README.md`](methods/tls2trees/README.md): completed FRDR
-  workflow and candidate FOR-instance work.
+- [`methods/tls2trees/README.md`](methods/tls2trees/README.md): completed FRDR and
+  development-tuned FOR-instance workflows plus the frozen published-default
+  route.
 - [`methods/treelearn/README.md`](methods/treelearn/README.md): completed
   published-pretrained and development-fine-tuned FOR-instance workflows,
   together with their preserved development and recovery routes.

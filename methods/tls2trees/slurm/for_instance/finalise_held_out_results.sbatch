@@ -13,7 +13,11 @@ set -euo pipefail
 cd "${TLS2TREES_PROJECT_ROOT:-$HOME/scratch/tree-seg-benchmark}"
 test "${TLS2TREES_FINALIZE_RESULTS_CONFIRMED:-0}" = "1"
 test "$(git rev-parse HEAD)" = "$TLS2TREES_FINALIZE_BENCHMARK_COMMIT"
-test -z "$(git status --porcelain)"
+RECOVERY_CONFIRMED="${TLS2TREES_FINALIZE_RESULTS_RECOVERY_CONFIRMED:-0}"
+# shellcheck source=methods/tls2trees/slurm/for_instance/held_out_finalisation_worktree_gate.sh
+source methods/tls2trees/slurm/for_instance/held_out_finalisation_worktree_gate.sh
+tls2trees_validate_held_out_finalisation_worktree \
+  "$PWD" "$RECOVERY_CONFIRMED"
 
 module purge
 module load miniforge3/25.3.0-python3.12.10
@@ -30,8 +34,14 @@ python methods/tls2trees/scripts/evaluation/finalise_tls2trees_held_out_results.
   --run-id "$TLS2TREES_TEST_RUN_ID" \
   --benchmark-commit "$TLS2TREES_FINALIZE_BENCHMARK_COMMIT" \
   --evaluation-benchmark-commit "$TLS2TREES_FINAL_EVALUATION_BENCHMARK_COMMIT" \
+  --evaluation-run-id "$TLS2TREES_FINAL_EVALUATION_RUN_ID" \
+  --evaluation-plan-json "$TLS2TREES_FINAL_EVALUATION_PLAN_JSON" \
+  --evaluation-plan-sha256 "$TLS2TREES_FINAL_EVALUATION_PLAN_SHA256" \
+  --evaluation-evaluator "$TLS2TREES_FINAL_EVALUATION_EVALUATOR" \
+  --evaluation-evaluator-sha256 "$TLS2TREES_FINAL_EVALUATION_EVALUATOR_SHA256" \
   --examples-dir methods/tls2trees/examples \
   --results-csv outputs/for_instance_benchmark_metrics/for_instance_method_benchmark_results.csv \
   --diagnostics-csv outputs/for_instance_benchmark_metrics/for_instance_method_development_diagnostics.csv \
   --retention-registry outputs/for_instance_benchmark_metrics/for_instance_prediction_retention_registry.csv \
+  --recovery-confirmed "$RECOVERY_CONFIRMED" \
   --receipt-json "$TLS2TREES_FINALIZE_RECEIPT_JSON"

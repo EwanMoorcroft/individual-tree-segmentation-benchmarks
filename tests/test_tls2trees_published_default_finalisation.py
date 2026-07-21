@@ -5,6 +5,7 @@ import csv
 import hashlib
 import importlib.util
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -79,7 +80,11 @@ def source_aggregate(rows: list[dict[str, Any]], target: str) -> dict[str, Any]:
     }
 
 
-def make_fixture(tmp_path: Path) -> tuple[argparse.Namespace, dict[str, Path]]:
+def make_fixture(
+    tmp_path: Path,
+    *,
+    include_metric_prediction_hash: bool = True,
+) -> tuple[argparse.Namespace, dict[str, Path]]:
     project = tmp_path / "repository"
     examples = project / "methods/tls2trees/examples"
     workflow_path = project / "workflow.yml"
@@ -142,7 +147,15 @@ def make_fixture(tmp_path: Path) -> tuple[argparse.Namespace, dict[str, Path]]:
             alignment = output / "alignment_metadata.json"
             prediction.parent.mkdir(parents=True, exist_ok=True)
             prediction.write_bytes(f"{target}:{task}".encode())
-            write_json(alignment, {"status": "passed", "target": target})
+            write_json(
+                alignment,
+                {
+                    "status": "passed",
+                    "target": target,
+                    "aligned_prediction_npz": str(prediction.resolve()),
+                    "aligned_prediction_npz_sha256": sha256(prediction),
+                },
+            )
             metric_path = (
                 project
                 / "runtime/metrics"
@@ -162,10 +175,33 @@ def make_fixture(tmp_path: Path) -> tuple[argparse.Namespace, dict[str, Path]]:
                 "evaluation_mask": finaliser.SOURCE_MASK,
                 "matching_policy": finaliser.MATCHING,
                 "iou_threshold": 0.5,
-                "semantic_ignore": {"ignored_semantic_classes": [3]},
+                "split": "test",
+                "target": target,
+                "plot_id": plot["safe_plot_id"],
+                "relative_path": plot["relative_path"],
+                "aligned_predictions_npz": str(prediction.resolve()),
+                "alignment_metadata_json": str(alignment.resolve()),
+                "alignment_metadata_sha256": sha256(alignment),
+                "semantic_ignore": {
+                    "ignored_semantic_classes": [3],
+                    "raw_prediction_instance_count": predicted,
+                },
                 "status": "evaluated",
                 "safe_for_scoring": True,
+                "prediction_instance_count": predicted,
+                "reference_instance_count": references,
+                "true_positives": tp,
+                "false_positives": fp,
+                "false_negatives": fn,
+                "precision": precision,
+                "recall": recall,
+                "f1": f1,
+                "mean_matched_iou": 0.75 if tp else 0.0,
+                "oversegmented_reference_count": 0,
+                "undersegmented_prediction_count": 0,
             }
+            if include_metric_prediction_hash:
+                metric["aligned_predictions_npz_sha256"] = sha256(prediction)
             write_json(metric_path, metric)
             row = {
                 "target": target,
@@ -273,6 +309,7 @@ def make_fixture(tmp_path: Path) -> tuple[argparse.Namespace, dict[str, Path]]:
         project_root=project,
         run_id=run_id,
         benchmark_commit="a" * 40,
+        publication_benchmark_commit="b" * 40,
         upstream_commit=finaliser.EXPECTED_UPSTREAM_COMMIT,
         model_sha256=finaliser.EXPECTED_MODEL_SHA256,
         workflow_config=workflow_path,
@@ -300,6 +337,10 @@ def make_fixture(tmp_path: Path) -> tuple[argparse.Namespace, dict[str, Path]]:
         "diagnostics": diagnostics_csv,
         "retention": retention_csv,
         "first_prediction": project / retained[0]["relative_path"],
+        "first_metric": Path(rows[0]["metrics_path"]),
+        "summary": summary_path,
+        "source_plot_csv": source_plot_csv,
+        "source_target_csv": source_target_csv,
     }
 
 
@@ -339,6 +380,28 @@ def test_finaliser_verifies_and_safely_upserts_public_evidence(tmp_path: Path) -
     assert len(matching_rows(paths["retention"], retention_match)) == 1
     assert matching_rows(paths["results"], {"method_slug": "treelearn"})
 
+    provenance = json.loads(
+        (
+            paths["examples"]
+            / "tls2trees_published_default_test_provenance.json"
+        ).read_text(encoding="utf-8")
+    )
+    public_retention = (
+        paths["examples"]
+        / "tls2trees_published_default_prediction_retention_manifest.json"
+    )
+    assert provenance["inference_executed"] is True
+    assert provenance["inference_execution_scope"] == (
+        "dedicated_published_default_held_out_test"
+    )
+    assert provenance["inference_rerun"] is False
+    assert provenance["benchmark_commit"] == "a" * 40
+    assert provenance["publication_benchmark_commit"] == "b" * 40
+    assert provenance["retention_manifest_sha256"] == sha256(public_retention)
+    assert provenance["public_retention_manifest_sha256"] == sha256(
+        public_retention
+    )
+
     # A recovery finalisation replaces the one matching row and never duplicates it.
     finaliser.finalise(args)
     assert len(matching_rows(paths["results"], result_match)) == 1
@@ -359,6 +422,176 @@ def test_finaliser_rejects_changed_retained_prediction(tmp_path: Path) -> None:
     paths["first_prediction"].write_bytes(b"changed")
     with pytest.raises(ValueError, match="retained prediction"):
         finaliser.finalise(args)
+    assert not paths["examples"].exists()
+
+
+def test_finaliser_accepts_db4051d_metric_without_redundant_prediction_hash(
+    tmp_path: Path,
+) -> None:
+    success_args, success_paths = make_fixture(
+        tmp_path / "success",
+        include_metric_prediction_hash=False,
+    )
+    metric = json.loads(success_paths["first_metric"].read_text(encoding="utf-8"))
+    assert "aligned_predictions_npz_sha256" not in metric
+    payload = finaliser.finalise(success_args)
+    assert payload["status"] == "tls2trees_published_default_results_finalised"
+
+    tamper_args, tamper_paths = make_fixture(
+        tmp_path / "tamper",
+        include_metric_prediction_hash=False,
+    )
+    tamper_paths["first_prediction"].write_bytes(b"changed after evaluation")
+    with pytest.raises(ValueError, match="retained prediction"):
+        finaliser.finalise(tamper_args)
+    assert not tamper_paths["examples"].exists()
+
+
+def test_finaliser_rejects_metric_not_bound_to_retained_prediction(
+    tmp_path: Path,
+) -> None:
+    args, paths = make_fixture(tmp_path)
+    metric = json.loads(paths["first_metric"].read_text(encoding="utf-8"))
+    metric["aligned_predictions_npz_sha256"] = "0" * 64
+    write_json(paths["first_metric"], metric)
+
+    summary = json.loads(paths["summary"].read_text(encoding="utf-8"))
+    summary["plot_metrics"][0]["metrics_sha256"] = sha256(paths["first_metric"])
+    write_json(paths["summary"], summary)
+    paths["source_plot_csv"].write_text(
+        finaliser.csv_text(
+            list(summary["plot_metrics"][0]), summary["plot_metrics"]
+        )
+    )
+
+    with pytest.raises(ValueError, match="Metric retained-evidence binding changed"):
+        finaliser.finalise(args)
+    assert not paths["examples"].exists()
+
+
+def test_finaliser_rejects_metric_identity_not_bound_to_summary(
+    tmp_path: Path,
+) -> None:
+    args, paths = make_fixture(tmp_path)
+    metric = json.loads(paths["first_metric"].read_text(encoding="utf-8"))
+    metric["target"] = "leaf_on"
+    write_json(paths["first_metric"], metric)
+
+    summary = json.loads(paths["summary"].read_text(encoding="utf-8"))
+    summary["plot_metrics"][0]["metrics_sha256"] = sha256(paths["first_metric"])
+    write_json(paths["summary"], summary)
+    paths["source_plot_csv"].write_text(
+        finaliser.csv_text(
+            list(summary["plot_metrics"][0]), summary["plot_metrics"]
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Published-default summary/metric evidence mismatch: leaf_off:0:target",
+    ):
+        finaliser.finalise(args)
+    assert not paths["examples"].exists()
+
+
+@pytest.mark.parametrize(
+    ("field", "replacement"),
+    (("prediction_instance_count", 2), ("f1", 0.25)),
+)
+def test_finaliser_rejects_summary_count_or_score_not_bound_to_metric(
+    tmp_path: Path,
+    field: str,
+    replacement: int | float,
+) -> None:
+    args, paths = make_fixture(tmp_path)
+    summary = json.loads(paths["summary"].read_text(encoding="utf-8"))
+    summary["plot_metrics"][0][field] = replacement
+    summary["aggregates"] = [
+        source_aggregate(summary["plot_metrics"], target)
+        for target in finaliser.TARGETS
+    ]
+    write_json(paths["summary"], summary)
+    paths["source_plot_csv"].write_text(
+        finaliser.csv_text(
+            list(summary["plot_metrics"][0]), summary["plot_metrics"]
+        )
+    )
+    paths["source_target_csv"].write_text(
+        finaliser.csv_text(
+            list(summary["aggregates"][0]), summary["aggregates"]
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Published-default summary/metric evidence mismatch: "
+            rf"leaf_off:0:{field}"
+        ),
+    ):
+        finaliser.finalise(args)
+    assert not paths["examples"].exists()
+
+
+def test_finaliser_recovers_exact_publication_after_interrupted_registry_commit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    args, paths = make_fixture(tmp_path)
+    real_replace = finaliser.os.replace
+    replacements = 0
+
+    def interrupt_ninth_replace(source: Path, destination: Path) -> None:
+        nonlocal replacements
+        replacements += 1
+        if replacements == 9:
+            raise OSError("simulated published-default publication interruption")
+        real_replace(source, destination)
+
+    monkeypatch.setattr(finaliser.os, "replace", interrupt_ninth_replace)
+    with pytest.raises(OSError, match="publication interruption"):
+        finaliser.finalise(args)
+    monkeypatch.setattr(finaliser.os, "replace", real_replace)
+
+    payload = finaliser.finalise(args)
+    assert payload["status"] == "tls2trees_published_default_results_finalised"
+    for path in (paths["results"], paths["diagnostics"], paths["retention"]):
+        with path.open(encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        assert len(rows) == 2
+    assert not list(
+        paths["project"].rglob(
+            "*.tls2trees-published-default-finalisation.tmp"
+        )
+    )
+
+
+def test_finaliser_accepts_exact_existing_publication_without_replacing_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    args, _ = make_fixture(tmp_path)
+    first = finaliser.finalise(args)
+
+    def unexpected_replace(source: Path, destination: Path) -> None:
+        raise AssertionError(f"unexpected replacement: {source} -> {destination}")
+
+    monkeypatch.setattr(finaliser.os, "replace", unexpected_replace)
+    second = finaliser.finalise(args)
+    assert second == first
+
+
+def test_finaliser_rejects_receipt_symlink_before_publication(
+    tmp_path: Path,
+) -> None:
+    args, paths = make_fixture(tmp_path)
+    external = tmp_path / "external-receipt.json"
+    external.write_text("external remains unchanged\n", encoding="utf-8")
+    args.receipt_json.parent.mkdir(parents=True, exist_ok=True)
+    args.receipt_json.symlink_to(external)
+
+    with pytest.raises(ValueError, match="Publication target is a symlink"):
+        finaliser.finalise(args)
+
+    assert external.read_text(encoding="utf-8") == "external remains unchanged\n"
     assert not paths["examples"].exists()
 
 
@@ -385,12 +618,162 @@ def test_finaliser_refuses_duplicate_registry_rows(tmp_path: Path) -> None:
 def test_guarded_slurm_entrypoints_are_syntactically_valid() -> None:
     wrapper = SLURM / "finalise_published_default_results.sh"
     batch = SLURM / "finalise_published_default_results.sbatch"
-    subprocess.run(["bash", "-n", str(wrapper)], check=True)
-    subprocess.run(["bash", "-n", str(batch)], check=True)
+    gate = SLURM / "published_default_finalisation_worktree_gate.sh"
+    for path in (wrapper, batch, gate):
+        subprocess.run(["bash", "-n", str(path)], check=True)
     text = wrapper.read_text()
     assert "TLS2TREES_PUBLISHED_DEFAULT_RESULTS_CONFIRMED" in text
     assert "TLS2TREES_REVIEWED_PUBLISHED_DEFAULT_CONFIG_SHA256" in text
     assert "SUMMARY_STATE" in text
     assert "COMPLETED" in text
     assert "git merge-base --is-ancestor" in text
-    assert "git merge-base --is-ancestor" in batch.read_text()
+    batch_text = batch.read_text()
+    assert "git merge-base --is-ancestor" in batch_text
+    assert "PUBLICATION_BENCHMARK_COMMIT=$(git rev-parse HEAD)" in text
+    assert "TLS2TREES_PD_FINALISE_PUBLICATION_BENCHMARK_COMMIT" in text
+    assert "TLS2TREES_PD_FINALISE_PUBLICATION_BENCHMARK_COMMIT" in batch_text
+    assert 'test "$(git rev-parse HEAD)"' in batch_text
+    assert "--publication-benchmark-commit" in batch_text
+    gate_text = gate.read_text()
+
+    expected_targets = {
+        "methods/tls2trees/examples/tls2trees_published_default_test_plot_results.csv",
+        "methods/tls2trees/examples/tls2trees_published_default_test_site_results.csv",
+        "methods/tls2trees/examples/tls2trees_published_default_test_results.csv",
+        "methods/tls2trees/examples/tls2trees_published_default_leaf_off_test_plot_diagnostic.csv",
+        "methods/tls2trees/examples/tls2trees_published_default_leaf_off_test_site_diagnostic.csv",
+        "methods/tls2trees/examples/tls2trees_published_default_leaf_off_test_diagnostic.csv",
+        "methods/tls2trees/examples/tls2trees_published_default_prediction_retention_manifest.json",
+        "methods/tls2trees/examples/tls2trees_published_default_test_provenance.json",
+        "outputs/for_instance_benchmark_metrics/for_instance_method_benchmark_results.csv",
+        "outputs/for_instance_benchmark_metrics/for_instance_method_development_diagnostics.csv",
+        "outputs/for_instance_benchmark_metrics/for_instance_prediction_retention_registry.csv",
+    }
+    for source in (text, batch_text):
+        assert "TLS2TREES_PUBLISHED_DEFAULT_RESULTS_RECOVERY_CONFIRMED" in source
+        assert "published_default_finalisation_worktree_gate.sh" in source
+        assert "tls2trees_validate_published_default_finalisation_worktree" in source
+        assert ":(exclude)" not in source
+    match = re.search(
+        r"publication_targets=\(\n(.*?)\n  \)", gate_text, re.DOTALL
+    )
+    assert match
+    assert set(match.group(1).split()) == expected_targets
+    assert 'status=${entry:0:2}' in gate_text
+    assert 'changed_path=${entry:3}' in gate_text
+    assert '"$status" != " M" && "$status" != "??"' in gate_text
+    assert "tls2trees-published-default-finalisation.tmp" in gate_text
+    assert ":(exclude)" not in gate_text
+
+
+def test_published_default_recovery_gate_rejects_index_and_path_corruption(
+    tmp_path: Path,
+) -> None:
+    gate = SLURM / "published_default_finalisation_worktree_gate.sh"
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    subprocess.run(["git", "init", "-q", str(repository)], check=True)
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.email", "test@example.com"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.name", "Test User"],
+        check=True,
+    )
+    tracked = (
+        repository
+        / "outputs/for_instance_benchmark_metrics/"
+        "for_instance_method_benchmark_results.csv"
+    )
+    tracked.parent.mkdir(parents=True)
+    tracked.write_text("original\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repository), "add", "."], check=True)
+    subprocess.run(
+        ["git", "-C", str(repository), "commit", "-q", "-m", "fixture"],
+        check=True,
+    )
+
+    def check(recovery: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                "bash",
+                "-c",
+                'source "$1"; '
+                'tls2trees_validate_published_default_finalisation_worktree "$2" "$3"',
+                "gate-test",
+                str(gate),
+                str(repository),
+                recovery,
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+    assert check("0").returncode == 0
+    tracked.write_text("unstaged publication\n", encoding="utf-8")
+    assert check("1").returncode == 0
+    assert check("0").returncode == 2
+
+    subprocess.run(["git", "-C", str(repository), "add", str(tracked)], check=True)
+    staged = check("1")
+    assert staged.returncode == 2
+    assert "Git status 'M '" in staged.stderr
+    subprocess.run(
+        ["git", "-C", str(repository), "restore", "--staged", str(tracked)],
+        check=True,
+    )
+    tracked.write_text("original\n", encoding="utf-8")
+
+    tracked.unlink()
+    deleted = check("1")
+    assert deleted.returncode == 2
+    assert "Git status ' D'" in deleted.stderr
+    tracked.write_text("original\n", encoding="utf-8")
+
+    moved = tracked.with_name("renamed.csv")
+    subprocess.run(
+        ["git", "-C", str(repository), "mv", str(tracked), str(moved)], check=True
+    )
+    renamed = check("1")
+    assert renamed.returncode == 2
+    assert "Git status 'R '" in renamed.stderr
+    subprocess.run(
+        ["git", "-C", str(repository), "mv", str(moved), str(tracked)], check=True
+    )
+
+    public = (
+        repository
+        / "methods/tls2trees/examples/"
+        "tls2trees_published_default_test_results.csv"
+    )
+    public.parent.mkdir(parents=True)
+    public.write_text("published\n", encoding="utf-8")
+    temporary = public.with_name(
+        f".{public.name}.tls2trees-published-default-finalisation.tmp"
+    )
+    temporary.write_text("staged\n", encoding="utf-8")
+    assert check("1").returncode == 0
+
+    unrelated = repository / "unrelated.txt"
+    unrelated.write_text("unrelated\n", encoding="utf-8")
+    rejected = check("1")
+    assert rejected.returncode == 2
+    assert "unrelated worktree path" in rejected.stderr
+
+    unrelated.unlink()
+    public.unlink()
+    temporary.unlink()
+    external = tmp_path / "external-publication-target.txt"
+    external.write_text("must remain external\n", encoding="utf-8")
+    public.symlink_to(external)
+    rejected = check("1")
+    assert rejected.returncode == 2
+    assert "symbolic link at publication path" in rejected.stderr
+
+    public.unlink()
+    public.write_text("published\n", encoding="utf-8")
+    temporary.symlink_to(external)
+    rejected = check("1")
+    assert rejected.returncode == 2
+    assert "symbolic link at publication path" in rejected.stderr

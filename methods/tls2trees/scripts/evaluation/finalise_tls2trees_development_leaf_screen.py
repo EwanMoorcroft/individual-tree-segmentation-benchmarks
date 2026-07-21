@@ -8,11 +8,25 @@ import hashlib
 import io
 import json
 import math
+import os
+import sys
 from collections import defaultdict
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
 import yaml
+
+
+EVALUATION = Path(__file__).resolve().parent
+if str(EVALUATION) not in sys.path:
+    sys.path.insert(0, str(EVALUATION))
+
+from tls2trees_publication import (  # noqa: E402
+    publication_lock,
+    publication_path,
+    require_git_head,
+    validate_git_worktree,
+)
 
 
 EXPECTED_EVALUATOR = "for_instance_tls2trees_source_row_class3_ignore"
@@ -27,6 +41,7 @@ EXPECTED_METRIC_COUNT = EXPECTED_CANDIDATE_COUNT * EXPECTED_PLOTS_PER_CANDIDATE
 PUBLIC_PLOT_NAME = "tls2trees_development_leaf_screen_plot_results.csv"
 PUBLIC_CANDIDATE_NAME = "tls2trees_development_leaf_screen_candidate_results.csv"
 PUBLIC_PROVENANCE_NAME = "tls2trees_development_leaf_screen_provenance.json"
+PUBLICATION_STAGE_NAME = ".tls2trees_development_leaf_screen_publication.staging"
 
 SOURCE_PLOT_FIELDS = (
     "candidate_index",
@@ -84,6 +99,7 @@ PUBLIC_CANDIDATE_FIELDS = (
     "maximum_instance_peak_rss_gb",
 )
 HEX_64 = set("0123456789abcdef")
+HEX_40 = HEX_64
 
 
 def sha256(path: Path) -> str:
@@ -104,6 +120,10 @@ def is_sha256(value: Any) -> bool:
         and len(value) == 64
         and set(value) <= HEX_64
     )
+
+
+def is_git_commit(value: Any) -> bool:
+    return isinstance(value, str) and len(value) == 40 and set(value) <= HEX_40
 
 
 def read_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
@@ -130,6 +150,208 @@ def render_csv(fields: Iterable[str], rows: list[dict[str, Any]]) -> bytes:
     for row in rows:
         writer.writerow({field: csv_cell(row[field]) for field in fieldnames})
     return handle.getvalue().encode("utf-8")
+
+
+def render_json(payload: Any) -> bytes:
+    return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+
+
+def validate_staged_bundle(
+    *,
+    staged: dict[str, Path],
+    expected_payloads: dict[str, bytes],
+    provenance: dict[str, Any],
+) -> None:
+    """Validate the complete on-disk bundle before publishing any target."""
+
+    if set(staged) != set(expected_payloads):
+        raise ValueError("Leaf-screen staged bundle is incomplete")
+    for name, path in staged.items():
+        if (
+            not path.is_file()
+            or path.is_symlink()
+            or path.stat().st_nlink != 1
+        ):
+            raise ValueError(f"Leaf-screen staged artifact is invalid: {path}")
+        if path.read_bytes() != expected_payloads[name]:
+            raise ValueError(f"Leaf-screen staged artifact differs after write: {path}")
+
+    plot_fields, plot_rows = read_csv(staged[PUBLIC_PLOT_NAME])
+    if (
+        plot_fields != list(PUBLIC_PLOT_FIELDS)
+        or len(plot_rows) != EXPECTED_METRIC_COUNT
+    ):
+        raise ValueError("Leaf-screen staged plot evidence is invalid")
+    candidate_fields, candidate_rows = read_csv(staged[PUBLIC_CANDIDATE_NAME])
+    if (
+        candidate_fields != list(PUBLIC_CANDIDATE_FIELDS)
+        or len(candidate_rows) != EXPECTED_CANDIDATE_COUNT
+    ):
+        raise ValueError("Leaf-screen staged candidate evidence is invalid")
+    staged_provenance = json.loads(
+        staged[PUBLIC_PROVENANCE_NAME].read_text(encoding="utf-8")
+    )
+    if staged_provenance != provenance:
+        raise ValueError("Leaf-screen staged provenance differs after write")
+    public_artifacts = staged_provenance.get("public_artifacts", {})
+    for key, name in (
+        ("plot_results", PUBLIC_PLOT_NAME),
+        ("candidate_results", PUBLIC_CANDIDATE_NAME),
+    ):
+        recorded = public_artifacts.get(key, {})
+        if recorded.get("sha256") != sha256(staged[name]):
+            raise ValueError(f"Leaf-screen staged {key} hash does not reconcile")
+
+
+def existing_output_is_exact(path: Path, expected: bytes) -> bool:
+    """Accept only a regular, byte-identical prior publication output."""
+
+    if not path.exists() and not path.is_symlink():
+        return False
+    if (
+        path.is_symlink()
+        or not path.is_file()
+        or path.stat().st_nlink != 1
+        or path.read_bytes() != expected
+    ):
+        raise FileExistsError(
+            "Existing leaf-screen public evidence conflicts with rendered bundle: "
+            f"{path}"
+        )
+    return True
+
+
+def publish_bundle(
+    *,
+    output_dir: Path,
+    payloads: dict[str, bytes],
+    provenance: dict[str, Any],
+    project_root: Path | None = None,
+    expected_head: str | None = None,
+) -> tuple[int, int]:
+    """Stage, validate, and atomically create missing public bundle members.
+
+    A previous interrupted invocation may have created any prefix of the bundle.
+    Byte-identical members are retained, while any conflict is rejected before a
+    missing target is created. Hard-link creation provides atomic no-overwrite
+    publication because the staging directory resides beside the targets.
+    """
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stage_dir = output_dir / PUBLICATION_STAGE_NAME
+    if stage_dir.is_symlink() or (stage_dir.exists() and not stage_dir.is_dir()):
+        raise FileExistsError(f"Invalid leaf-screen publication stage: {stage_dir}")
+    stage_dir.mkdir(exist_ok=True)
+    expected_names = set(payloads)
+    unexpected = [
+        path for path in stage_dir.iterdir() if path.name not in expected_names
+    ]
+    if unexpected:
+        raise FileExistsError(
+            "Leaf-screen publication stage contains unexpected artifacts: "
+            + ", ".join(str(path) for path in unexpected)
+        )
+
+    staged = {name: stage_dir / name for name in payloads}
+    invalid_staged = [
+        path
+        for path in staged.values()
+        if path.is_symlink() or (path.exists() and not path.is_file())
+    ]
+    if invalid_staged:
+        raise FileExistsError(
+            "Leaf-screen publication stage contains invalid artifacts: "
+            + ", ".join(str(path) for path in invalid_staged)
+        )
+    created_staging: set[Path] = set()
+    try:
+        # Accept only exact standalone stage files or the one recognizable
+        # two-link state left by a crash between linking and unlinking a target.
+        for name, path in staged.items():
+            if path.exists():
+                target = output_dir / name
+                if path.read_bytes() != payloads[name]:
+                    raise FileExistsError(
+                        f"Leaf-screen staging content conflicts: {path}"
+                    )
+                if path.stat().st_nlink != 1:
+                    if (
+                        path.stat().st_nlink != 2
+                        or not target.is_file()
+                        or target.is_symlink()
+                        or not os.path.samefile(path, target)
+                    ):
+                        raise FileExistsError(
+                            f"Leaf-screen staging hard link is unsafe: {path}"
+                        )
+                path.unlink()
+        for name, payload in payloads.items():
+            staged[name].write_bytes(payload)
+            created_staging.add(staged[name])
+        validate_staged_bundle(
+            staged=staged,
+            expected_payloads=payloads,
+            provenance=provenance,
+        )
+
+        targets = {name: output_dir / name for name in payloads}
+        existing = {
+            name: existing_output_is_exact(targets[name], payload)
+            for name, payload in payloads.items()
+        }
+        created = 0
+        retained = 0
+        if project_root is not None and expected_head is not None:
+            require_git_head(project_root, expected_head)
+        for name, payload in payloads.items():
+            if existing_output_is_exact(targets[name], payload) != existing[name]:
+                raise RuntimeError(
+                    f"Leaf-screen public target changed during staging: {targets[name]}"
+                )
+        for name, payload in payloads.items():
+            if project_root is not None and expected_head is not None:
+                require_git_head(project_root, expected_head)
+            if existing_output_is_exact(targets[name], payload) != existing[name]:
+                raise RuntimeError(
+                    "Leaf-screen public target changed before publication: "
+                    f"{targets[name]}"
+                )
+            if existing[name]:
+                retained += 1
+                if project_root is not None and expected_head is not None:
+                    require_git_head(project_root, expected_head)
+                continue
+            try:
+                os.link(staged[name], targets[name])
+                staged[name].unlink()
+                created_staging.discard(staged[name])
+                existing_output_is_exact(targets[name], payload)
+                if project_root is not None and expected_head is not None:
+                    require_git_head(project_root, expected_head)
+                created += 1
+            except FileExistsError:
+                # A concurrent invocation may have won the no-overwrite race.
+                if existing_output_is_exact(targets[name], payload):
+                    retained += 1
+                    continue
+                raise
+        for name, payload in payloads.items():
+            if not existing_output_is_exact(targets[name], payload):
+                raise RuntimeError(
+                    f"Leaf-screen published bundle is incomplete: {targets[name]}"
+                )
+        if project_root is not None and expected_head is not None:
+            require_git_head(project_root, expected_head)
+        return created, retained
+    finally:
+        for path in created_staging:
+            if path.exists() or path.is_symlink():
+                path.unlink()
+        try:
+            stage_dir.rmdir()
+        except OSError:
+            # Preserve unexpected concurrent content rather than deleting it.
+            pass
 
 
 def validate_source_csv(
@@ -403,7 +625,7 @@ def validate_summary(
     return rows, aggregates
 
 
-def finalise(
+def _finalise_locked(
     *,
     summary_path: Path,
     source_plot_csv: Path,
@@ -417,6 +639,10 @@ def finalise(
     expected_manifest_sha256: str,
     expected_source_config_sha256: str,
     expected_development_evidence_sha256: str,
+    source_benchmark_commit: str,
+    publication_benchmark_commit: str,
+    publication_project_root: Path | None,
+    expected_publication_head: str | None,
 ) -> dict[str, Any]:
     paths = (summary_path, source_plot_csv, source_candidate_csv, candidate_config_path)
     if not all(path.is_file() for path in paths):
@@ -429,6 +655,12 @@ def finalise(
     ):
         if not is_sha256(value):
             raise ValueError(f"Invalid {label} SHA-256")
+    for value, label in (
+        (source_benchmark_commit, "source benchmark commit"),
+        (publication_benchmark_commit, "publication benchmark commit"),
+    ):
+        if not is_git_commit(value):
+            raise ValueError(f"Invalid {label}")
 
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     config = yaml.safe_load(candidate_config_path.read_text(encoding="utf-8"))
@@ -473,6 +705,8 @@ def finalise(
         "workflow_run_id": expected_run_id,
         "source_stage1_run_id": expected_source_run_id,
         "source_semantic_cache_run_id": expected_semantic_cache_run_id,
+        "source_benchmark_commit": source_benchmark_commit,
+        "publication_benchmark_commit": publication_benchmark_commit,
         "evaluation_protocol": EXPECTED_EVALUATOR,
         "evaluation_mask": EXPECTED_EVALUATION_MASK,
         "ignored_semantic_classes": [3],
@@ -520,18 +754,20 @@ def finalise(
     assert_public_safe(public_aggregates, "candidate_results")
     assert_public_safe(provenance, "provenance")
 
-    output_dir.mkdir(parents=True, exist_ok=True)
     plot_output = output_dir / PUBLIC_PLOT_NAME
     candidate_output = output_dir / PUBLIC_CANDIDATE_NAME
     provenance_output = output_dir / PUBLIC_PROVENANCE_NAME
-    outputs = (plot_output, candidate_output, provenance_output)
-    if any(path.exists() for path in outputs):
-        raise FileExistsError("Refusing to overwrite leaf-screen public evidence")
-    plot_output.write_bytes(plot_payload)
-    candidate_output.write_bytes(candidate_payload)
-    provenance_output.write_text(
-        json.dumps(provenance, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+    payloads = {
+        PUBLIC_PLOT_NAME: plot_payload,
+        PUBLIC_CANDIDATE_NAME: candidate_payload,
+        PUBLIC_PROVENANCE_NAME: render_json(provenance),
+    }
+    created, retained = publish_bundle(
+        output_dir=output_dir,
+        payloads=payloads,
+        provenance=provenance,
+        project_root=publication_project_root,
+        expected_head=expected_publication_head,
     )
     print("status=TLS2TREES_DEVELOPMENT_LEAF_SCREEN_PUBLICATION_READY")
     print(f"plot_results={plot_output}")
@@ -539,9 +775,84 @@ def finalise(
     print(f"provenance={provenance_output}")
     print(f"plot_rows={EXPECTED_METRIC_COUNT}")
     print(f"candidate_rows={EXPECTED_CANDIDATE_COUNT}")
+    print(f"publication_outputs_created={created}")
+    print(f"publication_outputs_retained={retained}")
     print("held_out_test_accessed=false")
     print("final_configuration_selected=false")
     return provenance
+
+
+def finalise(
+    *,
+    summary_path: Path,
+    source_plot_csv: Path,
+    source_candidate_csv: Path,
+    candidate_config_path: Path,
+    output_dir: Path,
+    project_root: Path,
+    source_state_sha256: str,
+    expected_run_id: str,
+    expected_source_run_id: str,
+    expected_semantic_cache_run_id: str,
+    expected_manifest_sha256: str,
+    expected_source_config_sha256: str,
+    expected_development_evidence_sha256: str,
+    source_benchmark_commit: str,
+    publication_benchmark_commit: str,
+    recovery_confirmed: bool = False,
+    validate_worktree: bool = False,
+) -> dict[str, Any]:
+    """Validate and publish the leaf-screen bundle under the shared lock."""
+
+    root = project_root.expanduser().resolve()
+    for name in (
+        PUBLIC_PLOT_NAME,
+        PUBLIC_CANDIDATE_NAME,
+        PUBLIC_PROVENANCE_NAME,
+    ):
+        publication_path(output_dir / name, root)
+    with publication_lock(root):
+        if validate_worktree:
+            public_paths = {
+                f"methods/tls2trees/examples/{PUBLIC_PLOT_NAME}",
+                f"methods/tls2trees/examples/{PUBLIC_CANDIDATE_NAME}",
+                f"methods/tls2trees/examples/{PUBLIC_PROVENANCE_NAME}",
+            }
+            recovery_paths = set(public_paths)
+            for path in public_paths:
+                _, name = path.rsplit("/", 1)
+                recovery_paths.add(
+                    "methods/tls2trees/examples/"
+                    f"{PUBLICATION_STAGE_NAME}/{name}"
+                )
+            validate_git_worktree(
+                root,
+                recovery_confirmed=recovery_confirmed,
+                recovery_paths=recovery_paths,
+                expected_head=publication_benchmark_commit,
+            )
+        return _finalise_locked(
+            summary_path=summary_path,
+            source_plot_csv=source_plot_csv,
+            source_candidate_csv=source_candidate_csv,
+            candidate_config_path=candidate_config_path,
+            output_dir=output_dir,
+            source_state_sha256=source_state_sha256,
+            expected_run_id=expected_run_id,
+            expected_source_run_id=expected_source_run_id,
+            expected_semantic_cache_run_id=expected_semantic_cache_run_id,
+            expected_manifest_sha256=expected_manifest_sha256,
+            expected_source_config_sha256=expected_source_config_sha256,
+            expected_development_evidence_sha256=(
+                expected_development_evidence_sha256
+            ),
+            source_benchmark_commit=source_benchmark_commit,
+            publication_benchmark_commit=publication_benchmark_commit,
+            publication_project_root=(root if validate_worktree else None),
+            expected_publication_head=(
+                publication_benchmark_commit if validate_worktree else None
+            ),
+        )
 
 
 def parse_args() -> argparse.Namespace:
@@ -551,6 +862,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-candidate-csv", required=True, type=Path)
     parser.add_argument("--candidate-config", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--project-root", required=True, type=Path)
     parser.add_argument("--source-state-sha256", required=True)
     parser.add_argument("--expected-run-id", required=True)
     parser.add_argument("--expected-source-run-id", required=True)
@@ -558,6 +870,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--expected-manifest-sha256", required=True)
     parser.add_argument("--expected-source-config-sha256", required=True)
     parser.add_argument("--expected-development-evidence-sha256", required=True)
+    parser.add_argument("--source-benchmark-commit", required=True)
+    parser.add_argument("--publication-benchmark-commit", required=True)
+    parser.add_argument("--recovery-confirmed", type=int, choices=(0, 1), default=0)
     return parser.parse_args()
 
 
@@ -569,6 +884,7 @@ def main() -> int:
         source_candidate_csv=args.source_candidate_csv,
         candidate_config_path=args.candidate_config,
         output_dir=args.output_dir,
+        project_root=args.project_root,
         source_state_sha256=args.source_state_sha256,
         expected_run_id=args.expected_run_id,
         expected_source_run_id=args.expected_source_run_id,
@@ -578,6 +894,10 @@ def main() -> int:
         expected_development_evidence_sha256=(
             args.expected_development_evidence_sha256
         ),
+        source_benchmark_commit=args.source_benchmark_commit,
+        publication_benchmark_commit=args.publication_benchmark_commit,
+        recovery_confirmed=bool(args.recovery_confirmed),
+        validate_worktree=True,
     )
     return 0
 

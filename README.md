@@ -9,20 +9,32 @@ model files, predictions, logs and external repositories are not included.
 
 ## Current status
 
-Status last updated: 14 July 2026.
+Status last updated: 20 July 2026.
 
-Three methods have completed comparable FOR-instance accuracy evaluation. All
-five headline rows use the same 11 held-out plots, 323 reference instances,
-point-aligned union-mask evaluation, IoU `>= 0.5` and maximum-cardinality
-one-to-one matching.
+The public tracker contains six completed FOR-instance held-out results. Every
+row uses the supplied 11-plot test split, 323 reference instances, point-aligned
+predictions, IoU `>= 0.5` and maximum-cardinality one-to-one matching. The five
+shared pointwise rows use their established union mask. TLS2trees uses its
+documented class-3-ignore mask, so its score is a valid method result but is not
+ranked directly against rows with a different scoring domain.
 
-| Method | Variant | Mean plot F1 | Micro F1 |
-| --- | --- | ---: | ---: |
-| SegmentAnyTree | Published pretrained | 0.453409 | 0.444245 |
-| SegmentAnyTree | Fine-tuned on development data | 0.544679 | 0.531987 |
-| TreeX | Unsupervised parameterised | 0.383108 | 0.362705 |
-| TreeLearn | Published pretrained | 0.078944 | 0.098694 |
-| TreeLearn | Fine-tuned on development data | 0.364685 | 0.331924 |
+| Method | Variant | Protocol group | Mean plot F1 | Micro F1 |
+| --- | --- | --- | ---: | ---: |
+| SegmentAnyTree | Published pretrained | Shared pointwise | 0.453409 | 0.444245 |
+| SegmentAnyTree | Fine-tuned on development data | Shared pointwise | 0.544679 | 0.531987 |
+| TreeX | Unsupervised parameterised | Shared pointwise | 0.383108 | 0.362705 |
+| TreeLearn | Published pretrained | Shared pointwise | 0.078944 | 0.098694 |
+| TreeLearn | Fine-tuned on development data | Shared pointwise | 0.364685 | 0.331924 |
+| TLS2trees | Development tuned | TLS2trees class-3-ignore | 0.015023 | 0.016620 |
+
+The frozen TLS2trees development-tuned leaf-on result has 38 predicted and 323
+reference instances, with 3 TP, 35 FP and 320 FN. Its target-specific leaf-off
+diagnostic has 22 predictions and no matches. All 22 source-row prediction
+files remain hash-verified. A separate nine-setting leaf-attachment screen
+completed on five development plots (45/45 valid metrics); every setting gave
+the same aggregate accuracy, indicating that leaf-attachment geometry was not
+the principal transfer bottleneck. The independent published-default held-out
+workflow also completed, with mean plot and micro F1 both `0.000000`.
 
 TLS2trees has completed a 16-plot FRDR prediction and operational benchmark.
 FRDR has no individual-tree reference labels, so that work is not a
@@ -31,9 +43,9 @@ FOR-instance accuracy result and reports no precision, recall, F1 or IoU.
 Historical and diagnostic results remain available but are excluded from the
 headline table: the provisional coordinate-rematched SegmentAnyTree run, the
 historical SegmentAnyTree `0.4825` mean plot F1 result, the TreeX
-reference-labelled-mask `0.5222` result, and all TreeLearn development smokes,
-overlap-affected runs and rejected validation checkpoints. TLS2trees on
-FOR-instance and the Wytham Woods benchmarks remain candidates.
+reference-labelled-mask `0.5222` result, TreeLearn development smokes,
+overlap-affected runs and rejected validation checkpoints, plus the TLS2trees
+leaf-off target diagnostic. Wytham Woods benchmarks remain candidates.
 
 The [benchmark registry](BENCHMARKS.md) is the short status index. Each
 completed, provisional or candidate row records a dataset slug, method slug,
@@ -89,8 +101,9 @@ The public repository is organised primarily by method:
   current FOR-instance training, inference and evaluation workflow.
 - [`methods/treex/README.md`](methods/treex/README.md): completed FOR-instance
   TreeX benchmark using the `pointtree` API.
-- [`methods/tls2trees/README.md`](methods/tls2trees/README.md): completed FRDR
-  workflow and candidate FOR-instance work.
+- [`methods/tls2trees/README.md`](methods/tls2trees/README.md): completed FRDR and
+  development-tuned FOR-instance workflows plus the frozen published-default
+  route.
 - [`methods/treelearn/README.md`](methods/treelearn/README.md): completed
   published-pretrained and development-fine-tuned FOR-instance workflows,
   together with their preserved development and recovery routes.
@@ -150,10 +163,13 @@ TUWIEN and RMIT as the weakest domain-transfer cases.
 
 The consolidated public workbook is
 [`outputs/for_instance_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx`](outputs/for_instance_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx).
-It includes the five completed held-out rows shown above. Public-safe per-plot,
-site and overall source tables independently reproduce every aggregate; raw
-predictions remain off Git under the paths and hashes recorded in the
-prediction-retention registry.
+It reports seven completed held-out headline rows with an explicit protocol
+column and retains the TLS2trees prediction evidence. The independently frozen
+TLS2trees published-default leaf-on result has mean plot F1 `0.000000` and
+micro F1 `0.000000` under its class-3-ignore scoring domain. Public-safe
+per-plot, site and overall source
+tables independently reproduce every aggregate; raw predictions remain off Git
+under the paths and hashes recorded in the prediction-retention registry.
 
 ## Barkla environment
 

@@ -112,9 +112,17 @@ def test_cross_method_results_separate_comparable_groups_and_retain_predictions(
     )
     with results_path.open(encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
-    assert len(rows) == 5
-    assert {row["comparable_group"] for row in rows} == {"held_out_test_primary"}
-    assert {(row["method_slug"], row["training_mode"]) for row in rows} == {
+    published_default_tls2trees = (
+        ROOT
+        / "methods/tls2trees/examples/"
+        "tls2trees_published_default_test_results.csv"
+    ).is_file()
+    legacy_rows = [row for row in rows if row["method_slug"] != "tls2trees"]
+    assert len(rows) == 6 + int(published_default_tls2trees)
+    assert {row["comparable_group"] for row in legacy_rows} == {
+        "held_out_test_primary"
+    }
+    assert {(row["method_slug"], row["training_mode"]) for row in legacy_rows} == {
         ("segmentanytree", "published_pretrained"),
         ("segmentanytree", "fine_tuned_on_dev"),
         ("treex", "external_training_only"),
@@ -124,7 +132,10 @@ def test_cross_method_results_separate_comparable_groups_and_retain_predictions(
     assert {row["evaluation_split"] for row in rows} == {"test"}
     assert {int(row["plots"]) for row in rows} == {11}
     assert {int(row["reference_instances"]) for row in rows} == {323}
-    assert all(row["evaluation_protocol"] == "for_instance_pointwise_v1" for row in rows)
+    assert all(
+        row["evaluation_protocol"] == "for_instance_pointwise_v1"
+        for row in legacy_rows
+    )
     clean_pretrained = next(
         row
         for row in rows
@@ -139,6 +150,18 @@ def test_cross_method_results_separate_comparable_groups_and_retain_predictions(
     assert int(clean_pretrained["false_negatives"]) == 289
     assert math.isclose(float(clean_pretrained["mean_plot_f1"]), 0.07894350692791946)
     assert math.isclose(float(clean_pretrained["micro_f1"]), 0.09869375907111756)
+    tls2trees_rows = [row for row in rows if row["method_slug"] == "tls2trees"]
+    assert len(tls2trees_rows) == 1 + int(published_default_tls2trees)
+    assert {row["variant"] for row in tls2trees_rows} == {
+        "development_tuned",
+        *({"published_default"} if published_default_tls2trees else set()),
+    }
+    assert {row["evaluation_protocol"] for row in tls2trees_rows} == {
+        "for_instance_pointwise_class3_ignore"
+    }
+    assert {row["comparable_group"] for row in tls2trees_rows} == {
+        "held_out_test_tls2trees_class3_ignore"
+    }
 
     diagnostics_path = (
         ROOT
@@ -146,16 +169,48 @@ def test_cross_method_results_separate_comparable_groups_and_retain_predictions(
     )
     with diagnostics_path.open(encoding="utf-8", newline="") as handle:
         diagnostics = list(csv.DictReader(handle))
-    assert len(diagnostics) == 3
-    assert {row["method_slug"] for row in diagnostics} == {"treelearn"}
+    assert len(diagnostics) == 4 + int(published_default_tls2trees)
+    assert {row["method_slug"] for row in diagnostics} == {
+        "treelearn",
+        "tls2trees",
+    }
     assert {row["variant"] for row in diagnostics} == {
         "published_pretrained",
         "fine_tuned_on_dev",
+        "development_tuned",
+        *({"published_default"} if published_default_tls2trees else set()),
     }
-    assert all(row["variant"] == row["training_mode"] for row in diagnostics)
-    assert {row["evaluation_split"] for row in diagnostics} == {"dev", "dev_validation"}
-    assert {int(row["plots"]) for row in diagnostics} == {5, 21}
-    assert all(row["held_out_test_accessed"] == "false" for row in diagnostics)
+    assert all(
+        row["variant"] == row["training_mode"]
+        or (
+            row["method_slug"] == "tls2trees"
+            and row["variant"] in {"development_tuned", "published_default"}
+            and row["training_mode"] == "external_training_only"
+        )
+        for row in diagnostics
+    )
+    assert {row["evaluation_split"] for row in diagnostics} == {
+        "dev",
+        "dev_validation",
+        "test",
+    }
+    assert {int(row["plots"]) for row in diagnostics} == {5, 11, 21}
+    tls2trees_diagnostics = [
+        row for row in diagnostics if row["method_slug"] == "tls2trees"
+    ]
+    assert len(tls2trees_diagnostics) == 1 + int(published_default_tls2trees)
+    assert {row["evaluation_protocol"] for row in tls2trees_diagnostics} == {
+        "for_instance_pointwise_class3_ignore"
+    }
+    assert {row["comparable_group"] for row in tls2trees_diagnostics} == {
+        "tls2trees_leaf_off_class3_ignore_diagnostic"
+    }
+    assert {row["result_status"] for row in tls2trees_diagnostics} == {
+        "completed_aligned_pointwise_test"
+    }
+    assert {row["held_out_test_accessed"] for row in tls2trees_diagnostics} == {
+        "true"
+    }
     assert not any(row["comparable_group"] == "held_out_test_primary" for row in diagnostics)
 
     retention_path = (
@@ -175,14 +230,38 @@ def test_cross_method_results_separate_comparable_groups_and_retain_predictions(
         ("treelearn", "published_pretrained", "held_out_test"),
         ("treelearn", "fine_tuned_on_dev", "checkpoint_sweep"),
         ("treelearn", "fine_tuned_on_dev", "held_out_test"),
+        (
+            "tls2trees",
+            "development_tuned",
+            "held_out_test_tls2trees_class3_ignore",
+        ),
     ):
         assert retained[key]["future_metrics_without_inference"] == "true"
+    if published_default_tls2trees:
+        assert retained[
+            (
+                "tls2trees",
+                "published_default",
+                "held_out_test_tls2trees_class3_ignore",
+            )
+        ]["future_metrics_without_inference"] == "true"
     assert (
         "treelearn",
         "published_pretrained",
         "development_diagnostic",
     ) in retained
     assert ("treelearn", "fine_tuned_on_dev", "epoch_70_validation") in retained
+    assert int(
+        retained[
+            (
+                "tls2trees",
+                "development_tuned",
+                "held_out_test_tls2trees_class3_ignore",
+            )
+        ][
+            "retained_file_count"
+        ]
+    ) == 22
     published = retained[("treelearn", "published_pretrained", "held_out_test")]
     assert published["run_id"] == (
         "treelearn_for-instance_published_pretrained_20260714_134109"

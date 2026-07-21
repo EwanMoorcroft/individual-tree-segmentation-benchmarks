@@ -1,0 +1,267 @@
+{
+  "candidate_count": 9,
+  "candidate_parameters": {
+    "leaf_v025_e05": {
+      "add_leaves": true,
+      "add_leaves_edge_length": 0.5,
+      "add_leaves_voxel_length": 0.25,
+      "find_stems_boundary": [
+        2.0,
+        2.5
+      ],
+      "find_stems_min_points": 50,
+      "find_stems_min_radius": 0.025,
+      "graph_edge_length": 2.0,
+      "graph_maximum_cumulative_gap": 3.0,
+      "ignore_missing_tiles": false,
+      "min_points_per_tree": 50,
+      "n_tiles": 5,
+      "n_zeros": 3,
+      "overlap": false,
+      "pandarallel": false,
+      "save_diameter_class": false,
+      "slice_thickness": 0.5,
+      "verbose": true
+    },
+    "leaf_v025_e10": {
+      "add_leaves": true,
+      "add_leaves_edge_length": 1.0,
+      "add_leaves_voxel_length": 0.25,
+      "find_stems_boundary": [
+        2.0,
+        2.5
+      ],
+      "find_stems_min_points": 50,
+      "find_stems_min_radius": 0.025,
+      "graph_edge_length": 2.0,
+      "graph_maximum_cumulative_gap": 3.0,
+      "ignore_missing_tiles": false,
+      "min_points_per_tree": 50,
+      "n_tiles": 5,
+      "n_zeros": 3,
+      "overlap": false,
+      "pandarallel": false,
+      "save_diameter_class": false,
+      "slice_thickness": 0.5,
+      "verbose": true
+    },
+    "leaf_v025_e20": {
+      "add_leaves": true,
+      "add_leaves_edge_length": 2.0,
+      "add_leaves_voxel_length": 0.25,
+      "find_stems_boundary": [
+        2.0,
+        2.5
+      ],
+      "find_stems_min_points": 50,
+      "find_stems_min_radius": 0.025,
+      "graph_edge_length": 2.0,
+      "graph_maximum_cumulative_gap": 3.0,
+      "ignore_missing_tiles": false,
+      "min_points_per_tree": 50,
+      "n_tiles": 5,
+      "n_zeros": 3,
+      "overlap": false,
+      "pandarallel": false,
+      "save_diameter_class": false,
+      "slice_thickness": 0.5,
+      "verbose": true
+    },
+    "leaf_v050_e05": {
+      "add_leaves": true,
+      "add_leaves_edge_length": 0.5,
+      "add_leaves_voxel_length": 0.5,
+      "find_stems_boundary": [
+        2.0,
+        2.5
+      ],
+      "find_stems_min_points": 50,
+      "find_stems_min_radius": 0.025,
+      "graph_edge_length": 2.0,
+      "graph_maximum_cumulative_gap": 3.0,
+      "ignore_missing_tiles": false,
+      "min_points_per_tree": 50,
+      "n_tiles": 5,
+      "n_zeros": 3,
+      "overlap": false,
+      "pandarallel": false,
+      "save_diameter_class": false,
+      "slice_thickness": 0.5,
+      "verbose": true
+    },
+    "leaf_v050_e10": {
+      "add_leaves": true,
+      "add_leaves_edge_length": 1.0,
+      "add_leaves_voxel_length": 0.5,
+      "find_stems_boundary": [
+        2.0,
+        2.5
+      ],
+      "find_stems_min_points": 50,
+      "find_stems_min_radius": 0.025,
+      "graph_edge_length": 2.0,
+      "graph_maximum_cumulative_gap": 3.0,
+      "ignore_missing_tiles": false,
+      "min_points_per_tree": 50,
+      "n_tiles": 5,
+      "n_zeros": 3,
+      "overlap": false,
+      "pandarallel": false,
+      "save_diameter_class": false,
+      "slice_thickness": 0.5,
+      "verbose": true
+    },
+    "leaf_v050_e20": {
+      "add_leaves": true,
+      "add_leaves_edge_length": 2.0,
+      "add_leaves_voxel_length": 0.5,
+      "find_stems_boundary": [
+        2.0,
+        2.5
+      ],
+      "find_stems_min_points": 50,
+      "find_stems_min_radius": 0.025,
+      "graph_edge_length": 2.0,
+      "graph_maximum_cumulative_gap": 3.0,
+      "ignore_missing_tiles": false,
+      "min_points_per_tree": 50,
+      "n_tiles": 5,
+      "n_zeros": 3,
+      "overlap": false,
+      "pandarallel": false,
+      "save_diameter_class": false,
+      "slice_thickness": 0.5,
+      "verbose": true
+    },
+    "leaf_v100_e05": {
+      "add_leaves": true,
+      "add_leaves_edge_length": 0.5,
+      "add_leaves_voxel_length": 1.0,
+      "find_stems_boundary": [
+        2.0,
+        2.5
+      ],
+      "find_stems_min_points": 50,
+      "find_stems_min_radius": 0.025,
+      "graph_edge_length": 2.0,
+      "graph_maximum_cumulative_gap": 3.0,
+      "ignore_missing_tiles": false,
+      "min_points_per_tree": 50,
+      "n_tiles": 5,
+      "n_zeros": 3,
+      "overlap": false,
+      "pandarallel": false,
+      "save_diameter_class": false,
+      "slice_thickness": 0.5,
+      "verbose": true
+    },
+    "leaf_v100_e10": {
+      "add_leaves": true,
+      "add_leaves_edge_length": 1.0,
+      "add_leaves_voxel_length": 1.0,
+      "find_stems_boundary": [
+        2.0,
+        2.5
+      ],
+      "find_stems_min_points": 50,
+      "find_stems_min_radius": 0.025,
+      "graph_edge_length": 2.0,
+      "graph_maximum_cumulative_gap": 3.0,
+      "ignore_missing_tiles": false,
+      "min_points_per_tree": 50,
+      "n_tiles": 5,
+      "n_zeros": 3,
+      "overlap": false,
+      "pandarallel": false,
+      "save_diameter_class": false,
+      "slice_thickness": 0.5,
+      "verbose": true
+    },
+    "leaf_v100_e20": {
+      "add_leaves": true,
+      "add_leaves_edge_length": 2.0,
+      "add_leaves_voxel_length": 1.0,
+      "find_stems_boundary": [
+        2.0,
+        2.5
+      ],
+      "find_stems_min_points": 50,
+      "find_stems_min_radius": 0.025,
+      "graph_edge_length": 2.0,
+      "graph_maximum_cumulative_gap": 3.0,
+      "ignore_missing_tiles": false,
+      "min_points_per_tree": 50,
+      "n_tiles": 5,
+      "n_zeros": 3,
+      "overlap": false,
+      "pandarallel": false,
+      "save_diameter_class": false,
+      "slice_thickness": 0.5,
+      "verbose": true
+    }
+  },
+  "candidate_ranking_for_review": [
+    "leaf_v025_e05",
+    "leaf_v050_e05",
+    "leaf_v025_e20",
+    "leaf_v025_e10",
+    "leaf_v100_e20",
+    "leaf_v050_e10",
+    "leaf_v100_e10",
+    "leaf_v050_e20",
+    "leaf_v100_e05"
+  ],
+  "dataset": "FOR-instance",
+  "development_accuracy_metrics_computed": true,
+  "development_reference_labels_accessed": true,
+  "evaluation_mask": "union_of_reference_target_and_predicted_target_points_excluding_class3_outpoints",
+  "evaluation_protocol": "for_instance_tls2trees_source_row_class3_ignore",
+  "expected_metric_count": 45,
+  "final_configuration_selected": false,
+  "held_out_test_accessed": false,
+  "ignored_semantic_classes": [
+    3
+  ],
+  "method": "TLS2trees",
+  "plots_per_candidate": 5,
+  "public_artifacts": {
+    "candidate_results": {
+      "path": "methods/tls2trees/examples/tls2trees_development_leaf_screen_candidate_results.csv",
+      "row_count": 9,
+      "sha256": "0bd7d659cc5b2861e7d6ba8ff322cd5414c4ce4314c0950cb9f525595e3dcca3"
+    },
+    "plot_results": {
+      "path": "methods/tls2trees/examples/tls2trees_development_leaf_screen_plot_results.csv",
+      "row_count": 45,
+      "sha256": "07fdf04dc2efcc760d3f85db7228d7874313c6f7a65b590471cffed427c1f2f2"
+    }
+  },
+  "publication_benchmark_commit": "4e902616bf257a035a352f6eae8f167408c7bb34",
+  "publication_candidate_config": "methods/tls2trees/configs/for_instance_development_tuned_leaf_screen.yml",
+  "publication_candidate_config_sha256": "37a07bd420b9fb6397b6c1d0880cad28b03c5b3c324d6a6af353f94be9798a97",
+  "schema_version": 1,
+  "source_artifact_hashes": {
+    "candidate_csv_sha256": "0bd7d659cc5b2861e7d6ba8ff322cd5414c4ce4314c0950cb9f525595e3dcca3",
+    "development_evidence_sha256": "83da14140f5c81fa356a30053652141777ff249c645c1b95e1fa5d5947a2c73e",
+    "execution_candidate_config_sha256": "0120421624000790c2993fbf5361770ff5e342e6727cc10f57420bfa141b0e14",
+    "manifest_sha256": "9e23d4c95303ec8dbdfe8b3a95574c40ff46ef0003a81ca91852f4b34de3a4e3",
+    "plot_csv_sha256": "c49f95a86395f25e63963d6da42e234d484a75700f31bdb77446d4f3f6ba28ce",
+    "state_sha256": "781c1246c4d0d359e0ce60f0d17c05fb7fbcfa578e28f75da38cc394d3d073e9",
+    "summary_sha256": "d9c9f929ffff61bf49b3f48d8fb3aeb9c3376859737df08d4eb5ab6e69077c6e"
+  },
+  "source_benchmark_commit": "23c140f0cb2ae4f0559c417d8fca4f84e0b0ee3f",
+  "source_semantic_cache_run_id": "tls2trees_for-instance_development_tuned_stage1_20260718_150231__semantic_cache",
+  "source_stage1_run_id": "tls2trees_for-instance_development_tuned_stage1_20260718_150231",
+  "split": "development",
+  "status": "development_leaf_screen_publication_completed",
+  "target": "leaf_on",
+  "top_three_candidate_ids_for_review": [
+    "leaf_v025_e05",
+    "leaf_v050_e05",
+    "leaf_v025_e20"
+  ],
+  "training_mode": "external_training_only",
+  "valid_metric_count": 45,
+  "variant": "development_tuned",
+  "workflow_run_id": "tls2trees_for-instance_development_tuned_leaf_screen_20260720_193825"
+}

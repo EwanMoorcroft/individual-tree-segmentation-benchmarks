@@ -1,0 +1,253 @@
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: tls2trees
+  mode: for_instance_tls2trees_published_default
+  status: development_smoke_implemented_execution_pending
+
+dataset:
+  slug: for-instance
+  name: FOR-instance
+  source_url: "https://doi.org/10.5281/zenodo.8287792"
+  benchmark_contract: methods/tls2trees/configs/for_instance_benchmark.yml
+  input_modality: uav_laser_scanning
+
+method:
+  slug: tls2trees
+  name: TLS2trees
+  variant: published_default
+  training_mode: external_training_only
+  repository_url: "https://github.com/tls-tools-ucl/TLS2trees"
+  publication_release:
+    name: "0.1"
+    tag: tls2trees
+    commit: "216100ed2dade15d1bd6f09c287787e55085102a"
+    archive_url: "https://doi.org/10.5281/zenodo.8406668"
+  executable_pin:
+    commit: "ca12cb73b2c736d80b020e8025f8d975d42e6f01"
+    reason: official_post_release_coordinate_and_runtime_compatibility_fixes
+  paper:
+    citation: "Wilkes et al. (2023), TLS2trees: A scalable tree segmentation pipeline for TLS data"
+    doi: "10.1111/2041-210X.14233"
+    parameter_source: Appendix_A_Table_A1
+  bundled_fsct_model:
+    relative_path: tls2trees/fsct/model/model.pth
+    sha256: "1a8bb6372394600f7c4b15f76beb98c32cb47ed25f8f729a84117ccfa410e72b"
+
+runtime_environment:
+  classification: historical_runtime_compatibility_not_parameter_tuning
+  strategy: isolated_conda_prefix_with_gpu_validation
+  default_prefix: "~/fastscratch/venvs/tls2trees"
+  completion_marker: .tls2trees_setup_complete.json
+  python: "3.9"
+  user_site_packages_enabled: false
+  primary_packages:
+    cudatoolkit: "11.1.1=h6406543_8"
+    torch: "1.9.0+cu111"
+    torch_geometric: "1.7.2"
+    torch_cluster: "1.5.9"
+    torch_scatter: "2.0.8"
+    torch_sparse: "0.6.11"
+    torch_spline_conv: "1.2.1"
+    numpy: "1.21.1"
+    pandas: "1.2.5"
+    scipy: "1.7.1"
+    scikit_learn: "0.24.2"
+    networkx: "2.6.2"
+    matplotlib: "3.4.3"
+    tqdm: "4.62.1"
+    laspy: "2.0.2"
+    pyyaml: "6.0.1"
+  conda_artifacts:
+    cudatoolkit:
+      subdir: linux-64
+      md5: "4851e7f19b684e517dc8e6b5b375dda0"
+  wheel_sources:
+    pytorch: "https://download.pytorch.org/whl/torch_stable.html"
+    pyg_extensions: "https://data.pyg.org/whl/torch-1.9.0+cu111.html"
+  required_gpu_validation:
+    - cuda_available
+    - compiled_fps
+    - compiled_radius
+    - compiled_knn_interpolate
+    - compiled_global_max_pool
+    - bundled_fsct_model_load
+    - bundled_fsct_model_forward
+  setup_entrypoint: methods/tls2trees/slurm/for_instance/setup_tls2trees_environment.sbatch
+  validator: methods/tls2trees/scripts/runtime/validate_tls2trees_environment.py
+  barkla_validation_status: execution_pending_l40s_compatibility_unproven
+
+published_preprocessing:
+  tile_edge_length_m: 10.0
+  downsample_voxel_length_m: 0.02
+  downsample_rule: voxel_centre_nearest_source_point
+  semantic_buffer_m: 5.0
+  coordinate_frame:
+    input: source_crs
+    processing: reversible_local_shift
+    raw_method_output: grid_aligned_local_shift
+    benchmark_output: source_row_aligned_labels_without_coordinates
+    purpose: prevent_float32_precision_loss_without_changing_geometry
+  riegl_specific_parameters:
+    applicable_to_for_instance: false
+    deviation_bounds: [0, 15]
+    reflectance_bounds: [-20, 0]
+
+semantic_parameters:
+  source: bundled_default_fsct_model
+  use_reference_semantic_labels_as_method_input: false
+  buffer_m: 5.0
+  batch_size: 10
+  num_processes: 10
+  is_wood_probability_threshold: 1.0
+  output_format: ply
+  operational_defaults:
+    step: 3
+    redo: null
+    zeros: 3
+    keep_npy: false
+  hidden_fixed_values:
+    buffer_tile_neighbours: 9
+    box_dimensions_m: [6.0, 6.0, 8.0]
+    box_overlap_fraction: [0.5, 0.5, 0.25]
+    min_points_per_box: 1000
+    max_points_per_box: 20000
+    internal_subsampling_enabled: true
+    internal_subsampling_min_spacing_m: 0.01
+    dtm_grid_resolution_m: 0.5
+    ground_height_threshold_m: 0.1
+    terrain_neighbours: 5
+    max_distance_between_tiles_m: .inf
+    inference_probability_neighbours: 16
+    inference_probability_aggregation: median
+    inactive_in_current_preprocessing_and_inference_route:
+      noise_class: 4
+      slice_thickness_m: 0.2
+      slice_increment_m: 0.05
+      min_tree_cylinders: 10
+    class_ids:
+      terrain: 0
+      leaf: 1
+      coarse_woody_debris: 2
+      wood: 3
+
+instance_parameters:
+  n_tiles: 5
+  n_tiles_provenance: official_readme_example_with_paper_permitting_3_5_or_7
+  n_zeros: 3
+  overlap: false
+  slice_thickness_m: 0.5
+  find_stems_boundary_m: [2.0, 2.5]
+  find_stems_min_radius_m: 0.025
+  find_stems_min_points: 200
+  graph_edge_length_m: 2.0
+  graph_maximum_cumulative_gap_m: 3.0
+  min_points_per_tree: 200
+  add_leaves: true
+  add_leaves_voxel_length_m: 0.5
+  add_leaves_edge_length_m: 1.0
+  save_diameter_class: false
+  ignore_missing_tiles: false
+  pandarallel: false
+  verbose: true
+
+hidden_instance_constants:
+  search_in_published_default: false
+  slice_cluster_minimum_points_exclusive: 200
+  wood_dbscan_eps_m: 0.1
+  wood_dbscan_min_samples: 20
+  stem_noise_neighbours: 10
+  stem_noise_quantile: 0.9
+  base_dbscan_eps_m: 0.2
+  base_dbscan_min_samples: 50
+  ransac_iterations: 100
+  ransac_sample_points: 20
+  ransac_normalised_radial_inlier_bounds: [0.8, 1.2]
+  ransac_minimum_inlier_fraction: 0.2
+  accepted_cylinder_cv_maximum: 0.15
+  wood_graph_neighbours: 200
+  leaf_graph_neighbours: 20
+  leaf_candidate_minimum_height_m: 2.0
+
+reproducibility_controls:
+  status: seeded_best_effort_requires_barkla_smoke_validation
+  python_random_seed: 42
+  numpy_random_seed: 42
+  torch_random_seed: 42
+  torch_cuda_random_seed: 42
+  deterministic_algorithms: false
+  determinism_policy: seeded_best_effort_upstream_compatible_nondeterministic_cuda_scatter
+  deterministic_algorithms_reason: >-
+    PyTorch 1.9 cannot execute the CUDA scatter_add used by the published
+    PyG/TLS2trees stack when deterministic enforcement is enabled.
+  classification: reproducibility_control_not_selected_from_for_instance_metrics
+  stochastic_realisation_note: "Seeding can change stochastic subsampling and RANSAC outcomes; it does not change a method parameter but must be treated as an output-affecting recorded patch."
+
+targets:
+  leaf_off:
+    prediction_pattern: "*.leafoff.ply"
+  leaf_on:
+    prediction_pattern: "*.leafon.ply"
+
+compatibility_modifications:
+  - name: official_post_release_global_shift_fix
+    changes_algorithmic_parameters: false
+  - name: pandas_concat_and_groupby_apply_compatibility
+    changes_algorithmic_parameters: false
+  - name: five_column_tile_index_support
+    changes_algorithmic_parameters: false
+  - name: reversible_local_coordinate_shift_with_source_row_projection
+    changes_algorithmic_parameters: false
+  - name: stable_source_row_sidecar_or_passthrough
+    changes_algorithmic_parameters: false
+  - name: seeded_random_state_without_deterministic_cuda_enforcement
+    changes_algorithmic_parameters: false
+    can_change_stochastic_realisation: true
+    status: implemented_requires_barkla_smoke_validation
+  - name: empty_graph_sources_recorded_as_no_predictions
+    changes_algorithmic_parameters: false
+    reason: >-
+      Pinned upstream removes graph-isolated stem origins but calls NetworkX
+      with an empty source set. The guard records that method outcome without
+      creating instances or changing stem-detection parameters.
+  - name: use_add_leaves_edge_length_argument
+    changes_algorithmic_parameters_at_published_value: false
+  - name: cap_impossible_small_wood_graph_neighbour_count
+    changes_algorithmic_parameters_at_published_value: false
+    reason: >-
+      Scikit-learn adds one neighbour for a self-query before removing the
+      sample itself. Preserve the published 200-neighbour value for graphs
+      with at least 201 samples; for smaller graphs use every other available
+      sample rather than aborting with n_neighbors greater than n_samples.
+  - name: reconcile_cross_tile_prediction_ownership
+    changes_algorithmic_parameters: false
+    reason: >-
+      Pinned upstream can emit the same stem-backed tree from adjacent central
+      tiles. Merge raw tree-file owners only when their leaf-off outputs share
+      an exact converted source representative. When distinct leaf-off stems
+      remain but their leaf-on crowns claim the same representative, assign it
+      to the tree with the nearest leaf-off support, breaking exact-distance
+      ties by stable owner order.
+
+run_gate:
+  runnable: true
+  scope: published_default_development_smoke_only
+  implemented_gates:
+    - exact_development_manifest_and_stage0_selection
+    - label_stripped_10m_tile_and_002m_voxel_conversion
+    - reversible_local_coordinate_shift
+    - pinned_bundled_semantic_model_runner
+    - isolated_version_pinned_method_environment_setup
+    - gpu_compiled_operator_and_model_forward_validator
+    - published_instance_and_leaf_attachment_runner
+    - unique_representative_to_source_row_projection
+    - cross_tile_prediction_ownership_reconciliation_from_leaf_off_stem_support
+    - target_explicit_leaf_off_and_leaf_on_evaluation
+    - immutable_run_roots_and_automated_smoke_gate
+  remaining_gates:
+    - barkla_semantic_environment_validation
+    - manual_development_alignment_review
+    - observed_runtime_and_memory_review
+  full_development_runnable: false
+  development_search_runnable: false
+  held_out_test_runnable: false

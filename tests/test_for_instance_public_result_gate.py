@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import re
 import statistics
@@ -104,6 +105,77 @@ SPECS = {
         "summary_kind": "treelearn",
     },
 }
+
+TLS2TREES_EXAMPLES = "methods/tls2trees/examples"
+TLS2TREES_PROTOCOL = "for_instance_pointwise_class3_ignore"
+TLS2TREES_EVALUATOR = "for_instance_tls2trees_source_row_class3_ignore"
+TLS2TREES_MASK = (
+    "classification_3_excluded_then_union_of_reference_tree_and_predicted_tree_points"
+)
+TLS2TREES_COMPARABLE_GROUP = "held_out_test_tls2trees_class3_ignore"
+TLS2TREES_DIAGNOSTIC_GROUP = "tls2trees_leaf_off_class3_ignore_diagnostic"
+TLS2TREES_RETENTION_PROFILE = "held_out_test_tls2trees_class3_ignore"
+TLS2TREES_VARIANTS = ("development_tuned", "published_default")
+TLS2TREES_BUNDLE_SUFFIXES = (
+    "test_plot_results.csv",
+    "test_site_results.csv",
+    "test_results.csv",
+    "test_provenance.json",
+    "prediction_retention_manifest.json",
+    "leaf_off_test_plot_diagnostic.csv",
+    "leaf_off_test_site_diagnostic.csv",
+    "leaf_off_test_diagnostic.csv",
+)
+
+
+def tls2trees_prefix(variant: str) -> str:
+    assert variant in TLS2TREES_VARIANTS
+    return f"{TLS2TREES_EXAMPLES}/tls2trees_{variant}"
+
+
+def tls2trees_bundle_paths(variant: str) -> list[Path]:
+    prefix = tls2trees_prefix(variant)
+    return [ROOT / f"{prefix}_{suffix}" for suffix in TLS2TREES_BUNDLE_SUFFIXES]
+
+
+def published_default_bundle_present() -> bool:
+    """Allow the baseline to be absent, but never partially published."""
+    artifact_flags = [path.is_file() for path in tls2trees_bundle_paths("published_default")]
+    headline = [
+        row
+        for row in read_csv(
+            "outputs/for_instance_benchmark_metrics/"
+            "for_instance_method_benchmark_results.csv"
+        )
+        if row["method_slug"] == "tls2trees"
+        and row["variant"] == "published_default"
+    ]
+    diagnostic = [
+        row
+        for row in read_csv(
+            "outputs/for_instance_benchmark_metrics/"
+            "for_instance_method_development_diagnostics.csv"
+        )
+        if row["method_slug"] == "tls2trees"
+        and row["variant"] == "published_default"
+    ]
+    retention = [
+        row
+        for row in read_csv(
+            "outputs/for_instance_benchmark_metrics/"
+            "for_instance_prediction_retention_registry.csv"
+        )
+        if row["method_slug"] == "tls2trees"
+        and row["variant"] == "published_default"
+    ]
+    signals = artifact_flags + [bool(headline), bool(diagnostic), bool(retention)]
+    if not any(signals):
+        return False
+    assert all(artifact_flags), "TLS2trees published-default artifact bundle is partial"
+    assert len(headline) == len(diagnostic) == len(retention) == 1, (
+        "TLS2trees published-default rows must be published atomically"
+    )
+    return True
 
 
 def read_csv(relative_path: str) -> list[dict[str, str]]:
@@ -214,6 +286,9 @@ def aggregate(rows: list[dict[str, object]]) -> dict[str, int | float]:
     tp = sum(int(row["true_positives"]) for row in rows)
     fp = sum(int(row["false_positives"]) for row in rows)
     fn = sum(int(row["false_negatives"]) for row in rows)
+    precision_denominator = tp + fp
+    recall_denominator = tp + fn
+    f1_denominator = 2 * tp + fp + fn
     return {
         "plots": len(rows),
         "predicted_instances": predicted,
@@ -222,10 +297,30 @@ def aggregate(rows: list[dict[str, object]]) -> dict[str, int | float]:
         "false_positives": fp,
         "false_negatives": fn,
         "mean_plot_f1": statistics.fmean(float(row["f1"]) for row in rows),
-        "micro_precision": tp / (tp + fp),
-        "micro_recall": tp / (tp + fn),
-        "micro_f1": 2 * tp / (2 * tp + fp + fn),
+        "micro_precision": (
+            tp / precision_denominator if precision_denominator else 0.0
+        ),
+        "micro_recall": tp / recall_denominator if recall_denominator else 0.0,
+        "micro_f1": 2 * tp / f1_denominator if f1_denominator else 0.0,
     }
+
+
+def test_aggregate_accepts_a_site_with_no_predictions() -> None:
+    calculated = aggregate(
+        [
+            {
+                "predicted_instances": 0,
+                "reference_instances": 64,
+                "true_positives": 0,
+                "false_positives": 0,
+                "false_negatives": 64,
+                "f1": 0.0,
+            }
+        ]
+    )
+    assert calculated["micro_precision"] == 0.0
+    assert calculated["micro_recall"] == 0.0
+    assert calculated["micro_f1"] == 0.0
 
 
 def assert_plot_rows(rows: list[dict[str, object]]) -> None:
@@ -343,7 +438,7 @@ def assert_summary_matches(
         assert float(recorded[field]) == pytest.approx(calculated[field])
 
 
-def test_five_headline_rows_reconcile_from_committed_plot_sources() -> None:
+def test_headline_rows_reconcile_from_committed_plot_sources() -> None:
     plot_sources, source_rows = load_plot_sources()
     assert set(plot_sources) == set(SPECS)
 
@@ -376,9 +471,14 @@ def test_five_headline_rows_reconcile_from_committed_plot_sources() -> None:
         "for_instance_method_benchmark_results.csv"
     )
     tracker = {
-        (row["method_slug"], row["training_mode"]): row for row in tracker_rows
+        (row["method_slug"], row["training_mode"]): row
+        for row in tracker_rows
+        if row["method_slug"] != "tls2trees"
     }
-    assert len(tracker_rows) == 5
+    tls2trees_rows = [row for row in tracker_rows if row["method_slug"] == "tls2trees"]
+    expected_tls2trees_rows = 1 + int(published_default_bundle_present())
+    assert len(tracker_rows) == len(SPECS) + expected_tls2trees_rows
+    assert len(tls2trees_rows) == expected_tls2trees_rows
     assert set(tracker) == set(SPECS)
 
     reference_inventory: dict[str, int] | None = None
@@ -437,8 +537,9 @@ def test_five_headline_rows_reconcile_from_committed_plot_sources() -> None:
 def test_public_source_hashes_and_treex_retention_manifest_reconcile() -> None:
     _, source_rows = load_plot_sources()
     source_hashes = [row["source_metrics_sha256"] for row in source_rows]
-    assert len(source_hashes) == 44
-    assert len(set(source_hashes)) == 44
+    expected_hashes = 44
+    assert len(source_hashes) == expected_hashes
+    assert len(set(source_hashes)) == expected_hashes
     assert all(HEX_64.fullmatch(value) for value in source_hashes)
 
     manifest = json.loads(
@@ -475,3 +576,227 @@ def test_public_source_hashes_and_treex_retention_manifest_reconcile() -> None:
         int(row["size_bytes"]) for row in files
     )
     assert treex["hash_status"] == "sha256_verified"
+
+
+def tls2trees_output_rows(
+    relative_path: str, variant: str
+) -> list[dict[str, str]]:
+    return [
+        row
+        for row in read_csv(relative_path)
+        if row["method_slug"] == "tls2trees" and row["variant"] == variant
+    ]
+
+
+def assert_tls2trees_protocol_fields(rows: list[dict[str, str]]) -> None:
+    assert rows
+    assert {row["evaluation_protocol"] for row in rows} == {
+        TLS2TREES_PROTOCOL
+    }
+    assert {row["matching_policy"] for row in rows} == {MATCHING}
+    assert {row["evaluation_mask"] for row in rows} == {TLS2TREES_MASK}
+
+
+def assert_tls2trees_sites(
+    plot_rows: list[dict[str, str]], site_relative_path: str
+) -> None:
+    normalized = [normalize_aligned_plot(row) for row in plot_rows]
+    grouped: dict[str, list[dict[str, object]]] = defaultdict(list)
+    for row in normalized:
+        grouped[str(row["site"])].append(row)
+    assert {site: len(rows) for site, rows in grouped.items()} == (
+        EXPECTED_SITE_PLOTS
+    )
+    recorded = {row["site"]: row for row in read_csv(site_relative_path)}
+    assert set(recorded) == set(EXPECTED_SITE_PLOTS)
+    for site, rows in grouped.items():
+        calculated = aggregate(rows)
+        assert calculated["reference_instances"] == EXPECTED_SITE_REFERENCES[site]
+        assert_summary_matches(calculated, recorded[site])
+
+
+def assert_tls2trees_bundle(variant: str) -> None:
+    prefix = tls2trees_prefix(variant)
+    paths = tls2trees_bundle_paths(variant)
+    assert all(path.is_file() for path in paths), f"missing {variant} artifact bundle"
+
+    public_plot_rows = read_csv(f"{prefix}_test_plot_results.csv")
+    diagnostic_plot_rows = read_csv(
+        f"{prefix}_leaf_off_test_plot_diagnostic.csv"
+    )
+    for target, rows in (
+        ("leaf_on", public_plot_rows),
+        ("leaf_off", diagnostic_plot_rows),
+    ):
+        assert len(rows) == 11
+        assert {row["method_slug"] for row in rows} == {"tls2trees"}
+        assert {row["variant"] for row in rows} == {variant}
+        assert {row["training_mode"] for row in rows} == {
+            "external_training_only"
+        }
+        assert {row["target"] for row in rows} == {target}
+        assert {row["dataset_split"] for row in rows} == {"test"}
+        assert {float(row["iou_threshold"]) for row in rows} == {
+            IOU_THRESHOLD
+        }
+        assert_tls2trees_protocol_fields(rows)
+        assert all(HEX_64.fullmatch(row["source_metrics_sha256"]) for row in rows)
+        assert all(
+            HEX_64.fullmatch(row["aligned_prediction_sha256"]) for row in rows
+        )
+        assert_plot_rows([normalize_aligned_plot(row) for row in rows])
+
+    public_inventory = {
+        (row["plot_index"], row["relative_path"], row["collection"]): int(
+            row["reference_instances"]
+        )
+        for row in public_plot_rows
+    }
+    diagnostic_inventory = {
+        (row["plot_index"], row["relative_path"], row["collection"]): int(
+            row["reference_instances"]
+        )
+        for row in diagnostic_plot_rows
+    }
+    assert public_inventory == diagnostic_inventory
+
+    run_ids = {row["run_id"] for row in public_plot_rows + diagnostic_plot_rows}
+    assert len(run_ids) == 1
+    run_id = run_ids.pop()
+
+    public_calculated = aggregate(
+        [normalize_aligned_plot(row) for row in public_plot_rows]
+    )
+    public_overall_rows = read_csv(f"{prefix}_test_results.csv")
+    assert len(public_overall_rows) == 1
+    public_overall = public_overall_rows[0]
+    assert public_overall["target"] == "leaf_on"
+    assert public_overall["run_id"] == run_id
+    assert_tls2trees_protocol_fields(public_overall_rows)
+    assert_summary_matches(public_calculated, public_overall)
+    assert_tls2trees_sites(public_plot_rows, f"{prefix}_test_site_results.csv")
+
+    diagnostic_calculated = aggregate(
+        [normalize_aligned_plot(row) for row in diagnostic_plot_rows]
+    )
+    diagnostic_overall_rows = read_csv(
+        f"{prefix}_leaf_off_test_diagnostic.csv"
+    )
+    assert len(diagnostic_overall_rows) == 1
+    diagnostic_overall = diagnostic_overall_rows[0]
+    assert diagnostic_overall["target"] == "leaf_off"
+    assert diagnostic_overall["run_id"] == run_id
+    assert_tls2trees_protocol_fields(diagnostic_overall_rows)
+    assert_summary_matches(diagnostic_calculated, diagnostic_overall)
+    assert_tls2trees_sites(
+        diagnostic_plot_rows,
+        f"{prefix}_leaf_off_test_site_diagnostic.csv",
+    )
+
+    headline = tls2trees_output_rows(
+        "outputs/for_instance_benchmark_metrics/"
+        "for_instance_method_benchmark_results.csv",
+        variant,
+    )
+    assert len(headline) == 1
+    assert headline[0]["run_id"] == run_id
+    assert headline[0]["comparable_group"] == TLS2TREES_COMPARABLE_GROUP
+    assert headline[0]["result_status"] == "completed_aligned_pointwise_test"
+    assert_tls2trees_protocol_fields(headline)
+    assert_summary_matches(public_calculated, headline[0])
+
+    diagnostic = tls2trees_output_rows(
+        "outputs/for_instance_benchmark_metrics/"
+        "for_instance_method_development_diagnostics.csv",
+        variant,
+    )
+    assert len(diagnostic) == 1
+    assert diagnostic[0]["run_id"] == run_id
+    assert diagnostic[0]["comparable_group"] == TLS2TREES_DIAGNOSTIC_GROUP
+    assert diagnostic[0]["result_status"] == "completed_aligned_pointwise_test"
+    assert_tls2trees_protocol_fields(diagnostic)
+    assert_summary_matches(diagnostic_calculated, diagnostic[0])
+
+    retention_path = ROOT / f"{prefix}_prediction_retention_manifest.json"
+    retention_bytes = retention_path.read_bytes()
+    retention_sha256 = hashlib.sha256(retention_bytes).hexdigest()
+    retention = json.loads(retention_bytes)
+    files = retention["files"]
+    assert retention["status"] == "retention_verified"
+    assert retention["run_id"] == run_id
+    assert retention["variant"] == variant
+    assert retention["dataset_split"] == "test"
+    assert retention["targets"] == ["leaf_off", "leaf_on"]
+    assert retention["prediction_contract"] == "one_instance_label_per_source_row"
+    assert retention["future_metrics_without_inference"] is True
+    assert retention["configuration_changed_after_test"] is False
+    assert retention["verified_prediction_files"] == len(files) == 22
+    assert retention["verified_prediction_size_bytes"] == sum(
+        int(row["size_bytes"]) for row in files
+    )
+    assert Counter(row["target"] for row in files) == {
+        "leaf_off": 11,
+        "leaf_on": 11,
+    }
+    assert len({row["relative_path"] for row in files}) == 22
+    assert all(row["point_correspondence"] == "source_row_index" for row in files)
+    assert all(HEX_64.fullmatch(row["sha256"]) for row in files)
+
+    retained_hashes = {
+        (row["target"], int(row["plot_index"])): row["sha256"] for row in files
+    }
+    assert len(retained_hashes) == 22
+    for row in public_plot_rows + diagnostic_plot_rows:
+        assert retained_hashes[(row["target"], int(row["plot_index"]))] == (
+            row["aligned_prediction_sha256"]
+        )
+
+    retention_registry = tls2trees_output_rows(
+        "outputs/for_instance_benchmark_metrics/"
+        "for_instance_prediction_retention_registry.csv",
+        variant,
+    )
+    assert len(retention_registry) == 1
+    registry = retention_registry[0]
+    assert registry["retention_profile"] == TLS2TREES_RETENTION_PROFILE
+    assert registry["run_id"] == run_id
+    assert registry["evaluation_split"] == "test"
+    assert registry["future_metrics_without_inference"] == "true"
+    assert registry["hash_status"] == "sha256_verified"
+    assert int(registry["retained_file_count"]) == 22
+    assert int(registry["retained_size_bytes"]) == retention[
+        "verified_prediction_size_bytes"
+    ]
+    assert registry["retention_manifest"] == (
+        f"{prefix}_prediction_retention_manifest.json"
+    )
+    assert registry["retention_manifest_sha256"] == retention_sha256
+    assert registry["evidence_path"] == f"{prefix}_test_plot_results.csv"
+
+    provenance = json.loads(
+        (ROOT / f"{prefix}_test_provenance.json").read_text(encoding="utf-8")
+    )
+    assert provenance["run_id"] == run_id
+    assert provenance["variant"] == variant
+    assert provenance["canonical_target"] == "leaf_on"
+    assert provenance["diagnostic_target"] == "leaf_off"
+    assert provenance["evaluation_evaluator"] == TLS2TREES_EVALUATOR
+    assert provenance["configuration_changed_after_test"] is False
+    assert provenance["inference_rerun"] is False
+    assert provenance["verified_prediction_files"] == 22
+    assert provenance["retention_manifest_sha256"] == retention_sha256
+    assert provenance["public_result"]["run_id"] == run_id
+    assert provenance["diagnostic_result"]["run_id"] == run_id
+    assert_summary_matches(public_calculated, provenance["public_result"])
+    assert_summary_matches(
+        diagnostic_calculated, provenance["diagnostic_result"]
+    )
+
+
+def test_current_tls2trees_development_tuned_bundle_reconciles() -> None:
+    assert_tls2trees_bundle("development_tuned")
+
+
+def test_published_default_bundle_is_absent_or_complete_and_reconciled() -> None:
+    if published_default_bundle_present():
+        assert_tls2trees_bundle("published_default")

@@ -21,7 +21,7 @@ individual-tree reference instance labels.
 - TLS2trees commit: `ca12cb73b2c736d80b020e8025f8d975d42e6f01`
 - Instance entry point: `methods/tls2trees/scripts/runtime/patches/instance_patched.py`
 
-The wrapper applies the documented compatibility correction for newer pandas
+The wrapper applies the documented compatibility adaptation for newer pandas
 `groupby.apply` behaviour while leaving the external TLS2trees checkout
 unchanged.
 

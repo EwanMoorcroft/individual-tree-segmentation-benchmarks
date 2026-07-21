@@ -1,0 +1,158 @@
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: tls2trees
+  mode: for_instance_tls2trees_accuracy_benchmark
+  status: development_tuned_completed_published_default_test_ready
+
+dataset:
+  slug: for-instance
+  name: FOR-instance
+  source_url: "https://doi.org/10.5281/zenodo.8287792"
+  root: "~/data/datasets/for_instance/FORinstance_dataset"
+  split_metadata: data_split_metadata.csv
+  split_metadata_sha256: "dd64aa338681f8f4166f8d175879a2b0b0158ecf222497ec6f7f0b23bc4fce94"
+  split_contract:
+    source: dataset_supplied_exact_path_metadata
+    development:
+      plot_count: 21
+      point_count: 101769037
+      reference_tree_count: 807
+      site_counts:
+        CULS: 2
+        NIBIO: 14
+        RMIT: 1
+        SCION: 3
+        TUWIEN: 1
+      relative_paths:
+        - CULS/plot_1_annotated.las
+        - CULS/plot_3_annotated.las
+        - NIBIO/plot_10_annotated.las
+        - NIBIO/plot_11_annotated.las
+        - NIBIO/plot_12_annotated.las
+        - NIBIO/plot_13_annotated.las
+        - NIBIO/plot_16_annotated.las
+        - NIBIO/plot_19_annotated.las
+        - NIBIO/plot_21_annotated.las
+        - NIBIO/plot_2_annotated.las
+        - NIBIO/plot_3_annotated.las
+        - NIBIO/plot_4_annotated.las
+        - NIBIO/plot_6_annotated.las
+        - NIBIO/plot_7_annotated.las
+        - NIBIO/plot_8_annotated.las
+        - NIBIO/plot_9_annotated.las
+        - RMIT/train.las
+        - SCION/plot_35_annotated.las
+        - SCION/plot_39_annotated.las
+        - SCION/plot_87_annotated.las
+        - TUWIEN/train.las
+    test:
+      plot_count: 11
+      point_count: 49709922
+      reference_tree_count: 323
+      site_counts:
+        CULS: 1
+        NIBIO: 6
+        RMIT: 1
+        SCION: 2
+        TUWIEN: 1
+      relative_paths:
+        - CULS/plot_2_annotated.las
+        - NIBIO/plot_17_annotated.las
+        - NIBIO/plot_18_annotated.las
+        - NIBIO/plot_1_annotated.las
+        - NIBIO/plot_22_annotated.las
+        - NIBIO/plot_23_annotated.las
+        - NIBIO/plot_5_annotated.las
+        - RMIT/test.las
+        - SCION/plot_31_annotated.las
+        - SCION/plot_61_annotated.las
+        - TUWIEN/test.las
+
+method:
+  slug: tls2trees
+  name: TLS2trees
+  training_mode: external_training_only
+  variants:
+    - published_default
+    - development_tuned
+  repository_url: "https://github.com/tls-tools-ucl/TLS2trees"
+  published_configuration: methods/tls2trees/configs/for_instance_published_default.yml
+  search_definition: methods/tls2trees/configs/for_instance_search_space.yml
+
+targets:
+  leaf_off:
+    reference_instance_field: treeID
+    reference_semantic_field: classification
+    included_semantic_classes: [4, 6]
+    excluded_semantic_classes: [0, 1, 2, 5]
+    ignored_evaluation_semantic_classes: [3]
+    ignored_instance_labels: [0, -1]
+    valid_instance_rule: treeID_positive_and_at_least_one_included_point
+    prediction_pattern: "*.leafoff.ply"
+    predicted_foliage_policy:
+      leaf_attachment_output_included: false
+      every_emitted_prediction_point_is_positive: true
+      reference_semantic_postfilter_applied_to_predictions: false
+  leaf_on:
+    reference_instance_field: treeID
+    reference_semantic_field: classification
+    included_semantic_classes: [4, 5, 6]
+    excluded_semantic_classes: [0, 1, 2]
+    ignored_evaluation_semantic_classes: [3]
+    ignored_instance_labels: [0, -1]
+    valid_instance_rule: treeID_positive_and_at_least_one_included_point
+    prediction_pattern: "*.leafon.ply"
+    predicted_foliage_policy:
+      leaf_attachment_output_included: true
+      every_emitted_prediction_point_is_positive: true
+      reference_semantic_postfilter_applied_to_predictions: false
+
+evaluation:
+  protocol: for_instance_tls2trees_source_row_class3_ignore
+  raw_output_adapter: coordinate_to_voxel_representative_then_source_row_projection
+  primary_artifact: source_row_predictions.npz
+  primary_mask: union_of_reference_target_and_predicted_target_points_excluding_class3_outpoints
+  inference_only_semantic_classes: [3]
+  iou_threshold: 0.5
+  threshold_operator: greater_than_or_equal
+  matching: maximum_cardinality_one_to_one
+  raw_coordinate_tolerance_m: 0.001
+  raw_coordinate_tolerance_status: compatibility_value_requires_smoke_diagnostics
+  primary_evaluation_uses_coordinate_tolerance: false
+  require_unique_source_assignment: true
+  require_coordinate_multiplicity_audit: true
+  require_unmatched_coordinate_audit: true
+  require_reference_retention_audit: true
+  aggregate_counts_before_micro_metrics: true
+  required_plot_metrics:
+    - evaluated_point_count
+    - prediction_instance_count
+    - reference_instance_count
+    - true_positives
+    - false_positives
+    - false_negatives
+    - precision
+    - recall
+    - f1
+    - mean_matched_iou
+    - median_matched_iou
+    - mean_unweighted_coverage
+    - mean_weighted_coverage
+    - oversegmented_reference_count
+    - undersegmented_prediction_count
+
+split_control:
+  tuning_split: development
+  held_out_test_accessed_during_tuning: false
+  published_default_test_requires_compatibility_gate: true
+  development_tuned_test_requires_frozen_selection_and_user_review: true
+  repeat_test_for_setting_selection_permitted: false
+
+outputs:
+  runtime_root: "data/predictions/tls2trees/for_instance/<variant>/<split>/<run_id>/<plot_id>"
+  raw_prediction_root: "<runtime_root>/predictions/raw"
+  aligned_prediction_root: "<runtime_root>/predictions/aligned/<target>"
+  metadata_root: "results/metadata/tls2trees/for_instance/<variant>/<target>/<split>/<run_id>"
+  table_root: "results/tables/tls2trees/for_instance/<variant>/<target>/<split>/<run_id>"
+  immutable_run_roots: true

@@ -1,0 +1,51 @@
+schema_version: 1
+
+project:
+  status: target_specific_configuration_frozen_and_test_completed
+  dataset_slug: for-instance
+  method_slug: tls2trees
+
+dataset:
+  slug: for-instance
+  selection_split: development
+  exact_development_plot_count: 21
+  held_out_test_accessed: false
+
+method:
+  slug: tls2trees
+  variant: development_tuned
+  training_mode: external_training_only
+  semantic_config: methods/tls2trees/configs/for_instance_published_default.yml
+  source_candidate_config: methods/tls2trees/configs/for_instance_development_tuned_stage1.yml
+
+selection:
+  source_phase: full_development_stage2
+  compare_targets_separately: true
+  selected_by_target:
+    leaf_off:
+      candidate_id: p04_min_points_50_lower_band
+      stage1_candidate_index: 2
+      reason: >-
+        Higher full-development micro F1, mean plot F1 and precision than p02
+        at identical recall, with zero failed or invalid plots.
+    leaf_on:
+      candidate_id: p02_min_points_50
+      stage1_candidate_index: 0
+      reason: >-
+        Higher full-development micro F1, mean plot F1, precision and recall
+        than p04, with zero failed or invalid plots.
+
+integrity:
+  expected_stage2_metric_count: 84
+  required_stage2_status: stage2_completed
+  required_invalid_plot_count_per_candidate_target: 0
+  selection_uses_held_out_test_metrics: false
+  held_out_test_accessed: false
+  final_configuration_selected: true
+  configuration_parameters_copied_from_frozen_stage1_candidates: true
+
+run_gate:
+  development_selection_runnable: false
+  held_out_test_runnable: false
+  held_out_test_completed: true
+  next_gate: none_configuration_is_final

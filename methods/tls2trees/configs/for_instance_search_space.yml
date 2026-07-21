@@ -1,0 +1,170 @@
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: tls2trees
+  mode: for_instance_tls2trees_development_search
+  status: development_search_completed_configuration_frozen
+
+dataset:
+  slug: for-instance
+  name: FOR-instance
+  benchmark_contract: methods/tls2trees/configs/for_instance_benchmark.yml
+  allowed_split: development
+  expected_plot_count: 21
+  required_sites: [CULS, NIBIO, RMIT, SCION, TUWIEN]
+  held_out_test_accessed: false
+
+method:
+  slug: tls2trees
+  name: TLS2trees
+  variant: development_tuned
+  training_mode: external_training_only
+  baseline_config: methods/tls2trees/configs/for_instance_published_default.yml
+
+design:
+  seed: 42
+  reproducibility_status: stage1_candidates_frozen_before_development_metrics
+  stage_0:
+    purpose: compatibility_runtime_and_sensitivity_gate
+    plots: one_predeclared_median_point_count_development_plot_per_site
+    selection_uses_accuracy_metrics: false
+    required_checks:
+      - semantic_output_schema
+      - coordinate_shift_round_trip
+      - source_coordinate_retention
+      - duplicate_coordinate_multiplicity
+      - unique_source_assignment
+      - leaf_off_and_leaf_on_target_selection
+      - runtime_and_resource_capture
+  stage_1:
+    design_type: seeded_bounded_space_filling_design
+    maximum_configurations_including_baseline: 12
+    plots: stage_0_cross_site_subset
+    save_all_configurations_and_failures: true
+    compare_targets_separately: true
+  stage_2:
+    design_type: bounded_refinement
+    maximum_candidates_per_target: 3
+    plots: all_21_development_plots
+    maximum_refinement_rounds: 1
+  stage_3:
+    outputs:
+      - frozen_leaf_off_configuration
+      - frozen_leaf_on_configuration
+      - configuration_selection_manifest
+      - configuration_and_manifest_hashes
+    user_review_required_before_tuned_test: true
+
+compatibility_probe:
+  runnable: true
+  candidate_manifest: methods/tls2trees/configs/for_instance_development_tuned_compatibility_probe.yml
+  candidate_count: 6
+  source_semantic_output: checksum_verified_published_default_development_stage0_index_0
+  target: leaf_off
+  add_leaves: false
+  selection_uses_accuracy_metrics: false
+  reference_labels_accessed: false
+  held_out_test_accessed: false
+  full_development_runnable: false
+  purpose: non_metric_stem_viability_gate_before_cross_site_stage_0
+
+stage1_execution:
+  runnable: true
+  candidate_manifest: methods/tls2trees/configs/for_instance_development_tuned_stage1.yml
+  promoted_candidate_count: 4
+  stage0_plot_count: 5
+  targets: [leaf_off, leaf_on]
+  expected_metric_count: 40
+  final_configuration_selected: false
+  full_development_runnable: false
+  held_out_test_runnable: false
+
+fixed_parameters:
+  bundled_fsct_model: true
+  tile_edge_length_m: 10.0
+  semantic_dtm_grid_resolution_m: 0.5
+  semantic_ground_height_threshold_m: 0.1
+  hidden_upstream_constants: published_values
+  iou_threshold: 0.5
+  matching: maximum_cardinality_one_to_one
+  add_leaves: true
+
+conditionally_searched_parameters:
+  downsample_voxel_length_m:
+    baseline: 0.02
+    values: [0.02, 0.04, 0.08]
+    condition: only_after_coordinate_and_runtime_gate
+  semantic_is_wood_probability_threshold:
+    baseline: 1.0
+    values: [0.5, 0.75, 1.0]
+    condition: only_if_published_semantic_output_is_not_degenerate
+  n_tiles:
+    baseline: 5
+    values: [3, 5, 7]
+    condition: only_if_physical_context_differs_after_tiling
+
+searched_instance_parameters:
+  slice_thickness_m:
+    baseline: 0.5
+    values: [0.25, 0.5, 1.0]
+  find_stems_boundary_m:
+    baseline: [2.0, 2.5]
+    values:
+      - [1.0, 1.5]
+      - [1.5, 2.0]
+      - [2.0, 2.5]
+  find_stems_min_radius_m:
+    baseline: 0.025
+    values: [0.015, 0.025, 0.05]
+  find_stems_min_points:
+    baseline: 200
+    values: [50, 100, 200]
+  graph_edge_length_m:
+    baseline: 2.0
+    values: [1.0, 2.0, 3.0]
+  graph_maximum_cumulative_gap_m:
+    baseline: 3.0
+    values: [2.0, 3.0, 5.0]
+  min_points_per_tree:
+    baseline: 200
+    values: [50, 100, 200]
+  add_leaves_voxel_length_m:
+    target: leaf_on
+    baseline: 0.5
+    values: [0.25, 0.5, 1.0]
+  add_leaves_edge_length_m:
+    target: leaf_on
+    baseline: 1.0
+    values: [0.5, 1.0, 2.0]
+
+selection:
+  primary_evidence:
+    - mean_plot_f1
+    - micro_f1
+    - site_level_f1
+    - precision_recall_balance
+    - cross_site_variation
+    - failed_or_invalid_plots
+    - over_segmentation
+    - under_segmentation
+    - runtime
+    - deviation_from_published_default
+  tie_breaker_order:
+    - stronger_cross_site_stability
+    - fewer_failed_or_invalid_plots
+    - fewer_changes_from_published_default
+    - lower_runtime
+    - small_metric_advantage
+  test_metrics_permitted: false
+
+freeze_manifest_required_fields:
+  - selected_parameter_values
+  - selection_criterion
+  - development_plots_used
+  - development_metrics
+  - alternative_configurations_considered
+  - tie_breaking_rule
+  - date
+  - git_commit
+  - target
+  - confirmation_no_test_metrics_used

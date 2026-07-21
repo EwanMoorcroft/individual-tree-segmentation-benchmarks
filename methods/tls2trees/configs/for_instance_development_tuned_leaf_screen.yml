@@ -1,0 +1,156 @@
+schema_version: 1
+
+project:
+  status: development_leaf_attachment_screen_design_frozen
+  dataset_slug: for-instance
+  method_slug: tls2trees
+
+dataset:
+  slug: for-instance
+  allowed_split: development
+  stage0_plot_count: 5
+  required_collections: [CULS, NIBIO, RMIT, SCION, TUWIEN]
+  held_out_test_accessed: false
+
+method:
+  slug: tls2trees
+  variant: development_tuned
+  training_mode: external_training_only
+  semantic_config: methods/tls2trees/configs/for_instance_published_default.yml
+
+scope:
+  phase: development_leaf_attachment_screen
+  targets: [leaf_on]
+  reference_labels_accessed_for_development_evaluation: true
+  development_accuracy_metrics_permitted: true
+  selection_uses_held_out_test_metrics: false
+  held_out_test_accessed: false
+  final_configuration_selected: false
+
+development_evidence:
+  source_phase: cross_site_development_stage1
+  source_candidate_id: p02_min_points_50
+  purpose: semantic_cache_and_fixed_p02_parameter_provenance_only
+  grid_declared_before_this_screen: true
+  required_summary_status: stage1_completed
+  required_valid_metric_count: 40
+  accuracy_used_to_construct_grid: false
+
+leaf_attachment_grid:
+  design: exact_cartesian_product
+  voxel_length_m: [0.25, 0.5, 1.0]
+  edge_length_m: [0.5, 1.0, 2.0]
+  source: methods/tls2trees/configs/for_instance_search_space.yml
+
+candidate_generation:
+  ordering_frozen_before_stage1_metrics: true
+  ordering: voxel_length_then_edge_length
+  seed: 42
+
+candidates:
+  - candidate_index: 0
+    candidate_id: leaf_v025_e05
+    parameters: &leaf_v025_e05
+      n_tiles: 5
+      n_zeros: 3
+      overlap: false
+      slice_thickness: 0.5
+      find_stems_boundary: [2.0, 2.5]
+      find_stems_min_radius: 0.025
+      find_stems_min_points: 50
+      graph_edge_length: 2.0
+      graph_maximum_cumulative_gap: 3.0
+      min_points_per_tree: 50
+      add_leaves: true
+      add_leaves_voxel_length: 0.25
+      add_leaves_edge_length: 0.5
+      save_diameter_class: false
+      ignore_missing_tiles: false
+      pandarallel: false
+      verbose: true
+
+  - candidate_index: 1
+    candidate_id: leaf_v025_e10
+    parameters:
+      <<: *leaf_v025_e05
+      add_leaves_edge_length: 1.0
+
+  - candidate_index: 2
+    candidate_id: leaf_v025_e20
+    parameters:
+      <<: *leaf_v025_e05
+      add_leaves_edge_length: 2.0
+
+  - candidate_index: 3
+    candidate_id: leaf_v050_e05
+    parameters:
+      <<: *leaf_v025_e05
+      add_leaves_voxel_length: 0.5
+
+  - candidate_index: 4
+    candidate_id: leaf_v050_e10
+    parameters:
+      <<: *leaf_v025_e05
+      add_leaves_voxel_length: 0.5
+      add_leaves_edge_length: 1.0
+
+  - candidate_index: 5
+    candidate_id: leaf_v050_e20
+    parameters:
+      <<: *leaf_v025_e05
+      add_leaves_voxel_length: 0.5
+      add_leaves_edge_length: 2.0
+
+  - candidate_index: 6
+    candidate_id: leaf_v100_e05
+    parameters:
+      <<: *leaf_v025_e05
+      add_leaves_voxel_length: 1.0
+
+  - candidate_index: 7
+    candidate_id: leaf_v100_e10
+    parameters:
+      <<: *leaf_v025_e05
+      add_leaves_voxel_length: 1.0
+      add_leaves_edge_length: 1.0
+
+  - candidate_index: 8
+    candidate_id: leaf_v100_e20
+    parameters:
+      <<: *leaf_v025_e05
+      add_leaves_voxel_length: 1.0
+      add_leaves_edge_length: 2.0
+
+evaluation:
+  target: leaf_on
+  evaluator: for_instance_tls2trees_source_row_class3_ignore
+  evaluation_mask: union_of_reference_target_and_predicted_target_points_excluding_class3_outpoints
+  ignored_semantic_classes: [3]
+  iou_threshold: 0.5
+  matching: maximum_cardinality_one_to_one
+  coordinate_tolerance_m: 0.001
+  automatic_final_selection: false
+
+selection:
+  ranking_order:
+    - fewer_failed_or_invalid_plots
+    - higher_mean_plot_f1
+    - higher_micro_f1
+    - fewer_oversegmented_references
+    - fewer_undersegmented_predictions
+    - lower_runtime
+    - candidate_id
+  maximum_candidates_for_full_development_review: 3
+  test_metrics_permitted: false
+
+run_gate:
+  runnable: true
+  candidate_count: 9
+  stage0_plot_count: 5
+  candidate_plot_task_count: 45
+  expected_metric_count: 45
+  semantic_cache_reused: true
+  semantic_jobs_submitted: false
+  full_development_runnable: false
+  held_out_test_runnable: false
+  next_gate: publish_completed_development_leaf_screen_evidence

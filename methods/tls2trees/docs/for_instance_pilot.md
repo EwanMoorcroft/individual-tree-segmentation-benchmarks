@@ -1,8 +1,8 @@
-# FOR-instance TLS2trees Accuracy Pilot
+# Legacy FOR-instance TLS2trees Instance-stage Pilot
 
 ## Status And Scope
 
-This workflow prepares the first labelled accuracy pilot:
+This workflow preserves the first labelled instance-stage pilot:
 
 - dataset: FOR-instance;
 - plot: `CULS/plot_1_annotated.las`;
@@ -12,8 +12,15 @@ This workflow prepares the first labelled accuracy pilot:
 - reference semantic classes: `4` (stem) and `6` (woody branches).
 
 The workflow is implemented but has not produced a reported accuracy result.
-FOR-instance is UAV laser scanning data, so this run is also a compatibility
-test for the TLS2trees instance stage.
+It maps reference semantic classes directly into the TLS2trees instance stage,
+removes background, and does not run the bundled semantic model. It is an
+oracle-semantic diagnostic, not one of the `published_default` or
+`development_tuned` benchmark rows. FOR-instance is UAV laser-scanning data,
+so even the complete route remains a domain-compatibility benchmark.
+
+The replacement four-row design is documented in
+[`for_instance_benchmark.md`](for_instance_benchmark.md). Do not submit this
+legacy workflow as evidence for those rows.
 
 Class `5` contains live branches and is excluded from the first accuracy
 reference because the configured TLS2trees run produces `.leafoff.ply`

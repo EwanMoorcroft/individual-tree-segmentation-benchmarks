@@ -20,11 +20,11 @@ The exact manifest, published-default conversion, semantic and instance
 runners, source-row adapter, target-aware evaluator and Barkla chains are
 implemented and validated. Development selection was frozen before the
 held-out test. The final evaluator excludes class-3 out-points from the scoring
-domain and uses the retained source-row predictions directly. The
-development-tuned leaf-on row is complete; leaf-off is retained as a
-target-specific diagnostic. The published-default configuration is frozen and
-its separate full-test workflow is ready. The legacy one-plot pilot is not one
-of the four target rows.
+domain and uses the retained source-row predictions directly. Both leaf-on
+rows are complete; leaf-off is retained as a target-specific diagnostic for
+each variant. The published-default configuration was evaluated without
+FOR-instance metric selection and did not change after the test. The legacy
+one-plot pilot is not one of the four target rows.
 
 ## Authoritative Sources
 
@@ -354,9 +354,18 @@ development data only and followed the held-out execution, it does not change
 the frozen test result or authorize another tuned test run.
 
 The published-default configuration and 11-plot test chain are independent of
-the development-tuned selection. That workflow must retain both leaf targets,
-evaluate valid empty predictions as zero and write its own public summaries and
-retention manifest.
+the development-tuned selection. Run
+`tls2trees_for-instance_published_default_held_out_test_20260721_122448`
+completed all 22 metrics and retained both leaf targets. Its class-3-ignore
+leaf-on headline produced 6 predictions for 323 references, no matches, mean
+plot F1 `0.000000` and micro F1 `0.000000`; leaf-off produced 3 predictions
+and no matches. The public evidence is
+[`tls2trees_published_default_test_results.csv`](../examples/tls2trees_published_default_test_results.csv),
+[`tls2trees_published_default_test_provenance.json`](../examples/tls2trees_published_default_test_provenance.json)
+and
+[`tls2trees_published_default_prediction_retention_manifest.json`](../examples/tls2trees_published_default_prediction_retention_manifest.json).
+The negative result indicates weak transfer from terrestrial to UAV laser
+scanning for this frozen pipeline, not a failure of the evaluation route.
 
 ### Final publication order
 

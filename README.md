@@ -33,8 +33,8 @@ diagnostic has 22 predictions and no matches. All 22 source-row prediction
 files remain hash-verified. A separate nine-setting leaf-attachment screen
 completed on five development plots (45/45 valid metrics); every setting gave
 the same aggregate accuracy, indicating that leaf-attachment geometry was not
-the principal transfer bottleneck. The full published-default test workflow is
-frozen and ready for its separate Barkla execution.
+the principal transfer bottleneck. The independent published-default held-out
+workflow also completed, with mean plot and micro F1 both `0.000000`.
 
 TLS2trees has completed a 16-plot FRDR prediction and operational benchmark.
 FRDR has no individual-tree reference labels, so that work is not a
@@ -163,8 +163,11 @@ TUWIEN and RMIT as the weakest domain-transfer cases.
 
 The consolidated public workbook is
 [`outputs/for_instance_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx`](outputs/for_instance_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx).
-It reports the completed rows with an explicit protocol column and retains the
-TLS2trees prediction evidence. Public-safe per-plot, site and overall source
+It reports seven completed held-out headline rows with an explicit protocol
+column and retains the TLS2trees prediction evidence. The independently frozen
+TLS2trees published-default leaf-on result has mean plot F1 `0.000000` and
+micro F1 `0.000000` under its class-3-ignore scoring domain. Public-safe
+per-plot, site and overall source
 tables independently reproduce every aggregate; raw predictions remain off Git
 under the paths and hashes recorded in the prediction-retention registry.
 

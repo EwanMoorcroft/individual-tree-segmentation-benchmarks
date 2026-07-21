@@ -3,9 +3,9 @@
 ## Method Summary
 
 TLS2trees is a terrestrial-laser-scanning tree extraction workflow used here
-for a completed FRDR operational prediction benchmark, a completed
-development-tuned FOR-instance benchmark, a frozen published-default
-FOR-instance workflow and one legacy instance-stage pilot.
+for a completed FRDR operational prediction benchmark, completed
+development-tuned and published-default FOR-instance benchmarks, and one
+legacy instance-stage pilot.
 
 ## Upstream Repository And Citation
 
@@ -111,8 +111,9 @@ The completed FRDR run is an operational prediction benchmark only. FRDR has
 semantic `woods` labels but no individual-tree reference labels, so the run
 does not report instance precision, recall, F1 or IoU. The legacy FOR-instance
 pilot uses coordinate-based one-to-one matching for the leaf-off reference
-classes and is not a headline result. The completed development-tuned run uses
-source-row predictions and the final class-3-ignore evaluation protocol.
+classes and is not a headline result. The completed development-tuned and
+published-default runs use source-row predictions and the final class-3-ignore
+evaluation protocol.
 
 ## Known Limitations
 
@@ -131,3 +132,15 @@ The development-tuned leaf-on result has mean plot F1 `0.015023` and micro F1
 as a zero-match diagnostic. The 22 retained source-row prediction files, the
 development leaf screen, the published-default workflow and the legacy pilot
 are indexed in [`../../BENCHMARKS.md`](../../BENCHMARKS.md).
+
+The independent published-default run
+`tls2trees_for-instance_published_default_held_out_test_20260721_122448` was
+neither selected from FOR-instance metrics nor changed after its held-out test.
+Its leaf-on result has mean plot F1 `0.000000` and micro F1 `0.000000`; the
+public evidence is
+[`tls2trees_published_default_test_results.csv`](examples/tls2trees_published_default_test_results.csv),
+[`tls2trees_published_default_test_provenance.json`](examples/tls2trees_published_default_test_provenance.json)
+and
+[`tls2trees_published_default_prediction_retention_manifest.json`](examples/tls2trees_published_default_prediction_retention_manifest.json).
+The poor transfer from terrestrial to UAV laser scanning is specific to this
+frozen pipeline and scoring domain.

@@ -42,9 +42,27 @@ the files.
 
 ## Published-default FOR-instance result
 
-The frozen published-default workflow writes its held-out plot, site, overall,
-provenance and retention files here after the separate Barkla run completes.
-It does not reuse development-selected instance parameters.
+The frozen published-default execution
+`tls2trees_for-instance_published_default_held_out_test_20260721_122448` is
+recorded by:
+
+- [`tls2trees_published_default_test_plot_results.csv`](tls2trees_published_default_test_plot_results.csv);
+- [`tls2trees_published_default_test_site_results.csv`](tls2trees_published_default_test_site_results.csv);
+- [`tls2trees_published_default_test_results.csv`](tls2trees_published_default_test_results.csv);
+- [`tls2trees_published_default_test_provenance.json`](tls2trees_published_default_test_provenance.json);
+- [`tls2trees_published_default_prediction_retention_manifest.json`](tls2trees_published_default_prediction_retention_manifest.json);
+- [`tls2trees_published_default_leaf_off_test_plot_diagnostic.csv`](tls2trees_published_default_leaf_off_test_plot_diagnostic.csv);
+- [`tls2trees_published_default_leaf_off_test_site_diagnostic.csv`](tls2trees_published_default_leaf_off_test_site_diagnostic.csv); and
+- [`tls2trees_published_default_leaf_off_test_diagnostic.csv`](tls2trees_published_default_leaf_off_test_diagnostic.csv).
+
+The leaf-on headline has 6 predictions, 323 references, 0 TP, 6 FP and 323 FN,
+with mean plot F1 `0.000000` and micro F1 `0.000000`. The leaf-off diagnostic
+has 3 predictions and no matches. Both targets use the class-3-ignore scoring
+domain and all 22 prediction files are hash-verified. The publication-derived
+parameters were evaluated without FOR-instance metric selection and did not
+change after the held-out test. The result documents weak transfer from the
+method's intended terrestrial laser-scanning domain to FOR-instance UAV laser
+scanning; it does not reuse development-selected instance parameters.
 
 ## Historical FOR-instance candidate evidence
 

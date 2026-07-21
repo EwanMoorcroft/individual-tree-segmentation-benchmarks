@@ -35,8 +35,16 @@ canonical sources include:
 - `methods/tls2trees/examples/tls2trees_development_tuned_test_plot_results.csv`;
 - `methods/tls2trees/examples/tls2trees_development_tuned_test_site_results.csv`;
 - `methods/tls2trees/examples/tls2trees_development_tuned_test_results.csv`;
-- `methods/tls2trees/examples/tls2trees_development_tuned_test_provenance.json`; and
-- `methods/tls2trees/examples/tls2trees_development_tuned_prediction_retention_manifest.json`.
+- `methods/tls2trees/examples/tls2trees_development_tuned_test_provenance.json`;
+- `methods/tls2trees/examples/tls2trees_development_tuned_prediction_retention_manifest.json`;
+- `methods/tls2trees/examples/tls2trees_published_default_test_plot_results.csv`;
+- `methods/tls2trees/examples/tls2trees_published_default_test_site_results.csv`;
+- `methods/tls2trees/examples/tls2trees_published_default_test_results.csv`;
+- `methods/tls2trees/examples/tls2trees_published_default_test_provenance.json`;
+- `methods/tls2trees/examples/tls2trees_published_default_prediction_retention_manifest.json`;
+- `methods/tls2trees/examples/tls2trees_published_default_leaf_off_test_plot_diagnostic.csv`;
+- `methods/tls2trees/examples/tls2trees_published_default_leaf_off_test_site_diagnostic.csv`; and
+- `methods/tls2trees/examples/tls2trees_published_default_leaf_off_test_diagnostic.csv`.
 
 The
 [`for_instance_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx`](for_instance_benchmark_metrics/for_instance_method_benchmark_tracker.xlsx)

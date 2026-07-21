@@ -359,6 +359,24 @@ results/metadata/tls2trees/for_instance/published_default/test/<run_id>/
 results/tables/tls2trees/for_instance/published_default/test/<run_id>/
 ```
 
+The completed run
+`tls2trees_for-instance_published_default_held_out_test_20260721_122448`
+used publication-derived parameters without FOR-instance metric selection, and
+the configuration did not change after the held-out test. The class-3-ignore
+leaf-on result has 6 predictions, 323 references, 0 TP, 6 FP, 323 FN, mean plot
+F1 `0.000000` and micro F1 `0.000000`; leaf-off has 3 predictions and no
+matches. This negative transfer result concerns UAV laser scanning rather than
+TLS2trees' intended terrestrial laser-scanning domain. Its public files are:
+
+- `tls2trees_published_default_test_plot_results.csv`;
+- `tls2trees_published_default_test_site_results.csv`;
+- `tls2trees_published_default_test_results.csv`;
+- `tls2trees_published_default_test_provenance.json`;
+- `tls2trees_published_default_prediction_retention_manifest.json`;
+- `tls2trees_published_default_leaf_off_test_plot_diagnostic.csv`;
+- `tls2trees_published_default_leaf_off_test_site_diagnostic.csv`; and
+- `tls2trees_published_default_leaf_off_test_diagnostic.csv`.
+
 The summary JSON, plot CSV, target summary CSV and retention manifest are the
 only inputs accepted by the guarded public-result finaliser. After the monitor
 reports `published_default_test_completed`, export the public-safe evidence and

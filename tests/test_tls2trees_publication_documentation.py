@@ -75,6 +75,12 @@ def assert_contains(text: str, *tokens: str) -> None:
     assert not missing, f"Documentation is missing: {missing}"
 
 
+def assert_any_phrase(text: str, phrases: tuple[str, ...], label: str) -> None:
+    assert any(phrase in text for phrase in phrases), (
+        f"Documentation is missing {label}; expected one of {phrases}"
+    )
+
+
 def test_development_tuned_documentation_tracks_the_public_result() -> None:
     result = one_result("development_tuned", "test_results.csv")
     mean_f1 = f'{float(result["mean_plot_f1"]):.6f}'
@@ -129,6 +135,10 @@ def test_published_default_completion_updates_every_public_index() -> None:
         assert provenance[field] == sha256(ROOT / relative_path)
     assert retention["status"] == "retention_verified"
     assert retention["verified_prediction_files"] == 22
+    assert retention["verified_prediction_size_bytes"] > 0
+    assert provenance["verified_prediction_files"] == retention[
+        "verified_prediction_files"
+    ]
 
     run_id = result["run_id"]
     mean_f1 = f'{float(result["mean_plot_f1"]):.6f}'
@@ -167,6 +177,41 @@ def test_published_default_completion_updates_every_public_index() -> None:
             document_text(name), run_id, mean_f1, micro_f1, *artifact_names
         )
 
+    documented_counts = tuple(
+        str(int(result[field]))
+        for field in (
+            "predicted_instances",
+            "reference_instances",
+            "true_positives",
+            "false_positives",
+            "false_negatives",
+        )
+    )
+    for name in ("examples", "published_runbook"):
+        assert_contains(document_text(name), *documented_counts)
+
+    for name in ("method", "examples", "benchmark", "published_runbook"):
+        text = " ".join(document_text(name).lower().split())
+        assert_contains(text, "class-3-ignore", "uav", "terrestrial")
+        assert_any_phrase(
+            text,
+            (
+                "without for-instance metric selection",
+                "not selected from for-instance",
+                "neither selected from for-instance",
+            ),
+            "the no-FOR-instance-selection statement",
+        )
+        assert_any_phrase(
+            text,
+            (
+                "did not change",
+                "not changed",
+                "nor changed",
+            ),
+            "the no-post-test-configuration-change statement",
+        )
+
     assert "after the separate Barkla run completes" not in document_text(
         "examples"
     )
@@ -198,6 +243,28 @@ def test_leaf_screen_completion_updates_its_public_indexes() -> None:
     assert provenance["publication_candidate_config_sha256"] == sha256(
         leaf_config
     )
+
+    candidates = read_csv(paths[1])
+    assert len(candidates) == provenance["candidate_count"] == 9
+    micro_values = {float(row["micro_f1"]) for row in candidates}
+    mean_values = {float(row["mean_plot_f1"]) for row in candidates}
+    narrative_documents = ("examples", "benchmark")
+    if len(micro_values) == len(mean_values) == 1:
+        for name in narrative_documents:
+            assert_contains(document_text(name), "identical aggregate accuracy")
+    else:
+        ranked = sorted(
+            candidates,
+            key=lambda row: (
+                float(row["micro_f1"]),
+                float(row["mean_plot_f1"]),
+                row["candidate_id"],
+            ),
+            reverse=True,
+        )
+        top_three = tuple(row["candidate_id"] for row in ranked[:3])
+        for name in narrative_documents:
+            assert_contains(document_text(name), *top_three)
 
     artifact_names = [path.name for path in paths]
     for name in ("registry", "outputs", "method", "examples", "benchmark"):

@@ -647,6 +647,7 @@ def test_published_default_slurm_chain_is_guarded_and_barkla_sized() -> None:
     assert "TLS2TREES_PUBLISHED_DEFAULT_TEST_CONFIRMED" in submit
     assert "TLS2TREES_REVIEWED_PUBLISHED_DEFAULT_CONFIG_SHA256" in submit
     assert "latest_published_default_test_state_file.txt" in submit
+    assert 'LD_LIBRARY_PATH="$METHOD_ENV/lib' in submit
     assert '--array="0-10%2"' in submit
     assert '--array="0-10%4"' in submit
     assert 'dependency="afterok:$EVALUATE_JOB"' in submit

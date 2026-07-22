@@ -40,7 +40,6 @@ KNOWN_METHOD_SLUGS = {
     "randlanet",
     "pointnetpp",
     "forestformer3d",
-    "segmentanytreev2",
 }
 CANONICAL_RESULT_VARIANTS = {
     "development_tuned",

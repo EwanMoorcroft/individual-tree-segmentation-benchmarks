@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: nvidia/cuda:11.1.1-cudnn8-devel-ubuntu20.04@sha256:83e4b2841034cdf45ea5b9a5b472eb2c07b1b23d4836d32666a881db29a8dceb
+From: nvidia/cuda@sha256:83e4b2841034cdf45ea5b9a5b472eb2c07b1b23d4836d32666a881db29a8dceb
 
 %labels
     org.opencontainers.image.title ForAINet qualification runtime

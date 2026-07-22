@@ -6,7 +6,9 @@ Dockerfile blob `1daea67cfae9e44a0de439f06896320d9723c209`, but replaces mutable
 references and the mutable CUDA tag with immutable revisions.
 
 The pinned base is the Linux/amd64 manifest for
-`nvidia/cuda:11.1.1-cudnn8-devel-ubuntu20.04`, digest
+`nvidia/cuda:11.1.1-cudnn8-devel-ubuntu20.04`, addressed in the definition as
+digest-only `nvidia/cuda@sha256:...` for Apptainer 1.3.6 compatibility. Its
+digest is
 `sha256:83e4b2841034cdf45ea5b9a5b472eb2c07b1b23d4836d32666a881db29a8dceb`.
 MinkowskiEngine 0.5.4, TorchSparse 1.4.0 and hdbscan 0.8.28 are installed from
 the exact commits recorded in the definition. The private author-local

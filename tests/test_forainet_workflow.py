@@ -96,7 +96,8 @@ def test_container_definition_pins_mutable_upstream_inputs() -> None:
     definition = (
         METHOD / "containers/forainet-cuda111-a100.def"
     ).read_text(encoding="utf-8")
-    assert "nvidia/cuda:11.1.1-cudnn8-devel-ubuntu20.04@sha256:" in definition
+    assert "From: nvidia/cuda@sha256:" in definition
+    assert "11.1.1-cudnn8-devel-ubuntu20.04@sha256:" not in definition
     for commit in (
         "9f81ae66b33b883cd08ee4f64d08cf633608b118",
         "74099d10a51c71c14318bce63d6421f698b24f24",

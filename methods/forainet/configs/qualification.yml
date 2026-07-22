@@ -1,0 +1,58 @@
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: forainet
+  protocol_id: for_instance_method_adapter_acceptance_v1
+  status: qualification_in_progress
+
+dataset:
+  slug: for-instance
+  version: original
+  catalogue_size: 32
+  development_plot_count: 21
+  held_out_plot_count: 11
+  forbid_later_point_cloud_versions: true
+
+method:
+  slug: forainet
+  name: ForAINet
+  selected_release: original
+  selection_reason: no_complete_official_forainetv2_release
+  upstream_repository: https://github.com/prs-eth/ForAINet
+  upstream_commit: 5fe600ae8f2fe913ae8740f475f0261a702f2a72
+  upstream_branch: main
+  licence: BSD-3-Clause
+  checkpoint:
+    filename: PointGroup-PAPER.pt
+    provider: official_repository_readme
+    provider_url: "https://www.dropbox.com/scl/fi/mv4nxe60cco86fd2u9f3z/PointGroup-PAPER.pt?rlkey=ua6093kehk0youpo8g3a6g0nm&st=wiqv3a0u&dl=0"
+    provider_checksum: null
+    size_bytes: 665805463
+    sha256: 97c03ce81621dc4193e55d2ca2294861b1f4421c94d192799e5fe031f9d35861
+    md5: 2f8f0622bdce0c15779a811003140d26
+    weight_name: latest
+    job_name: setting1_classes5_mixtree2
+    training_mode: published_pretrained
+    dataset_exposure: published_checkpoint
+  official_configuration:
+    model_name: PointGroup-PAPER
+    dataset_class: treeins_set1.TreeinsFusedDataset
+    radius_m: 8
+    grid_size_m: 0.2
+    input_feature_count: 4
+    semantic_class_count: 5
+    stuff_class_ids: [0, 1]
+    thing_class_ids: [2, 3, 4]
+    voting_runs: 1
+    full_resolution: true
+
+gates:
+  v2_availability_resolved: true
+  source_licence_checkpoint_config_verified: true
+  held_out_documentary_exposure_pass: true
+  exact_train_validation_subdivision_published: false
+  barkla_image_verified: false
+  checkpoint_full_load_verified: false
+  prediction_label_independence_verified: false
+  source_row_inverse_map_verified: false
+  held_out_authorised: false

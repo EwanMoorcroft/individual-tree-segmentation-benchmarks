@@ -1,0 +1,39 @@
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: forainet
+  protocol_id: for_instance_pointwise_v1
+  status: planned_not_run
+
+dataset:
+  slug: for-instance
+  version: original
+  training_plot_count: 16
+  validation_plot_count: 5
+  split_seed: 42
+  held_out_access: forbidden
+
+method:
+  slug: forainet
+  name: ForAINet
+  upstream_commit: 5fe600ae8f2fe913ae8740f475f0261a702f2a72
+  training_mode: fine_tuned_on_dev
+  initial_checkpoint_sha256: 97c03ce81621dc4193e55d2ca2294861b1f4421c94d192799e5fe031f9d35861
+  initial_weight_name: latest
+  initialisation_override: models.PointGroup-PAPER.path_pretrained
+  resume: false
+
+training_plan:
+  architecture: official_PointGroup-PAPER
+  losses: official
+  tiling_and_clustering: official
+  seed: 42
+  epochs: null
+  checkpoint_interval: null
+  batch_size: null
+  precision: null
+  optimiser: Adam
+  base_learning_rate: 0.001
+  selection_metric: canonical_validation_micro_f1
+  tie_breakers: [lower_false_positives, earlier_epoch]
+  status: blocked_until_smoke_runtime_and_memory_are_measured

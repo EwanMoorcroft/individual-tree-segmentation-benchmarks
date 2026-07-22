@@ -1,0 +1,33 @@
+relative_path,collection,benchmark_split,checkpoint_role,evidence,mapping_status
+CULS/plot_1_annotated.las,CULS,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+CULS/plot_2_annotated.las,CULS,test,test_only,official eval fold and paper test table,exact test-only match
+CULS/plot_3_annotated.las,CULS,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_10_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_11_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_12_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_13_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_16_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_17_annotated.las,NIBIO,test,test_only,official eval fold and paper test table,exact test-only match
+NIBIO/plot_18_annotated.las,NIBIO,test,test_only,official eval fold and paper test table,exact test-only match
+NIBIO/plot_19_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_1_annotated.las,NIBIO,test,test_only,official eval fold and paper test table,exact test-only match
+NIBIO/plot_21_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_22_annotated.las,NIBIO,test,test_only,official eval fold and paper test table,exact test-only match
+NIBIO/plot_23_annotated.las,NIBIO,test,test_only,official eval fold and paper test table,exact test-only match
+NIBIO/plot_2_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_3_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_4_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_5_annotated.las,NIBIO,test,test_only,official eval fold and paper test table,exact test-only match
+NIBIO/plot_6_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_7_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_8_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+NIBIO/plot_9_annotated.las,NIBIO,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+RMIT/test.las,RMIT,test,test_only,official eval fold and paper test table,exact test-only match
+RMIT/train.las,RMIT,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+SCION/plot_31_annotated.las,SCION,test,test_only,official eval fold and paper test table,exact test-only match
+SCION/plot_35_annotated.las,SCION,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+SCION/plot_39_annotated.las,SCION,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+SCION/plot_61_annotated.las,SCION,test,test_only,official eval fold and paper test table,exact test-only match
+SCION/plot_87_annotated.las,SCION,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved
+TUWIEN/test.las,TUWIEN,test,test_only,official eval fold and paper test table,exact test-only match
+TUWIEN/train.las,TUWIEN,dev,train_or_validation,official paper 42 train and 14 validation; official split code,exact combined-role match; train versus validation unresolved

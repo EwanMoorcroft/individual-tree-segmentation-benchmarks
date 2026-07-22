@@ -1,0 +1,51 @@
+{
+  "retrieved_date": "2026-07-22",
+  "schema": "forainet_exposure_evidence_sources_v1",
+  "sources": [
+    {
+      "identifier": "forainet_paper",
+      "persistent_url": "https://doi.org/10.1016/j.rse.2024.114078",
+      "role": "published 42 training, 14 validation and 11 test design; validation-only model and post-processing selection",
+      "content_hash": null,
+      "content_hash_status": "publisher document not redistributed or retained in Git"
+    },
+    {
+      "identifier": "official_repository",
+      "persistent_url": "https://github.com/prs-eth/ForAINet/tree/5fe600ae8f2fe913ae8740f475f0261a702f2a72",
+      "role": "official source release",
+      "git_commit": "5fe600ae8f2fe913ae8740f475f0261a702f2a72"
+    },
+    {
+      "identifier": "official_original_test_fold",
+      "persistent_url": "https://github.com/prs-eth/ForAINet/blob/5fe600ae8f2fe913ae8740f475f0261a702f2a72/PointCloudSegmentation/conf/eval.yaml",
+      "role": "exact 11-file official original-FOR-instance test list",
+      "git_blob_sha1": "f9886421d90261f1bf80319ddfe7f5218665ddbf"
+    },
+    {
+      "identifier": "official_split_implementation",
+      "persistent_url": "https://github.com/prs-eth/ForAINet/blob/5fe600ae8f2fe913ae8740f475f0261a702f2a72/superpoint_graph/partition/partition_FORdata.py",
+      "role": "preserves supplied test rows and selects 25 percent of training rows for validation with seed 42",
+      "git_blob_sha1": "3bce02ecf8be918018e99cb76f7cdb441d729dab"
+    },
+    {
+      "identifier": "official_five_class_loader",
+      "persistent_url": "https://github.com/prs-eth/ForAINet/blob/5fe600ae8f2fe913ae8740f475f0261a702f2a72/PointCloudSegmentation/torch_points3d/datasets/segmentation/treeins_set1.py",
+      "role": "numeric semantic class identities and input-label shift",
+      "git_blob_sha1": "da8e53f34237f9af5d22254041bbf03e1fe5a68e"
+    },
+    {
+      "identifier": "official_treemix_configuration",
+      "persistent_url": "https://github.com/prs-eth/ForAINet/blob/5fe600ae8f2fe913ae8740f475f0261a702f2a72/PointCloudSegmentation/conf/data/panoptic/treeins_set1_treemix3d.yaml",
+      "role": "8 m radius, 0.2 m grid, TreeMix and source-origin tracking configuration",
+      "git_blob_sha1": "baea397415c0a73f82a0ff18fca3269775f12244"
+    },
+    {
+      "identifier": "official_checkpoint",
+      "persistent_url": "https://www.dropbox.com/scl/fi/mv4nxe60cco86fd2u9f3z/PointGroup-PAPER.pt?rlkey=ua6093kehk0youpo8g3a6g0nm&st=wiqv3a0u&dl=0",
+      "role": "published PointGroup-PAPER five-class TreeMix weights",
+      "size_bytes": 665805463,
+      "provider_checksum": null,
+      "locally_computed_sha256": "97c03ce81621dc4193e55d2ca2294861b1f4421c94d192799e5fe031f9d35861"
+    }
+  ]
+}

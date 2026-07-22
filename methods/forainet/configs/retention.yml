@@ -1,0 +1,30 @@
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: forainet
+  protocol_id: for_instance_method_adapter_acceptance_v1
+  status: schema_only
+
+dataset:
+  slug: for-instance
+  version: original
+
+method:
+  slug: forainet
+  name: ForAINet
+  variants: [published_pretrained, fine_tuned_on_dev]
+
+retention:
+  required_roles:
+    - official_raw_output
+    - aligned_prediction
+    - plot_metadata
+    - plot_metrics
+    - matched_pairs
+    - unmatched_predictions
+    - unmatched_references
+    - environment_manifest
+    - checkpoint_provenance
+  hash_algorithm: sha256
+  collision_policy: refuse
+  commit_runtime_artifacts: false

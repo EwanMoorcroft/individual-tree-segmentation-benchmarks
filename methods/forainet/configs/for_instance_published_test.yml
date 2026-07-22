@@ -1,0 +1,24 @@
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: forainet
+  protocol_id: for_instance_pointwise_v1
+  status: blocked
+
+dataset:
+  slug: for-instance
+  version: original
+  permitted_split: test
+  expected_plot_count: 11
+
+method:
+  slug: forainet
+  name: ForAINet
+  training_mode: published_pretrained
+  checkpoint_sha256: 97c03ce81621dc4193e55d2ca2294861b1f4421c94d192799e5fe031f9d35861
+
+gates:
+  test_readiness_manifest_required: true
+  explicit_user_authorisation_required: true
+  one_time_submission: true
+  current_authorisation: false

@@ -1,0 +1,68 @@
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: forainet
+  protocol_id: for_instance_pointwise_v1
+  status: scaffolded_not_run
+
+dataset:
+  slug: for-instance
+  version: original
+  root_env: FORAINET_DATASET_ROOT
+  split_metadata_file: data_split_metadata.csv
+  reference_instance_field: treeID
+  semantic_field: classification
+  reference_classes: [4, 5, 6]
+  ignored_classes: [0, 1, 2, 3]
+  ignored_tree_ids: [0, -1]
+
+method:
+  slug: forainet
+  name: ForAINet
+  upstream_repository: https://github.com/prs-eth/ForAINet
+  upstream_commit: 5fe600ae8f2fe913ae8740f475f0261a702f2a72
+  upstream_root_env: FORAINET_UPSTREAM_ROOT
+  image_env: FORAINET_IMAGE
+  checkpoint_env: FORAINET_CHECKPOINT
+  checkpoint_sha256: 97c03ce81621dc4193e55d2ca2294861b1f4421c94d192799e5fe031f9d35861
+  training_mode: published_pretrained
+  learning_regime: supervised
+  dataset_exposure: published_checkpoint
+
+smoke:
+  relative_path: CULS/plot_1_annotated.las
+  split: dev
+  expected_point_count: 1816672
+  expected_reference_tree_count: 6
+  run_id_pattern: forainet__for-instance__published-pretrained__none__dev-smoke__YYYYMMDDTHHMMSS
+  confirmation_env: FORAINET_SMOKE_CONFIRMED
+  confirmation_value: "1"
+  allow_test_split: false
+  overwrite: false
+
+roots:
+  run_root_env: FORAINET_RUN_ROOT
+  source_root_env: FORAINET_UPSTREAM_ROOT
+  checkpoint_root_env: FORAINET_CHECKPOINT_ROOT
+  container_root_env: FORAINET_CONTAINER_ROOT
+  converted_root_env: FORAINET_CONVERTED_ROOT
+  raw_prediction_root_env: FORAINET_RAW_PREDICTION_ROOT
+  aligned_prediction_root_env: FORAINET_ALIGNED_PREDICTION_ROOT
+  metadata_root_env: FORAINET_METADATA_ROOT
+
+resources:
+  partition: gpu-l40s-low
+  gpu_type: l40s
+  gpus: 1
+  cpus: 12
+  memory_gb: 128
+  wall_time: "04:00:00"
+  runtime_estimate_status: unmeasured
+
+evaluation:
+  iou_threshold: 0.5
+  iou_threshold_operator: ">="
+  matching: maximum_cardinality_one_to_one
+  mask: union_of_reference_tree_and_predicted_tree_points
+  point_correspondence: exact_source_row_index
+  coordinate_fallback: forbidden

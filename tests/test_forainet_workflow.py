@@ -79,7 +79,51 @@ def test_qualification_identity_is_frozen() -> None:
         "97c03ce81621dc4193e55d2ca2294861b1f4421c94d192799e5fe031f9d35861"
     )
     assert config["method"]["checkpoint"]["provider_checksum"] is None
+    container = config["method"]["container"]
+    assert container["base_image_digest"] == (
+        "sha256:83e4b2841034cdf45ea5b9a5b472eb2c07b1b23d4836d32666a881db29a8dceb"
+    )
+    assert container["cuda_arch"] == "8.0"
+    assert container["qualification_gpu"] == "a100"
+    assert container["barkla_build_probe"]["sha256"] == (
+        "2a111b22871288abe8eb205fe4a14424290bc4e2376e6c4c170f82260b3052db"
+    )
+    assert config["gates"]["barkla_root_mapped_fakeroot_probe_passed"] is True
     assert config["gates"]["held_out_authorised"] is False
+
+
+def test_container_definition_pins_mutable_upstream_inputs() -> None:
+    definition = (
+        METHOD / "containers/forainet-cuda111-a100.def"
+    ).read_text(encoding="utf-8")
+    assert "nvidia/cuda:11.1.1-cudnn8-devel-ubuntu20.04@sha256:" in definition
+    for commit in (
+        "9f81ae66b33b883cd08ee4f64d08cf633608b118",
+        "74099d10a51c71c14318bce63d6421f698b24f24",
+        "ec3b205fbd7da9f1e41b9d83cdf3f6236e2ef1c4",
+    ):
+        assert commit in definition
+    assert "TORCH_CUDA_ARCH_LIST=8.0" in definition
+    assert "hdbscan/archive/master" not in definition
+    assert "git+https://github.com/NVIDIA/MinkowskiEngine.git" not in definition
+    lock = (METHOD / "containers/requirements.lock").read_text(encoding="utf-8")
+    assert "pylidar" not in lock
+    assert "rios" not in lock
+
+
+def test_image_build_is_cpu_only_and_qualification_targets_a100() -> None:
+    build = (METHOD / "slurm/build_forainet_image.sbatch").read_text(
+        encoding="utf-8"
+    )
+    assert "#SBATCH --partition=nodes" in build
+    assert "#SBATCH --gres" not in build
+    assert "apptainer build --fakeroot" in build
+    assert "${APPTAINER_TMPDIR:?set APPTAINER_TMPDIR}" in build
+    qualification = (METHOD / "slurm/qualify_forainet_assets.sbatch").read_text(
+        encoding="utf-8"
+    )
+    assert "#SBATCH --partition=gpu-a-lowsmall" in qualification
+    assert "#SBATCH --gres=gpu:a100:1" in qualification
 
 
 def test_exposure_table_is_exact_and_test_only() -> None:

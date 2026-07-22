@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=forai_qualify
-#SBATCH --partition=gpu-l40s-low
-#SBATCH --gres=gpu:l40s:1
+#SBATCH --partition=gpu-a-lowsmall
+#SBATCH --gres=gpu:a100:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=00:30:00

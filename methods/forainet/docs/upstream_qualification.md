@@ -72,12 +72,21 @@ keys and must reject an incomplete load.
 
 ## Remaining qualification gates
 
-1. Acquire the checkpoint again into an immutable Barkla asset root and verify
-   its byte size and SHA-256.
-2. Build or obtain a pinned image and record its SHA-256 and package inventory.
-3. Confirm the pinned source is clean and at the expected commit.
-4. Load the checkpoint against the selected architecture and prove complete
+The checkpoint and source were independently acquired on Barkla and passed the
+frozen size, hash and commit checks. A minimal Apptainer 1.3.6 root-mapped
+fakeroot build also succeeded on 2026-07-23. The account has no `/etc/subuid`
+entry and no `fakeroot` helper, so the full dependency build remains the next
+gate.
+
+The committed definition derives from official Dockerfile blob
+`1daea67cfae9e44a0de439f06896320d9723c209`. It pins the CUDA base image and
+MinkowskiEngine, TorchSparse and hdbscan source commits. It targets an A100
+(compute capability 8.0) because the official CUDA 11.1 toolchain predates
+native L40S/Ada support.
+
+1. Build the pinned image and record its SHA-256 and package inventory.
+2. Load the checkpoint against the selected architecture and prove complete
    parameter compatibility.
-5. Prove prediction invariance when bookkeeping reference labels are changed.
-6. Prove that official full-resolution output maps back to retained source rows
+3. Prove prediction invariance when bookkeeping reference labels are changed.
+4. Prove that official full-resolution output maps back to retained source rows
    without coordinate matching.

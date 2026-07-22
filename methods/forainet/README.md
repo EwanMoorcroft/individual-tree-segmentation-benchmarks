@@ -76,23 +76,27 @@ development rows are conservatively labelled `train_or_validation`.
 ## Barkla Environment
 
 ForAINet must use an isolated Apptainer image rather than the shared utility
-environment or the SegmentAnyTree container. Barkla provides Apptainer 1.3.6
-and L40S partitions. The image, checkpoint, upstream checkout, converted data,
-predictions and logs remain external to Git and are addressed through
-environment variables documented in the smoke configuration.
+environment or the SegmentAnyTree container. Barkla provides Apptainer 1.3.6.
+The image, checkpoint, upstream checkout, converted data, predictions and logs
+remain external to Git and are addressed through environment variables
+documented in the smoke configuration.
 
 The upstream release targets Python 3.8, PyTorch 1.9 with CUDA 11.1 and compiled
-MinkowskiEngine/TorchSparse components. Some upstream dependency references
-are mutable or author-local; the resolved image digest and package inventory
-must therefore be retained before inference.
+MinkowskiEngine/TorchSparse components. The method-local definition pins the
+CUDA base-image digest and every Git dependency. It excludes two private
+author-local packages that are not imported by the official inference route.
+Extensions target CUDA architecture 8.0 and qualification therefore uses an
+A100; CUDA 11.1 predates native L40S/Ada support. The resolved SIF digest and
+package inventory must be retained before inference.
 
 ## Slurm Workflow
 
-The committed Slurm chain covers asset/environment qualification. Job names
-use the `forai_` prefix and submission refuses colliding evidence roots. The
-development-only sidecar, normalisation and evaluation components are ready,
-but an inference submission job is intentionally withheld until the container
-and complete checkpoint load have been verified.
+The committed Slurm chain covers a guarded CPU image build followed by
+asset/environment qualification on an A100. Job names use the `forai_` prefix
+and submission refuses colliding evidence roots. The development-only sidecar,
+normalisation and evaluation components are ready, but an inference submission
+job is intentionally withheld until the container and complete checkpoint load
+have been verified.
 
 Full-development, fine-tuning and test submission routes remain deliberately
 blocked until the preceding evidence exists. In particular, no held-out job
@@ -111,6 +115,8 @@ and unmatched references.
 - No complete official ForAINetV2 release was located.
 - The checkpoint provider publishes no checksum or immutable source tag.
 - The exact official 42/14 train/validation membership is not released.
+- The root-mapped fakeroot extraction probe passed, but the full legacy image
+  build and package-import report are still pending.
 - Current upstream source/checkpoint compatibility still needs a clean Barkla
   import and full state-dict load report.
 - Official conversion, tiling, merging and label-independence still require a
@@ -119,7 +125,7 @@ and unmatched references.
 
 ## Current Benchmark Status
 
-Status: `qualification_scaffold_complete; barkla_smoke_not_run`.
+Status: `fakeroot_probe_passed; pinned_image_build_not_run`.
 
 The method is not eligible for the held-out ranking. The next gate is a clean
 environment/checkpoint-load test followed by the frozen

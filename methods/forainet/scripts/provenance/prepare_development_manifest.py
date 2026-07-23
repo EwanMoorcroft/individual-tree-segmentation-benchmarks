@@ -48,13 +48,6 @@ def read_split_rows(path: Path) -> list[dict[str, str]]:
     paths = [row["relative_path"] for row in normalised]
     if len(paths) != len(set(paths)):
         raise ValueError("split metadata contains duplicate paths")
-    development = [row for row in normalised if row["split"] == "dev"]
-    test = [row for row in normalised if row["split"] == "test"]
-    if (
-        len(development) != EXPECTED_DEVELOPMENT_PLOTS
-        or len(test) != EXPECTED_TEST_PLOTS
-    ):
-        raise ValueError("split metadata does not preserve the frozen 21/11 boundary")
     return normalised
 
 
@@ -72,10 +65,35 @@ def build(
         or smoke.get("held_out_access") is not False
     ):
         raise ValueError("accepted development smoke evidence is not frozen")
-    source_rows = read_split_rows(split_metadata)
+    metadata_rows = read_split_rows(split_metadata)
+    metadata_by_path = {row["relative_path"]: row for row in metadata_rows}
+    catalogue_paths = {
+        path.relative_to(dataset_root).as_posix()
+        for path in dataset_root.rglob("*.las")
+        if path.is_file()
+    }
+    if len(catalogue_paths) != EXPECTED_DEVELOPMENT_PLOTS + EXPECTED_TEST_PLOTS:
+        raise ValueError("local LAS catalogue does not contain exactly 32 files")
+    missing_metadata = sorted(catalogue_paths - set(metadata_by_path))
+    if missing_metadata:
+        raise ValueError(f"local LAS files lack split metadata: {missing_metadata}")
+    source_rows = [
+        row for row in metadata_rows if row["relative_path"] in catalogue_paths
+    ]
+    development_rows = [
+        row for row in source_rows if row["split"] == "dev"
+    ]
+    test_rows = [row for row in source_rows if row["split"] == "test"]
+    if (
+        len(development_rows) != EXPECTED_DEVELOPMENT_PLOTS
+        or len(test_rows) != EXPECTED_TEST_PLOTS
+    ):
+        raise ValueError(
+            "available LAS catalogue does not preserve the frozen 21/11 boundary"
+        )
     plots = []
     for task_index, row in enumerate(
-        item for item in source_rows if item["split"] == "dev"
+        development_rows
     ):
         relative_path = row["relative_path"]
         source = dataset_root / relative_path
@@ -105,6 +123,8 @@ def build(
         "expected_plot_count": EXPECTED_DEVELOPMENT_PLOTS,
         "held_out_plot_count": EXPECTED_TEST_PLOTS,
         "held_out_paths_included": False,
+        "split_metadata_row_count": len(metadata_rows),
+        "available_catalogue_count": len(source_rows),
         "split_metadata_sha256": sha256(split_metadata),
         "accepted_smoke_run_id": smoke["run_id"],
         "accepted_smoke_record_sha256": sha256(accepted_smoke),

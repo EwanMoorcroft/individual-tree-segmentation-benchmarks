@@ -639,6 +639,13 @@ def test_development_manifest_freezes_only_the_21_development_plots(
         writer = csv.DictWriter(handle, fieldnames=["path", "folder", "split"])
         writer.writeheader()
         writer.writerows(rows)
+        writer.writerow(
+            {
+                "path": "ABSENT/not_in_local_catalogue.las",
+                "folder": "ABSENT",
+                "split": "dev",
+            }
+        )
     accepted_smoke = tmp_path / "accepted_smoke.json"
     accepted_smoke.write_text(
         json.dumps(
@@ -660,6 +667,8 @@ def test_development_manifest_freezes_only_the_21_development_plots(
     assert all(row["split"] == "dev" for row in plots)
     assert all(row["point_count"] == 3 for row in plots)
     assert payload["held_out_paths_included"] is False
+    assert payload["split_metadata_row_count"] == 33
+    assert payload["available_catalogue_count"] == 32
     assert payload["total_point_count"] == 63
     output_csv = tmp_path / "development.csv"
     output_json = tmp_path / "development.json"

@@ -6,8 +6,8 @@ This directory integrates the original ForAINet release as the reproducible
 fallback for the unavailable ForAINetV2 release. The selected method slug is
 `forainet`. The integration is development-only until every readiness gate in
 the FOR-instance method-adapter protocol has passed. The environment, image
-and complete checkpoint-load gates have passed; the guarded one-plot
-development smoke is ready for submission.
+and complete checkpoint-load gates have passed. The guarded one-plot
+development smoke and manual XY/XZ alignment review are accepted.
 
 ## Upstream Repository And Citation
 
@@ -100,11 +100,12 @@ package inventory must be retained before inference.
 ## Slurm Workflow
 
 The committed Slurm chain covers a guarded user-local Apptainer/fakeroot probe,
-a CPU image build, asset/environment qualification on an A100, and a guarded
-one-plot development smoke. Job names use the `forai_` prefix and submission
-refuses colliding evidence roots. The smoke uses the official 50 m tiler with
-5 m overlap, `eval.py`, and official merger; it then enforces exact source-row
-normalisation and shared-protocol evaluation.
+a CPU image build, asset/environment qualification on an A100, a guarded
+one-plot development smoke, and the 21-plot published-checkpoint development
+diagnostic. Job names use the `forai_` prefix and submission refuses colliding
+evidence roots. The runtime uses the official 50 m tiler with 5 m overlap,
+`eval.py`, and official merger; it then enforces exact source-row normalisation
+and shared-protocol evaluation.
 
 The saved checkpoint configuration may contain a non-portable data-root field.
 Each run stages a derivative archive that changes only this path to the
@@ -121,9 +122,9 @@ separate hashes for the complete PLY files and for canonicalised `preds`
 arrays, because the deliberately changed bookkeeping labels make the complete
 files differ even when predictions are identical.
 
-Full-development, fine-tuning and test submission routes remain deliberately
-blocked until the preceding evidence exists. In particular, no held-out job
-can be submitted from the current scaffold.
+Fine-tuning and test submission routes remain deliberately blocked until the
+preceding evidence exists. In particular, no held-out job can be submitted
+from the current scaffold.
 
 ## Evaluation Route
 
@@ -138,7 +139,8 @@ local-only XY/XZ comparison of reference and predicted instances from the
 development smoke. It validates exact source-row order, removes global
 coordinate offsets from the figure and writes a hash-linked JSON review
 record outside the immutable run root. The figure and raw coordinates are not
-committed. Manual confirmation is required before full-development inference.
+committed. The accepted smoke record under `examples/` closes this gate for
+the full-development route.
 
 ## Known Limitations
 
@@ -147,14 +149,15 @@ committed. Manual confirmation is required before full-development inference.
 - The exact official 42/14 train/validation membership is not released.
 - Root-mapped `apt` is unavailable, so rebuilding depends on the qualified
   pinned user-local toolchain.
-- Official conversion, tiling, merging and label-independence still require a
-  retained development smoke and manual alignment confirmation.
-- No runtime or memory estimate is evidence-backed yet.
+- The accepted development smoke took 458 seconds on one A100 and recorded
+  approximately 9.3 GB peak resident memory. Full-development estimates must
+  additionally use the frozen 21-plot point inventory.
 
 ## Current Benchmark Status
 
-Status: `environment_and_checkpoint_qualified; development_smoke_ready`.
+Status: `development_smoke_and_manual_alignment_accepted;
+full_development_published_checkpoint_ready`.
 
 The method is not eligible for the held-out ranking. The next gate is the
-frozen `CULS/plot_1_annotated.las` development smoke followed by manual
-alignment review. No shared repository files are modified by this branch.
+guarded 21-plot published-checkpoint development diagnostic. No shared
+repository files are modified by this branch.

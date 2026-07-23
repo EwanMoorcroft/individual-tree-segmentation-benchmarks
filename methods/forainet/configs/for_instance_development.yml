@@ -3,7 +3,7 @@ project:
   dataset_slug: for-instance
   method_slug: forainet
   protocol_id: for_instance_pointwise_v1
-  status: blocked_pending_accepted_smoke
+  status: ready_for_full_development_published_checkpoint
 
 dataset:
   slug: for-instance
@@ -21,6 +21,19 @@ method:
 
 gates:
   accepted_smoke_required: true
+  accepted_smoke_passed: true
   manual_alignment_required: true
+  manual_alignment_passed: true
   collision_policy: refuse
   held_out_access: forbidden
+
+execution:
+  plot_count: 21
+  array_concurrency: 2
+  partition: gpu-a-lowsmall
+  gpu: a100
+  gpus_per_task: 1
+  cpus_per_task: 12
+  memory_gb: 128
+  time_limit_hours: 4
+  label_independence_evidence: accepted_development_smoke

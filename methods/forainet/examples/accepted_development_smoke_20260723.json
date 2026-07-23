@@ -1,0 +1,21 @@
+{
+  "aligned_prediction_sha256": "cdadb64317c8ea3336be4758b2d1782446b837623d0d73082b4df78ec4323a5e",
+  "alignment_figure_sha256": "62c6d7a3da569ab03f539f5152b5101b47aa366b3ccc858d46f962043c06502e",
+  "alignment_report_sha256": "8fea978bf42454fd6430f1de7853e88bc53297d5c54f5a1cbc9c1268ef15ccdf",
+  "benchmark_commit": "6b2e7d4075d0d15672c3f2801f3c445756fb271a",
+  "coordinate_matching": false,
+  "held_out_access": false,
+  "label_independence_sha256": "8c31204b4e0bd02bf77dc786e9e3393fa4ab456b8e7f44b635744f624022be79",
+  "manual_review": {
+    "finding": "reference and predicted instances occupy the same XY and XZ plot geometry without visible translation, rotation or row-order displacement",
+    "status": "accepted"
+  },
+  "merge_alignment_sha256": "bcc1cfebd175514abb7eb8f7724ef32aa71eb7f243ee1bd3748dded1ac10bf74",
+  "relative_path": "CULS/plot_1_annotated.las",
+  "reviewed_on": "2026-07-23",
+  "run_id": "forainet__for-instance__published-pretrained__none__dev-smoke__20260723T202654",
+  "schema": "forainet_accepted_development_smoke_v1",
+  "source_row_index_exact": true,
+  "split": "dev",
+  "status": "accepted"
+}

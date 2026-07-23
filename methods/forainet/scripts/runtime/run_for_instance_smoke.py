@@ -27,6 +27,13 @@ EXPECTED_CHECKPOINT_SHA256 = (
 EXPECTED_RELATIVE_PATH = "CULS/plot_1_annotated.las"
 EXPECTED_POINT_COUNT = 1_816_672
 EXPECTED_REFERENCE_TREE_COUNT = 6
+ACCEPTED_SMOKE_RUN_ID = (
+    "forainet__for-instance__published-pretrained__none__dev-smoke__"
+    "20260723T202654"
+)
+ACCEPTED_SMOKE_LABEL_INDEPENDENCE_SHA256 = (
+    "8c31204b4e0bd02bf77dc786e9e3393fa4ab456b8e7f44b635744f624022be79"
+)
 TILE_SIZE_M = 50
 TILE_OVERLAP_M = 5
 EVAL_BATCH_SIZE = 5
@@ -252,11 +259,23 @@ def main() -> int:
     parser.add_argument("--run-root", required=True, type=Path)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--image-sha256", required=True)
+    parser.add_argument(
+        "--route", choices=("smoke", "development"), default="smoke"
+    )
+    parser.add_argument("--development-task-index", type=int)
+    parser.add_argument("--expected-source-sha256")
+    parser.add_argument("--expected-point-count", type=int)
     args = parser.parse_args()
 
     started = time.monotonic()
-    if args.relative_path != EXPECTED_RELATIVE_PATH:
+    if args.route == "smoke" and args.relative_path != EXPECTED_RELATIVE_PATH:
         raise ValueError("smoke route permits only the frozen development plot")
+    if args.route == "development" and (
+        args.development_task_index is None
+        or args.expected_source_sha256 is None
+        or args.expected_point_count is None
+    ):
+        raise ValueError("development route requires frozen task identity")
     if git_commit(args.benchmark_root) != args.benchmark_commit:
         raise ValueError("benchmark checkout changed after submission")
     if git_commit(args.upstream_root) != EXPECTED_UPSTREAM_COMMIT:
@@ -337,7 +356,8 @@ def main() -> int:
 
     python = sys.executable
     method_root = args.benchmark_root / "methods" / "forainet"
-    inference_ply = input_root / "CULS_plot_1_label_isolated.ply"
+    input_stem = args.relative_path.replace("/", "__").replace(".las", "")
+    inference_ply = input_root / f"{input_stem}_label_isolated.ply"
     sidecar_npz = input_root / "alignment_sidecar.npz"
     input_metadata = metadata_root / "conversion.json"
     run_checked(
@@ -365,12 +385,19 @@ def main() -> int:
         stderr=metadata_root / "conversion.stderr",
     )
     conversion = json.loads(input_metadata.read_text(encoding="utf-8"))
-    if (
-        conversion["split"] != "dev"
-        or conversion["source_point_count"] != EXPECTED_POINT_COUNT
-        or conversion["reference_tree_count"] != EXPECTED_REFERENCE_TREE_COUNT
+    if conversion["split"] != "dev":
+        raise ValueError("runtime route permits development plots only")
+    if args.route == "smoke":
+        if (
+            conversion["source_point_count"] != EXPECTED_POINT_COUNT
+            or conversion["reference_tree_count"] != EXPECTED_REFERENCE_TREE_COUNT
+        ):
+            raise ValueError("frozen smoke plot identity failed")
+    elif (
+        conversion["source_sha256"] != args.expected_source_sha256
+        or conversion["source_point_count"] != args.expected_point_count
     ):
-        raise ValueError("frozen smoke plot identity or development split failed")
+        raise ValueError("development source differs from frozen manifest")
     raw_catalogue_input = dataset_raw_root / inference_ply.name
     os.link(inference_ply, raw_catalogue_input)
 
@@ -442,80 +469,100 @@ def main() -> int:
                 if not expected.is_file():
                     raise FileNotFoundError(expected)
 
-    label_probe_input = input_root / "label_probe_tile.ply"
-    make_label_probe(tile_paths[0], label_probe_input)
-    label_probe_output = raw_root / "label_probe"
-    label_probe_exit_code = run_checked(
-        [
-            python,
-            str(pointcloud_root / "eval.py"),
-            f"checkpoint_dir={staged_checkpoint.parent}",
-            "model_name=PointGroup-PAPER",
-            f"data.fold={json.dumps([str(label_probe_input)], separators=(',', ':'))}",
-            "num_workers=0",
-            "batch_size=1",
-            "cuda=0",
-            "weight_name=latest",
-            "voting_runs=1",
-            "enable_dropout=false",
-            "tracker_options.full_res=true",
-            "tracker_options.make_submission=true",
-            "tracker_options.ply_output=vote1regular.ply",
-            f"hydra.run.dir={label_probe_output}",
-        ],
-        cwd=runtime_root,
-        stdout=raw_root / "label_probe.stdout",
-        stderr=raw_root / "label_probe.stderr",
-        accepted_error_markers=(
-            "treeins_set1.py\", line 204, in final_eval",
-            "ZeroDivisionError: float division by zero",
-        ),
-    )
-    primary_output = batch_root / "batch_0000"
-    comparisons = {}
-    for kind, filename in (
-        ("semantic", "Semantic_results_forEval_0.ply"),
-        ("instance", "Instance_Results_forEval_0.ply"),
-    ):
-        primary = primary_output / filename
-        probe = label_probe_output / filename
-        primary_values = prediction_values(primary)
-        probe_values = prediction_values(probe)
-        equal = np.array_equal(primary_values, probe_values)
-        comparisons[kind] = {
-            "prediction_equal": bool(equal),
-            "point_count": int(primary_values.size),
-            "primary_file_sha256": sha256(primary),
-            "probe_file_sha256": sha256(probe),
-            "primary_prediction_values_sha256": prediction_values_sha256(
-                primary_values
-            ),
-            "probe_prediction_values_sha256": prediction_values_sha256(
-                probe_values
-            ),
-        }
-        if not equal:
-            raise ValueError(
-                f"official {kind} prediction changed with bookkeeping labels"
-            )
     label_probe_metadata = metadata_root / "label_independence.json"
-    write_json(
-        label_probe_metadata,
-        {
-            "schema": "forainet_label_independence_probe_v2",
-            "status": "verified",
-            "reference_labels_used": False,
-            "primary_bookkeeping": {"semantic_seg": 1, "treeID": -1},
-            "probe_bookkeeping": {"semantic_seg": 2, "treeID": 0},
-            "official_eval_exit_code": label_probe_exit_code,
-            "accepted_reporting_failure": (
-                "official_final_eval_zero_denominator_on_artificial_labels"
-                if label_probe_exit_code
-                else None
+    if args.route == "smoke":
+        label_probe_input = input_root / "label_probe_tile.ply"
+        make_label_probe(tile_paths[0], label_probe_input)
+        label_probe_output = raw_root / "label_probe"
+        label_probe_exit_code = run_checked(
+            [
+                python,
+                str(pointcloud_root / "eval.py"),
+                f"checkpoint_dir={staged_checkpoint.parent}",
+                "model_name=PointGroup-PAPER",
+                (
+                    "data.fold="
+                    + json.dumps(
+                        [str(label_probe_input)], separators=(",", ":")
+                    )
+                ),
+                "num_workers=0",
+                "batch_size=1",
+                "cuda=0",
+                "weight_name=latest",
+                "voting_runs=1",
+                "enable_dropout=false",
+                "tracker_options.full_res=true",
+                "tracker_options.make_submission=true",
+                "tracker_options.ply_output=vote1regular.ply",
+                f"hydra.run.dir={label_probe_output}",
+            ],
+            cwd=runtime_root,
+            stdout=raw_root / "label_probe.stdout",
+            stderr=raw_root / "label_probe.stderr",
+            accepted_error_markers=(
+                "treeins_set1.py\", line 204, in final_eval",
+                "ZeroDivisionError: float division by zero",
             ),
-            "comparison": comparisons,
-        },
-    )
+        )
+        primary_output = batch_root / "batch_0000"
+        comparisons = {}
+        for kind, filename in (
+            ("semantic", "Semantic_results_forEval_0.ply"),
+            ("instance", "Instance_Results_forEval_0.ply"),
+        ):
+            primary = primary_output / filename
+            probe = label_probe_output / filename
+            primary_values = prediction_values(primary)
+            probe_values = prediction_values(probe)
+            equal = np.array_equal(primary_values, probe_values)
+            comparisons[kind] = {
+                "prediction_equal": bool(equal),
+                "point_count": int(primary_values.size),
+                "primary_file_sha256": sha256(primary),
+                "probe_file_sha256": sha256(probe),
+                "primary_prediction_values_sha256": prediction_values_sha256(
+                    primary_values
+                ),
+                "probe_prediction_values_sha256": prediction_values_sha256(
+                    probe_values
+                ),
+            }
+            if not equal:
+                raise ValueError(
+                    f"official {kind} prediction changed with bookkeeping labels"
+                )
+        write_json(
+            label_probe_metadata,
+            {
+                "schema": "forainet_label_independence_probe_v2",
+                "status": "verified",
+                "reference_labels_used": False,
+                "primary_bookkeeping": {"semantic_seg": 1, "treeID": -1},
+                "probe_bookkeeping": {"semantic_seg": 2, "treeID": 0},
+                "official_eval_exit_code": label_probe_exit_code,
+                "accepted_reporting_failure": (
+                    "official_final_eval_zero_denominator_on_artificial_labels"
+                    if label_probe_exit_code
+                    else None
+                ),
+                "comparison": comparisons,
+            },
+        )
+    else:
+        write_json(
+            label_probe_metadata,
+            {
+                "schema": "forainet_label_independence_inheritance_v1",
+                "status": "verified_by_accepted_development_smoke",
+                "reference_labels_used": False,
+                "bookkeeping": {"semantic_seg": 1, "treeID": -1},
+                "accepted_smoke_run_id": ACCEPTED_SMOKE_RUN_ID,
+                "accepted_smoke_label_independence_sha256": (
+                    ACCEPTED_SMOKE_LABEL_INDEPENDENCE_SHA256
+                ),
+            },
+        )
 
     collected_root = raw_root / "official_collected_tiles"
     merged_ply = raw_root / "official_merged_result.ply"
@@ -630,16 +677,28 @@ def main() -> int:
     elapsed = time.monotonic() - started
     child_rss_kb = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
     plot_metadata = metadata_root / "plot.json"
+    plot_status = (
+        "completed_waiting_manual_alignment"
+        if args.route == "smoke"
+        else "completed_development_diagnostic"
+    )
+    next_gate = (
+        "manual_alignment_review"
+        if args.route == "smoke"
+        else "development_run_summary"
+    )
     write_json(
         plot_metadata,
         {
-            "schema": "forainet_plot_smoke_v1",
-            "status": "completed_waiting_manual_alignment",
+            "schema": "forainet_plot_runtime_v2",
+            "status": plot_status,
             "run_id": args.run_id,
+            "route": args.route,
+            "development_task_index": args.development_task_index,
             "relative_path": args.relative_path,
             "split": "dev",
-            "point_count": EXPECTED_POINT_COUNT,
-            "reference_tree_count": EXPECTED_REFERENCE_TREE_COUNT,
+            "point_count": conversion["source_point_count"],
+            "reference_tree_count": conversion["reference_tree_count"],
             "tile_size_m": TILE_SIZE_M,
             "tile_overlap_m": TILE_OVERLAP_M,
             "tile_count": len(tile_paths),
@@ -658,7 +717,7 @@ def main() -> int:
             "raw_inventory_sha256": sha256(raw_inventory),
             "aligned_prediction_sha256": sha256(aligned_prediction),
             "metrics_sha256": sha256(metrics),
-            "next_gate": "manual_alignment_review",
+            "next_gate": next_gate,
         },
     )
 
@@ -707,17 +766,26 @@ def main() -> int:
         stdout=metadata_root / "retention.stdout",
         stderr=metadata_root / "retention.stderr",
     )
-    write_json(
-        args.run_root / "final_gate.json",
-        {
-            "schema": "forainet_smoke_final_gate_v1",
-            "status": "complete",
-            "scientific_status": "waiting_manual_alignment",
-            "run_id": args.run_id,
-            "retention_manifest_sha256": sha256(manifest),
-            "held_out_access": False,
-        },
-    )
+    final_gate = {
+        "schema": (
+            "forainet_smoke_final_gate_v1"
+            if args.route == "smoke"
+            else "forainet_development_plot_final_gate_v1"
+        ),
+        "status": "complete",
+        "scientific_status": (
+            "waiting_manual_alignment"
+            if args.route == "smoke"
+            else "development_diagnostic_complete"
+        ),
+        "run_id": args.run_id,
+        "route": args.route,
+        "development_task_index": args.development_task_index,
+        "relative_path": args.relative_path,
+        "retention_manifest_sha256": sha256(manifest),
+        "held_out_access": False,
+    }
+    write_json(args.run_root / "final_gate.json", final_gate)
     return 0
 
 

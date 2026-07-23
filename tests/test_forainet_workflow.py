@@ -48,6 +48,18 @@ exposure = load_script(
 retention = load_script(
     "scripts/provenance/build_retention_manifest.py", "forainet_retention"
 )
+development_manifest = load_script(
+    "scripts/provenance/prepare_development_manifest.py",
+    "forainet_development_manifest",
+)
+development_task = load_script(
+    "scripts/provenance/resolve_development_task.py",
+    "forainet_development_task",
+)
+development_summary = load_script(
+    "scripts/provenance/summarise_development_run.py",
+    "forainet_development_summary",
+)
 
 
 def test_scaffold_and_configs_are_method_local() -> None:
@@ -245,6 +257,61 @@ def test_exposure_table_is_exact_and_test_only() -> None:
     assert by_id["official_checkpoint"]["locally_computed_sha256"] == (
         "97c03ce81621dc4193e55d2ca2294861b1f4421c94d192799e5fe031f9d35861"
     )
+
+
+def test_full_development_route_is_guarded_and_development_only() -> None:
+    accepted = json.loads(
+        (
+            METHOD / "examples/accepted_development_smoke_20260723.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert accepted["status"] == "accepted"
+    assert accepted["split"] == "dev"
+    assert accepted["held_out_access"] is False
+    assert accepted["source_row_index_exact"] is True
+    assert accepted["coordinate_matching"] is False
+
+    runtime = (
+        METHOD / "scripts/runtime/run_for_instance_smoke.py"
+    ).read_text(encoding="utf-8")
+    assert 'choices=("smoke", "development")' in runtime
+    assert "development route requires frozen task identity" in runtime
+    assert "runtime route permits development plots only" in runtime
+    assert "verified_by_accepted_development_smoke" in runtime
+
+    task = (METHOD / "slurm/run_forainet_development.sbatch").read_text(
+        encoding="utf-8"
+    )
+    assert "#SBATCH --partition=gpu-a-lowsmall" in task
+    assert "#SBATCH --gres=gpu:a100:1" in task
+    assert "#SBATCH --cpus-per-task=12" in task
+    assert "#SBATCH --mem=128G" in task
+    assert "#SBATCH --time=04:00:00" in task
+    assert "FORAINET_DEVELOPMENT_CONFIRMED" in task
+    assert "--route development" in task
+    assert "development task index is outside 0..20" in task
+
+    submit = (METHOD / "slurm/submit_forainet_development.sh").read_text(
+        encoding="utf-8"
+    )
+    assert '--array="0-20%2"' in submit
+    assert '--dependency="afterok:$prepare_job"' in submit
+    assert '--dependency="afterany:$array_job"' in submit
+    monitor = (METHOD / "slurm/monitor_forainet_development.sh").read_text(
+        encoding="utf-8"
+    )
+    for status in (
+        "PENDING",
+        "RUNNING",
+        "COMPLETED_WAITING_GATE",
+        "COMPLETE",
+        "FAILED",
+        "BLOCKED",
+        "STALE",
+        "UNKNOWN",
+    ):
+        assert status in monitor
+    assert "held_out_access=forbidden" in monitor
 
 
 def test_exposure_validator_rejects_test_training_role(tmp_path: Path) -> None:
@@ -549,6 +616,192 @@ def test_retention_manifest_detects_missing_and_changed_files(tmp_path: Path) ->
         retention.build(tmp_path, incomplete)
 
 
+def test_development_manifest_freezes_only_the_21_development_plots(
+    tmp_path: Path,
+) -> None:
+    dataset_root = tmp_path / "dataset"
+    split_metadata = dataset_root / "data_split_metadata.csv"
+    rows = []
+    for index in range(32):
+        split = "dev" if index < 21 else "test"
+        relative_path = f"SITE_{index % 3}/plot_{index:02d}.las"
+        source = dataset_root / relative_path
+        source.parent.mkdir(parents=True, exist_ok=True)
+        write_las(source)
+        rows.append(
+            {
+                "path": relative_path,
+                "folder": f"SITE_{index % 3}",
+                "split": split,
+            }
+        )
+    with split_metadata.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["path", "folder", "split"])
+        writer.writeheader()
+        writer.writerows(rows)
+    accepted_smoke = tmp_path / "accepted_smoke.json"
+    accepted_smoke.write_text(
+        json.dumps(
+            {
+                "schema": "forainet_accepted_development_smoke_v1",
+                "status": "accepted",
+                "run_id": development_manifest.EXPECTED_SMOKE_RUN_ID,
+                "held_out_access": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    plots, payload = development_manifest.build(
+        dataset_root=dataset_root,
+        split_metadata=split_metadata,
+        accepted_smoke=accepted_smoke,
+    )
+    assert len(plots) == 21
+    assert all(row["split"] == "dev" for row in plots)
+    assert all(row["point_count"] == 3 for row in plots)
+    assert payload["held_out_paths_included"] is False
+    assert payload["total_point_count"] == 63
+    output_csv = tmp_path / "development.csv"
+    output_json = tmp_path / "development.json"
+    development_manifest.write_outputs(
+        plots, payload, output_csv, output_json
+    )
+    resolved = development_task.resolve(output_csv, 20)
+    assert resolved["relative_path"] == rows[20]["path"]
+    with pytest.raises(ValueError, match="exactly once"):
+        development_task.resolve(output_csv, 21)
+
+
+def test_development_summary_requires_all_plots_and_hash_complete_retention(
+    tmp_path: Path,
+) -> None:
+    run_root = tmp_path / "run"
+    run_root.mkdir()
+    manifest_root = run_root / "manifest"
+    manifest_root.mkdir()
+    manifest_rows = []
+    benchmark_commit = "a" * 40
+    run_id = (
+        "forainet__for-instance__published-pretrained__none__development__"
+        "20260723T210000"
+    )
+    for task_index in range(21):
+        relative_path = f"SITE_{task_index % 3}/plot_{task_index:02d}.las"
+        manifest_rows.append(
+            {
+                "task_index": task_index,
+                "relative_path": relative_path,
+                "split": "dev",
+                "source_sha256": f"{task_index:064x}",
+                "size_bytes": 100,
+                "point_count": 10,
+            }
+        )
+        plot_root = run_root / "plots" / f"task_{task_index:03d}"
+        metrics_path = plot_root / "evaluation" / "metrics.json"
+        plot_metadata_path = plot_root / "metadata" / "plot.json"
+        metrics_path.parent.mkdir(parents=True)
+        plot_metadata_path.parent.mkdir(parents=True)
+        metrics_path.write_text(
+            json.dumps(
+                {
+                    "protocol_id": "for_instance_pointwise_v1",
+                    "split": "dev",
+                    "coordinate_matching": False,
+                    "evaluated_point_count": 8,
+                    "reference_instance_count": 3,
+                    "prediction_instance_count": 3,
+                    "true_positives": 2,
+                    "false_positives": 1,
+                    "false_negatives": 1,
+                    "precision": 2 / 3,
+                    "recall": 2 / 3,
+                    "f1": 2 / 3,
+                }
+            ),
+            encoding="utf-8",
+        )
+        plot_metadata_path.write_text(
+            json.dumps(
+                {
+                    "route": "development",
+                    "benchmark_commit": benchmark_commit,
+                    "relative_path": relative_path,
+                    "reference_labels_supplied_to_model": False,
+                    "point_count": 10,
+                    "wall_runtime_seconds": 5.0,
+                    "peak_child_rss_kb": 1000,
+                    "aligned_prediction_sha256": "b" * 64,
+                }
+            ),
+            encoding="utf-8",
+        )
+        role_paths = {}
+        for role in sorted(retention.REQUIRED_SMOKE_ROLES):
+            if role == "plot_metrics":
+                role_paths[role] = metrics_path
+            elif role == "plot_metadata":
+                role_paths[role] = plot_metadata_path
+            else:
+                path = plot_root / "retained" / f"{role}.txt"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(f"{role}\n", encoding="utf-8")
+                role_paths[role] = path
+        retention_payload = retention.build(plot_root, role_paths)
+        retention_path = plot_root / "retention" / "manifest.json"
+        retention_path.parent.mkdir()
+        retention_path.write_text(
+            json.dumps(retention_payload), encoding="utf-8"
+        )
+        (plot_root / "final_gate.json").write_text(
+            json.dumps(
+                {
+                    "schema": "forainet_development_plot_final_gate_v1",
+                    "status": "complete",
+                    "held_out_access": False,
+                    "relative_path": relative_path,
+                    "development_task_index": task_index,
+                    "retention_manifest_sha256": retention.sha256(
+                        retention_path
+                    ),
+                }
+            ),
+            encoding="utf-8",
+        )
+    manifest_csv = manifest_root / "development.csv"
+    with manifest_csv.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(manifest_rows[0]))
+        writer.writeheader()
+        writer.writerows(manifest_rows)
+    manifest_json = manifest_root / "development.json"
+    manifest_json.write_text(
+        json.dumps(
+            {
+                "schema": "forainet_development_manifest_v1",
+                "status": "complete",
+                "expected_plot_count": 21,
+                "held_out_paths_included": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    payload = development_summary.summarise(
+        run_root,
+        run_id,
+        manifest_csv,
+        manifest_json,
+        benchmark_commit,
+    )
+    assert payload["completed_plots"] == 21
+    assert payload["overall"]["true_positives"] == 42
+    assert payload["overall"]["false_positives"] == 21
+    assert payload["overall"]["false_negatives"] == 21
+    assert payload["overall"]["f1"] == pytest.approx(2 / 3)
+    final_gate = json.loads((run_root / "final_gate.json").read_text())
+    assert final_gate["held_out_access"] is False
+    assert final_gate["completed_plots"] == 21
+
+
 def test_no_test_submission_route_exists() -> None:
     names = {path.name for path in (METHOD / "slurm").iterdir()}
     assert not any("test" in name for name in names)
@@ -581,6 +834,9 @@ def test_cli_help_is_available() -> None:
         METHOD / "scripts/provenance/probe_checkpoint_load.py",
         METHOD / "scripts/provenance/build_retention_manifest.py",
         METHOD / "scripts/provenance/build_alignment_review.py",
+        METHOD / "scripts/provenance/prepare_development_manifest.py",
+        METHOD / "scripts/provenance/resolve_development_task.py",
+        METHOD / "scripts/provenance/summarise_development_run.py",
     ]
     for path in scripts:
         completed = subprocess.run(

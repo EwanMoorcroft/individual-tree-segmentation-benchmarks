@@ -150,7 +150,9 @@ def test_image_build_is_cpu_only_and_qualification_targets_a100() -> None:
     )
     assert "#SBATCH --partition=gpu-a-lowsmall" in qualification
     assert "#SBATCH --gres=gpu:a100:1" in qualification
-    assert '"$FORAINET_IMAGE" \\\n  python3.8 ' in qualification
+    assert '"$image" \\\n  python3.8 ' in qualification
+    assert 'benchmark_root="$(readlink -f "$FORAINET_BENCHMARK_ROOT")"' in qualification
+    assert '--bind "$benchmark_root:$benchmark_root:ro"' in qualification
 
 
 def test_exposure_table_is_exact_and_test_only() -> None:

@@ -26,25 +26,31 @@ test ! -e "$FORAINET_QUALIFICATION_ROOT"
 mkdir -p "$FORAINET_QUALIFICATION_ROOT"
 module load apptainer/1.3.6
 
-python "$FORAINET_BENCHMARK_ROOT/methods/forainet/scripts/provenance/verify_forainet_assets.py" \
-  --upstream-root "$FORAINET_UPSTREAM_ROOT" \
-  --checkpoint "$FORAINET_CHECKPOINT" \
-  --output-json "$FORAINET_QUALIFICATION_ROOT/assets.json"
+benchmark_root="$(readlink -f "$FORAINET_BENCHMARK_ROOT")"
+upstream_root="$(readlink -f "$FORAINET_UPSTREAM_ROOT")"
+checkpoint="$(readlink -f "$FORAINET_CHECKPOINT")"
+image="$(readlink -f "$FORAINET_IMAGE")"
+qualification_root="$(readlink -f "$FORAINET_QUALIFICATION_ROOT")"
 
-sha256sum "$FORAINET_IMAGE" > "$FORAINET_QUALIFICATION_ROOT/image.sha256"
+python "$benchmark_root/methods/forainet/scripts/provenance/verify_forainet_assets.py" \
+  --upstream-root "$upstream_root" \
+  --checkpoint "$checkpoint" \
+  --output-json "$qualification_root/assets.json"
+
+sha256sum "$image" > "$qualification_root/image.sha256"
 
 apptainer exec --nv \
-  --bind "$FORAINET_UPSTREAM_ROOT:$FORAINET_UPSTREAM_ROOT:ro" \
-  --bind "$FORAINET_CHECKPOINT:$FORAINET_CHECKPOINT:ro" \
-  --bind "$FORAINET_BENCHMARK_ROOT:$FORAINET_BENCHMARK_ROOT:ro" \
-  --bind "$FORAINET_QUALIFICATION_ROOT:$FORAINET_QUALIFICATION_ROOT" \
-  "$FORAINET_IMAGE" \
-  python3.8 "$FORAINET_BENCHMARK_ROOT/methods/forainet/scripts/provenance/probe_checkpoint_load.py" \
-    --upstream-root "$FORAINET_UPSTREAM_ROOT" \
-    --checkpoint "$FORAINET_CHECKPOINT" \
-    --output-json "$FORAINET_QUALIFICATION_ROOT/checkpoint_load.json"
+  --bind "$upstream_root:$upstream_root:ro" \
+  --bind "$checkpoint:$checkpoint:ro" \
+  --bind "$benchmark_root:$benchmark_root:ro" \
+  --bind "$qualification_root:$qualification_root" \
+  "$image" \
+  python3.8 "$benchmark_root/methods/forainet/scripts/provenance/probe_checkpoint_load.py" \
+    --upstream-root "$upstream_root" \
+    --checkpoint "$checkpoint" \
+    --output-json "$qualification_root/checkpoint_load.json"
 
-python - "$FORAINET_QUALIFICATION_ROOT" <<'PY'
+python - "$qualification_root" <<'PY'
 import hashlib
 import json
 import sys

@@ -60,6 +60,10 @@ development_summary = load_script(
     "scripts/provenance/summarise_development_run.py",
     "forainet_development_summary",
 )
+finetune_data = load_script(
+    "scripts/data/prepare_finetune_data.py",
+    "forainet_finetune_data",
+)
 
 
 def test_scaffold_and_configs_are_method_local() -> None:
@@ -278,6 +282,10 @@ def test_full_development_route_is_guarded_and_development_only() -> None:
     assert "development route requires frozen task identity" in runtime
     assert "runtime route permits development plots only" in runtime
     assert "verified_by_accepted_development_smoke" in runtime
+    assert (
+        'args.expected_point_count\n                if args.route == "development"'
+        in runtime
+    )
 
     task = (METHOD / "slurm/run_forainet_development.sbatch").read_text(
         encoding="utf-8"
@@ -312,6 +320,76 @@ def test_full_development_route_is_guarded_and_development_only() -> None:
     ):
         assert status in monitor
     assert "held_out_access=forbidden" in monitor
+
+
+def test_finetune_split_and_official_setting_one_mapping() -> None:
+    plots = [
+        {"task_index": index, "relative_path": f"SITE/plot_{index}.las", "split": "dev"}
+        for index in range(21)
+    ]
+    assigned = finetune_data.assign_roles(plots, 42)
+    validation = [
+        row["task_index"]
+        for row in assigned
+        if row["training_role"] == "validation"
+    ]
+    assert validation == [0, 3, 7, 8, 20]
+    assert sum(row["training_role"] == "train" for row in assigned) == 16
+
+    classification = np.asarray([0, 1, 2, 3, 4, 5, 6, 4, 5, 6])
+    tree_id = np.asarray([0, 0, 0, 0, 1, 1, 1, 0, 0, 0])
+    keep, stuff_ids = finetune_data.official_keep_mask(
+        classification, tree_id
+    )
+    assert stuff_ids.tolist() == [0]
+    assert keep.tolist() == [
+        True,
+        True,
+        True,
+        False,
+        True,
+        True,
+        True,
+        False,
+        False,
+        False,
+    ]
+    assert finetune_data.OFFICIAL_SEMANTIC_MAPPING == {
+        0: 0,
+        1: 1,
+        2: 2,
+        4: 3,
+        5: 4,
+        6: 5,
+    }
+
+
+def test_finetune_plan_is_checkpoint_initialised_and_test_locked() -> None:
+    config = yaml.safe_load(
+        (METHOD / "configs/for_instance_finetune.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    plan = config["training_plan"]
+    assert config["dataset"]["training_plot_count"] == 16
+    assert config["dataset"]["validation_plot_count"] == 5
+    assert config["dataset"]["split_seed"] == 42
+    assert config["dataset"]["held_out_access"] == "forbidden"
+    assert plan["split_seed"] == 42
+    assert plan["upstream_training_seed"] == 2022
+    assert plan["epochs"] == 150
+    assert plan["checkpoint_epochs"] == [30, 60, 90, 120, 150]
+    assert plan["batch_size"] == 4
+    assert plan["samples_per_epoch"] == 3000
+    assert plan["precision"] == "fp32"
+    assert plan["checkpoint_initialisation"]["route"] == (
+        "models.PointGroup-PAPER.path_pretrained"
+    )
+    assert plan["checkpoint_initialisation"]["weight_name"] == "latest"
+    assert plan["checkpoint_initialisation"]["resume"] is False
+    assert plan["selection_metric"] == "canonical_validation_micro_f1"
+    assert plan["evaluation_protocol"] == "for_instance_pointwise_v1"
+    assert plan["held_out_access"] == "forbidden"
 
 
 def test_exposure_validator_rejects_test_training_role(tmp_path: Path) -> None:

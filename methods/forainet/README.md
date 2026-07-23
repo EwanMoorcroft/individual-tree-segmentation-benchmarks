@@ -35,7 +35,13 @@ Two future result roles are separated:
 The official checkpoint-initialisation hook is
 `models.PointGroup-PAPER.path_pretrained` with `weight_name=latest` and an
 empty training checkpoint directory. It is a weight-initialisation route, not
-a resume route. No training or held-out inference has been run by this branch.
+a resume route. The fixed fine-tuning plan uses the official 150 epochs,
+3,000 samples per epoch, batch size four, FP32 Adam optimiser and augmentation
+pipeline. The upstream trainer hard-codes training RNG seed 2022; seed 42 is
+used separately by the official `random.sample` train/validation split. The
+predeclared candidate epochs are 30, 60, 90, 120 and 150, selected only by
+canonical five-plot validation micro-F1, then lower false positives and earlier
+epoch. No training or held-out inference has been run by this branch.
 
 ## Input Requirements
 
@@ -122,9 +128,14 @@ separate hashes for the complete PLY files and for canonicalised `preds`
 arrays, because the deliberately changed bookkeeping labels make the complete
 files differ even when predictions are identical.
 
-Fine-tuning and test submission routes remain deliberately blocked until the
-preceding evidence exists. In particular, no held-out job can be submitted
-from the current scaffold.
+Fine-tuning preparation remains blocked on the completed 21-plot published
+development final gate. Its adapter reproduces the pinned official Setting-1
+mapping: class 3 and tree-class points carrying a stuff-instance ID are
+removed, and classes 0, 1, 2, 4, 5 and 6 map to PLY labels 0, 1, 2, 3, 4 and 5.
+Only the 21 hash-frozen development sources can be converted; the fixed seed-42
+split yields 16 training and five `_val.ply` files. Test submission remains
+separately blocked and no held-out job can be submitted from the current
+scaffold.
 
 ## Evaluation Route
 

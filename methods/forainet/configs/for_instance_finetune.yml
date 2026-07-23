@@ -3,7 +3,7 @@ project:
   dataset_slug: for-instance
   method_slug: forainet
   protocol_id: for_instance_pointwise_v1
-  status: planned_not_run
+  status: preparation_ready_pending_published_development_gate
 
 dataset:
   slug: for-instance
@@ -27,13 +27,36 @@ training_plan:
   architecture: official_PointGroup-PAPER
   losses: official
   tiling_and_clustering: official
-  seed: 42
-  epochs: null
-  checkpoint_interval: null
-  batch_size: null
-  precision: null
+  split_seed: 42
+  upstream_training_seed: 2022
+  epochs: 150
+  checkpoint_epochs: [30, 60, 90, 120, 150]
+  batch_size: 4
+  samples_per_epoch: 3000
+  precision: fp32
+  num_workers: 0
+  grid_size_m: 0.2
+  sampling_radius_m: 8
+  train_augmentation: official_Tree3DMix2_pipeline
   optimiser: Adam
   base_learning_rate: 0.001
+  weight_decay: 0
+  lr_scheduler: exponential
+  lr_scheduler_gamma: 0.9885
+  bn_scheduler:
+    policy: step_decay
+    momentum: 0.1
+    decay: 0.5
+    decay_step: 20
+    clip: 0.01
+  checkpoint_initialisation:
+    route: models.PointGroup-PAPER.path_pretrained
+    weight_name: latest
+    resume: false
+    required_compatible_fraction: 1.0
+  checkpoint_candidates: sparse_predeclared_epoch_sweep
   selection_metric: canonical_validation_micro_f1
   tie_breakers: [lower_false_positives, earlier_epoch]
-  status: blocked_until_smoke_runtime_and_memory_are_measured
+  evaluation_protocol: for_instance_pointwise_v1
+  held_out_access: forbidden
+  status: frozen_pending_one_batch_training_smoke

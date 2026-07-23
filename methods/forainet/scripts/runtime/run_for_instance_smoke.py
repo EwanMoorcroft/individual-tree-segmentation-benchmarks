@@ -600,7 +600,11 @@ def main() -> int:
             "--inference-ply",
             str(inference_ply),
             "--expected-point-count",
-            str(EXPECTED_POINT_COUNT),
+            str(
+                args.expected_point_count
+                if args.route == "development"
+                else EXPECTED_POINT_COUNT
+            ),
             "--output-npz",
             str(raw_prediction),
             "--metadata-json",

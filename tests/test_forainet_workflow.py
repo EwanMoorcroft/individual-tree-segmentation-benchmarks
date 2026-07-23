@@ -440,6 +440,37 @@ def test_finetune_smoke_is_development_gated_and_official() -> None:
     assert "differences != [177]" in stage
 
 
+def test_full_finetune_is_smoke_gated_and_retains_frozen_candidates() -> None:
+    task = (
+        METHOD / "slurm/run_forainet_finetune_full.sbatch"
+    ).read_text(encoding="utf-8")
+    submit = (
+        METHOD / "slurm/submit_forainet_finetune_full.sh"
+    ).read_text(encoding="utf-8")
+    monitor = (
+        METHOD / "slurm/monitor_forainet_finetune_full.sh"
+    ).read_text(encoding="utf-8")
+    watcher = (
+        METHOD / "scripts/provenance/snapshot_finetune_checkpoints.py"
+    ).read_text(encoding="utf-8")
+    validator = (
+        METHOD / "scripts/provenance/validate_finetune_full.py"
+    ).read_text(encoding="utf-8")
+    assert "#SBATCH --gres=gpu:a100:1" in task
+    assert "#SBATCH --time=3-00:00:00" in task
+    assert 'test -f "$FORAINET_FINETUNE_ROOT/smoke/final_gate.json"' in task
+    assert "training.epochs=150" in task
+    assert "debugging.early_break=false" in task
+    assert "snapshot_finetune_checkpoints.py" in task
+    assert "validate_finetune_full.py" in task
+    assert "FORAINET_FINETUNE_FULL_CONFIRMED" in submit
+    assert "validation_submitted=no" in monitor
+    assert "EXPECTED_EPOCHS = (30, 60, 90, 120, 149)" in watcher
+    assert '"held_out_access": False' in watcher
+    assert "epoch-149 candidate differs" in validator
+    assert '"next_gate": "canonical_five_plot_candidate_validation"' in validator
+
+
 def test_exposure_validator_rejects_test_training_role(tmp_path: Path) -> None:
     source = METHOD / "examples/checkpoint_exposure_32_plots.csv"
     with source.open(encoding="utf-8", newline="") as handle:

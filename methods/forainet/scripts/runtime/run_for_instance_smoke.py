@@ -290,6 +290,7 @@ def main() -> int:
             "packages": {
                 name: package_version(name)
                 for name in (
+                    "numpy",
                     "torch",
                     "torch-geometric",
                     "MinkowskiEngine",

@@ -32,6 +32,7 @@ def main() -> int:
     os.chdir(pointcloud_root)
     sys.path.insert(0, str(pointcloud_root))
 
+    import numpy
     import torch
     from omegaconf import OmegaConf
     from torch_points3d.datasets.base_dataset import BaseDataset
@@ -87,6 +88,7 @@ def main() -> int:
         ),
         "versions": {
             "python": sys.version.split()[0],
+            "numpy": numpy.__version__,
             "torch": torch.__version__,
             "torch-geometric": package_version("torch-geometric"),
             "MinkowskiEngine": package_version("MinkowskiEngine"),

@@ -127,6 +127,9 @@ def test_container_definition_pins_mutable_upstream_inputs() -> None:
         assert commit in definition
     assert "TORCH_CUDA_ARCH_LIST=8.0" in definition
     assert "--requirement /opt/forainet/requirements.lock" in definition
+    assert "numpy==1.23.5" in definition
+    assert 'assert numpy.__version__ == "1.23.5"' in definition
+    assert "numpy==1.24.4" not in definition
     assert "hdbscan/archive/master" not in definition
     assert "git+https://github.com/NVIDIA/MinkowskiEngine.git" not in definition
     probe = (METHOD / "containers/fakeroot-apt-probe.def").read_text(
@@ -172,6 +175,7 @@ def test_image_build_is_cpu_only_and_qualification_targets_a100() -> None:
     assert "ModelCheckpoint(" in checkpoint_probe
     assert "run_config.data.fold = []" in checkpoint_probe
     assert "checkpoint.dataset_properties" in checkpoint_probe
+    assert '"numpy": numpy.__version__' in checkpoint_probe
     assert "PretainedRegistry" not in checkpoint_probe
     smoke = (METHOD / "slurm/run_forainet_smoke.sbatch").read_text(
         encoding="utf-8"

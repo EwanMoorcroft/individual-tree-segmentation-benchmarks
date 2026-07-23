@@ -105,7 +105,23 @@ def git_commit(path: Path) -> str:
     return completed.stdout.strip()
 
 
-def checkpoint_provenance(checkpoint: Path) -> dict[str, Any]:
+def checkpoint_provenance(
+    checkpoint: Path,
+    *,
+    expected_sha256: str,
+    checkpoint_kind: str,
+    expected_epoch: int | None,
+) -> dict[str, Any]:
+    actual_sha256 = sha256(checkpoint)
+    if actual_sha256 != expected_sha256:
+        raise ValueError("checkpoint SHA-256 differs from the submitted identity")
+    if checkpoint_kind not in {"published_pretrained", "fine_tuned_on_dev"}:
+        raise ValueError(f"unsupported checkpoint kind: {checkpoint_kind}")
+    if (
+        checkpoint_kind == "published_pretrained"
+        and expected_sha256 != EXPECTED_CHECKPOINT_SHA256
+    ):
+        raise ValueError("published checkpoint identity differs from official asset")
     archive = torch.load(checkpoint, map_location="cpu")
     if not isinstance(archive, dict):
         raise ValueError("official checkpoint archive is not a dictionary")
@@ -132,13 +148,38 @@ def checkpoint_provenance(checkpoint: Path) -> dict[str, Any]:
     if add_input_features not in ([], None):
         raise ValueError("checkpoint unexpectedly requires labelled auxiliary features")
     models = archive.get("models")
-    if not isinstance(models, dict) or "latest" not in models:
+    if (
+        not isinstance(models, dict)
+        or not isinstance(models.get("latest"), dict)
+        or len(models["latest"]) != 755
+    ):
         raise ValueError("checkpoint does not contain official latest weights")
+    checkpoint_epoch = None
+    if checkpoint_kind == "fine_tuned_on_dev":
+        if expected_epoch not in {30, 60, 90, 120, 149}:
+            raise ValueError("fine-tuned checkpoint epoch is outside frozen candidates")
+        stats = archive.get("stats")
+        if (
+            not isinstance(stats, dict)
+            or not isinstance(stats.get("train"), list)
+            or not isinstance(stats.get("val"), list)
+            or not stats["train"]
+            or not stats["val"]
+        ):
+            raise ValueError("fine-tuned checkpoint lacks train/val statistics")
+        train_epoch = int(stats["train"][-1]["epoch"])
+        validation_epoch = int(stats["val"][-1]["epoch"])
+        if (train_epoch, validation_epoch) != (expected_epoch, expected_epoch):
+            raise ValueError("fine-tuned checkpoint epoch identity failed")
+        checkpoint_epoch = expected_epoch
     return {
         "schema": "forainet_checkpoint_runtime_provenance_v1",
         "status": "verified",
         "filename": checkpoint.name,
-        "sha256": sha256(checkpoint),
+        "sha256": actual_sha256,
+        "checkpoint_kind": checkpoint_kind,
+        "checkpoint_epoch": checkpoint_epoch,
+        "model_tensor_count": len(models["latest"]),
         "weight_name": "latest",
         "model_name": run_config.get("model_name"),
         "data_configuration": observed,
@@ -260,8 +301,17 @@ def main() -> int:
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--image-sha256", required=True)
     parser.add_argument(
-        "--route", choices=("smoke", "development"), default="smoke"
+        "--route",
+        choices=("smoke", "development", "finetune_validation"),
+        default="smoke",
     )
+    parser.add_argument(
+        "--checkpoint-kind",
+        choices=("published_pretrained", "fine_tuned_on_dev"),
+        default="published_pretrained",
+    )
+    parser.add_argument("--expected-checkpoint-sha256")
+    parser.add_argument("--expected-checkpoint-epoch", type=int)
     parser.add_argument("--development-task-index", type=int)
     parser.add_argument("--expected-source-sha256")
     parser.add_argument("--expected-point-count", type=int)
@@ -270,18 +320,34 @@ def main() -> int:
     started = time.monotonic()
     if args.route == "smoke" and args.relative_path != EXPECTED_RELATIVE_PATH:
         raise ValueError("smoke route permits only the frozen development plot")
-    if args.route == "development" and (
+    if args.route in {"development", "finetune_validation"} and (
         args.development_task_index is None
         or args.expected_source_sha256 is None
         or args.expected_point_count is None
     ):
-        raise ValueError("development route requires frozen task identity")
+        raise ValueError("non-smoke route requires frozen task identity")
+    if args.route == "finetune_validation" and (
+        args.checkpoint_kind != "fine_tuned_on_dev"
+        or args.expected_checkpoint_sha256 is None
+        or args.expected_checkpoint_epoch is None
+    ):
+        raise ValueError(
+            "fine-tune validation requires a frozen candidate checkpoint"
+        )
+    if args.route != "finetune_validation" and (
+        args.checkpoint_kind != "published_pretrained"
+        or args.expected_checkpoint_epoch is not None
+    ):
+        raise ValueError("published routes require the official checkpoint kind")
     if git_commit(args.benchmark_root) != args.benchmark_commit:
         raise ValueError("benchmark checkout changed after submission")
     if git_commit(args.upstream_root) != EXPECTED_UPSTREAM_COMMIT:
         raise ValueError("upstream checkout is not the pinned official commit")
-    if sha256(args.checkpoint) != EXPECTED_CHECKPOINT_SHA256:
-        raise ValueError("checkpoint SHA-256 is not the frozen official asset")
+    expected_checkpoint_sha256 = (
+        args.expected_checkpoint_sha256
+        if args.route == "finetune_validation"
+        else EXPECTED_CHECKPOINT_SHA256
+    )
     if not args.run_root.is_dir() or any(args.run_root.iterdir()):
         raise ValueError("run root must exist and be empty")
 
@@ -304,9 +370,12 @@ def main() -> int:
     ):
         directory.mkdir(parents=True, exist_ok=False)
 
-    checkpoint_payload = checkpoint_provenance(args.checkpoint)
-    if checkpoint_payload["sha256"] != EXPECTED_CHECKPOINT_SHA256:
-        raise ValueError("checkpoint provenance hash mismatch")
+    checkpoint_payload = checkpoint_provenance(
+        args.checkpoint,
+        expected_sha256=expected_checkpoint_sha256,
+        checkpoint_kind=args.checkpoint_kind,
+        expected_epoch=args.expected_checkpoint_epoch,
+    )
     staged_checkpoint = (
         runtime_root / "checkpoint_stage" / "PointGroup-PAPER.pt"
     )
@@ -602,7 +671,7 @@ def main() -> int:
             "--expected-point-count",
             str(
                 args.expected_point_count
-                if args.route == "development"
+                if args.route in {"development", "finetune_validation"}
                 else EXPECTED_POINT_COUNT
             ),
             "--output-npz",
@@ -684,12 +753,20 @@ def main() -> int:
     plot_status = (
         "completed_waiting_manual_alignment"
         if args.route == "smoke"
-        else "completed_development_diagnostic"
+        else (
+            "completed_finetune_validation"
+            if args.route == "finetune_validation"
+            else "completed_development_diagnostic"
+        )
     )
     next_gate = (
         "manual_alignment_review"
         if args.route == "smoke"
-        else "development_run_summary"
+        else (
+            "finetune_candidate_validation_summary"
+            if args.route == "finetune_validation"
+            else "development_run_summary"
+        )
     )
     write_json(
         plot_metadata,
@@ -707,7 +784,9 @@ def main() -> int:
             "tile_overlap_m": TILE_OVERLAP_M,
             "tile_count": len(tile_paths),
             "official_eval_batch_size": EVAL_BATCH_SIZE,
-            "official_checkpoint_sha256": EXPECTED_CHECKPOINT_SHA256,
+            "checkpoint_sha256": expected_checkpoint_sha256,
+            "checkpoint_kind": args.checkpoint_kind,
+            "checkpoint_epoch": args.expected_checkpoint_epoch,
             "upstream_commit": EXPECTED_UPSTREAM_COMMIT,
             "benchmark_commit": args.benchmark_commit,
             "label_isolation": "constant_nonreference_bookkeeping_fields",
@@ -774,13 +853,21 @@ def main() -> int:
         "schema": (
             "forainet_smoke_final_gate_v1"
             if args.route == "smoke"
-            else "forainet_development_plot_final_gate_v1"
+            else (
+                "forainet_finetune_validation_plot_final_gate_v1"
+                if args.route == "finetune_validation"
+                else "forainet_development_plot_final_gate_v1"
+            )
         ),
         "status": "complete",
         "scientific_status": (
             "waiting_manual_alignment"
             if args.route == "smoke"
-            else "development_diagnostic_complete"
+            else (
+                "finetune_validation_complete"
+                if args.route == "finetune_validation"
+                else "development_diagnostic_complete"
+            )
         ),
         "run_id": args.run_id,
         "route": args.route,

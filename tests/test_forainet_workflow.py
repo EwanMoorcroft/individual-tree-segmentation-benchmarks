@@ -64,6 +64,10 @@ finetune_data = load_script(
     "scripts/data/prepare_finetune_data.py",
     "forainet_finetune_data",
 )
+finetune_validation_task = load_script(
+    "scripts/provenance/resolve_finetune_validation_task.py",
+    "forainet_finetune_validation_task",
+)
 
 
 def test_scaffold_and_configs_are_method_local() -> None:
@@ -278,12 +282,13 @@ def test_full_development_route_is_guarded_and_development_only() -> None:
     runtime = (
         METHOD / "scripts/runtime/run_for_instance_smoke.py"
     ).read_text(encoding="utf-8")
-    assert 'choices=("smoke", "development")' in runtime
-    assert "development route requires frozen task identity" in runtime
+    assert '"finetune_validation"' in runtime
+    assert "non-smoke route requires frozen task identity" in runtime
     assert "runtime route permits development plots only" in runtime
     assert "verified_by_accepted_development_smoke" in runtime
     assert (
-        'args.expected_point_count\n                if args.route == "development"'
+        "args.expected_point_count\n"
+        '                if args.route in {"development", "finetune_validation"}'
         in runtime
     )
 
@@ -469,6 +474,94 @@ def test_full_finetune_is_smoke_gated_and_retains_frozen_candidates() -> None:
     assert '"held_out_access": False' in watcher
     assert "epoch-149 candidate differs" in validator
     assert '"next_gate": "canonical_five_plot_candidate_validation"' in validator
+
+
+def test_finetune_validation_is_five_by_five_and_test_locked() -> None:
+    task = (
+        METHOD / "slurm/run_forainet_finetune_validation.sbatch"
+    ).read_text(encoding="utf-8")
+    submit = (
+        METHOD / "slurm/submit_forainet_finetune_validation.sh"
+    ).read_text(encoding="utf-8")
+    monitor = (
+        METHOD / "slurm/monitor_forainet_finetune_validation.sh"
+    ).read_text(encoding="utf-8")
+    resolver = (
+        METHOD / "scripts/provenance/resolve_finetune_validation_task.py"
+    ).read_text(encoding="utf-8")
+    summary = (
+        METHOD / "scripts/provenance/summarise_finetune_validation.py"
+    ).read_text(encoding="utf-8")
+    assert "#SBATCH --gres=gpu:a100:1" in task
+    assert "--checkpoint-kind fine_tuned_on_dev" in task
+    assert "--route finetune_validation" in task
+    assert "--expected-checkpoint-epoch" in task
+    assert '--array="0-24%2"' in submit
+    assert '--dependency="afterany:$array_job"' in submit
+    assert "plot_gates=%s/25" in monitor
+    assert "test_submission=no" in monitor
+    assert "EXPECTED_EPOCHS = (30, 60, 90, 120, 149)" in resolver
+    assert "VALIDATION_TASKS = 25" in resolver
+    assert '"selection_metric": "micro_f1"' in summary
+    assert '"lower_false_positives", "earlier_epoch"' in summary
+    assert '"held_out_access": False' in summary
+
+
+def test_finetune_validation_task_maps_candidate_major_order(
+    tmp_path: Path,
+) -> None:
+    records = []
+    for index in range(21):
+        records.append(
+            {
+                "task_index": index,
+                "relative_path": f"SITE/plot_{index}.las",
+                "split": "dev",
+                "training_role": (
+                    "validation" if index in {0, 3, 7, 8, 20} else "train"
+                ),
+                "source_sha256": f"source-{index}",
+                "source_point_count": 1000 + index,
+            }
+        )
+    manifest = tmp_path / "finetune.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "forainet_finetune_data_manifest_v1",
+                "status": "complete",
+                "held_out_access": False,
+                "held_out_paths_included": False,
+                "records": records,
+            }
+        ),
+        encoding="utf-8",
+    )
+    index = tmp_path / "candidates.json"
+    index.write_text(
+        json.dumps(
+            {
+                "schema": "forainet_finetune_candidate_index_v1",
+                "status": "complete",
+                "held_out_access": False,
+                "candidates": [
+                    {
+                        "epoch": epoch,
+                        "filename": f"epoch_{epoch}.pt",
+                        "sha256": f"checkpoint-{epoch}",
+                    }
+                    for epoch in (30, 60, 90, 120, 149)
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    task = finetune_validation_task.resolve(manifest, index, 7)
+    assert task["candidate_epoch"] == 60
+    assert task["plot_offset"] == 2
+    assert task["development_task_index"] == 7
+    assert task["relative_path"] == "SITE/plot_7.las"
+    assert task["point_count"] == 1007
 
 
 def test_exposure_validator_rejects_test_training_role(tmp_path: Path) -> None:

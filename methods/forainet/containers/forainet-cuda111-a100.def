@@ -76,7 +76,8 @@ From: nvidia/cuda@sha256:83e4b2841034cdf45ea5b9a5b472eb2c07b1b23d4836d32666a881d
 
     python3.8 -m pip install --no-cache-dir torch-points-kernels==0.7.0
 
-    python3.8 -m pip install --no-cache-dir /opt/forainet/requirements.lock
+    python3.8 -m pip install --no-cache-dir \
+        --requirement /opt/forainet/requirements.lock
 
     mkdir -p /opt/forainet/src
     git clone https://github.com/NVIDIA/MinkowskiEngine.git \

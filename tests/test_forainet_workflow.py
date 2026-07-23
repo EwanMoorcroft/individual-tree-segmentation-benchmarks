@@ -113,6 +113,7 @@ def test_container_definition_pins_mutable_upstream_inputs() -> None:
     ):
         assert commit in definition
     assert "TORCH_CUDA_ARCH_LIST=8.0" in definition
+    assert "--requirement /opt/forainet/requirements.lock" in definition
     assert "hdbscan/archive/master" not in definition
     assert "git+https://github.com/NVIDIA/MinkowskiEngine.git" not in definition
     probe = (METHOD / "containers/fakeroot-apt-probe.def").read_text(

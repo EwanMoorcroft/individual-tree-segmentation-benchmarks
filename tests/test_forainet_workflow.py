@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -579,12 +580,63 @@ def test_cli_help_is_available() -> None:
         METHOD / "scripts/provenance/verify_forainet_assets.py",
         METHOD / "scripts/provenance/probe_checkpoint_load.py",
         METHOD / "scripts/provenance/build_retention_manifest.py",
+        METHOD / "scripts/provenance/build_alignment_review.py",
     ]
     for path in scripts:
         completed = subprocess.run(
             [sys.executable, str(path), "--help"], capture_output=True, text=True
         )
         assert completed.returncode == 0, (path, completed.stderr)
+
+
+def test_alignment_review_uses_exact_source_rows_and_writes_local_figure(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "plot.las"
+    write_las(source)
+    prediction = tmp_path / "prediction.npz"
+    np.savez_compressed(
+        prediction,
+        classification=np.asarray([1, 4, 5], dtype=np.int16),
+        pred_classification=np.asarray([0, 4, 6], dtype=np.int16),
+        pred_tree_id=np.asarray([0, 3, 4], dtype=np.int32),
+        source_row_index=np.arange(3, dtype=np.int64),
+        target_tree_id=np.asarray([0, 10, 11], dtype=np.int32),
+    )
+    figure = tmp_path / "review.png"
+    report = tmp_path / "review.json"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(METHOD / "scripts/provenance/build_alignment_review.py"),
+            "--source-las",
+            str(source),
+            "--prediction-npz",
+            str(prediction),
+            "--relative-path",
+            "SYNTHETIC/plot.las",
+            "--output-png",
+            str(figure),
+            "--output-json",
+            str(report),
+            "--maximum-union-points",
+            "3",
+            "--maximum-context-points",
+            "3",
+        ],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "MPLCONFIGDIR": str(tmp_path / "matplotlib")},
+    )
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    assert payload["status"] == "waiting_manual_confirmation"
+    assert payload["source_row_index_exact"] is True
+    assert payload["coordinate_matching"] is False
+    assert payload["point_count"] == 3
+    assert payload["reference_tree_count"] == 2
+    assert payload["predicted_tree_count"] == 2
+    assert figure.stat().st_size > 0
 
 
 def test_evaluator_cli_writes_required_tables(tmp_path: Path) -> None:

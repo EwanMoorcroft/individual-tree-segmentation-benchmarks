@@ -133,6 +133,13 @@ array. `scripts/evaluation/evaluate_for_instance.py` applies the shared
 pointwise protocol and writes per-plot metrics, matches, unmatched predictions
 and unmatched references.
 
+`scripts/provenance/build_alignment_review.py` creates a deterministic,
+local-only XY/XZ comparison of reference and predicted instances from the
+development smoke. It validates exact source-row order, removes global
+coordinate offsets from the figure and writes a hash-linked JSON review
+record outside the immutable run root. The figure and raw coordinates are not
+committed. Manual confirmation is required before full-development inference.
+
 ## Known Limitations
 
 - No complete official ForAINetV2 release was located.

@@ -5,11 +5,16 @@ from __future__ import annotations
 import argparse
 import json
 import pickle
+import sys
 from pathlib import Path
 
 import numpy as np
 
-from shared.for_instance_manifest import (
+ROOT = Path(__file__).resolve().parents[4]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from shared.for_instance_manifest import (  # noqa: E402
     EXPECTED_METADATA_SHA256,
     read_split_metadata,
     sha256_file,

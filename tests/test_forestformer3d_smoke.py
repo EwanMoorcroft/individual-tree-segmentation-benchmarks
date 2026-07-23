@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import importlib.util
+import subprocess
 from pathlib import Path
 
 import laspy
@@ -190,3 +191,18 @@ def test_smoke_submitter_is_guarded_development_only_and_monitored() -> None:
     assert "validate_one_plot_smoke.py" in job
     assert "runpy.run_path" in runner
     assert 'init_globals={"torch": torch}' in runner
+
+
+def test_preparation_cli_resolves_shared_package() -> None:
+    completed = subprocess.run(
+        [
+            "python",
+            "methods/forestformer3d/scripts/data/prepare_one_plot_smoke.py",
+            "--help",
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "--dataset-root" in completed.stdout

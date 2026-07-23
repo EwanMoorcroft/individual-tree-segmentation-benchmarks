@@ -71,6 +71,12 @@ export TORCH_CUDA_ARCH_LIST="8.0"
 export FORCE_CUDA=1
 export MAX_JOBS="${SLURM_CPUS_PER_TASK:-8}"
 export PYTHONDONTWRITEBYTECODE=1
+export CPATH="$TOOLCHAIN/include:${CPATH:-}"
+export LIBRARY_PATH="$TOOLCHAIN/lib:${LIBRARY_PATH:-}"
+
+echo "stage=blas_toolchain_validate"
+test -f "$TOOLCHAIN/include/cblas.h"
+test -e "$TOOLCHAIN/lib/libopenblas.so"
 
 clone_exact() {
   local repository="$1"
@@ -136,6 +142,8 @@ python -m pip install \
   -v \
   --no-deps \
   --install-option="--blas=openblas" \
+  --install-option="--blas_include_dirs=$TOOLCHAIN/include" \
+  --install-option="--blas_library_dirs=$TOOLCHAIN/lib" \
   --install-option="--force_cuda"
 
 python -m pip install "$SOURCE_ROOT/pytorch_scatter"

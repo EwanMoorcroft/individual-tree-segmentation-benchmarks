@@ -42,6 +42,15 @@
   Bash nounset mode.
 - Recovery suspends nounset only for the Conda hook and activation statements,
   then restores it before source retrieval or dependency installation.
+- The next build passed activation, created the rootless virtual environment,
+  fetched all five exact source revisions, and installed MMEngine,
+  MMDetection, MMDetection3D, MMSegmentation and the CUDA 11.6 MMCV wheel.
+- MinkowskiEngine then failed during CUDA compilation because `cblas.h` was
+  absent from the compiler include search path. OpenBLAS itself was present in
+  the external toolchain.
+- Recovery uses the pinned MinkowskiEngine setup interface
+  `--blas_include_dirs` and `--blas_library_dirs`, validates the header and
+  shared library first, and exports matching compiler search paths.
 
 ## Recorded observations
 

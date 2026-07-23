@@ -92,6 +92,9 @@ def test_rootless_builder_preserves_official_dependency_and_source_pins() -> Non
     assert "fakeroot" not in builder
     assert "gcc_linux-64=9" in builder
     assert "openblas=0.3.21" in builder
+    assert '--install-option="--blas_include_dirs=$TOOLCHAIN/include"' in builder
+    assert '--install-option="--blas_library_dirs=$TOOLCHAIN/lib"' in builder
+    assert 'test -f "$TOOLCHAIN/include/cblas.h"' in builder
     assert "CONDA_PKGS_DIRS" in builder
     assert "PIP_CACHE_DIR" in builder
     assert 'export HOME="$BUILD_HOME"' in builder

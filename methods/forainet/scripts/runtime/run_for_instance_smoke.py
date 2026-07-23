@@ -54,7 +54,8 @@ def run_checked(
     stdout: Path,
     stderr: Path,
     env: dict[str, str] = None,
-) -> None:
+    accepted_error_markers: tuple[str, ...] = (),
+) -> int:
     stdout.parent.mkdir(parents=True, exist_ok=True)
     with stdout.open("w", encoding="utf-8") as out_handle, stderr.open(
         "w", encoding="utf-8"
@@ -69,10 +70,15 @@ def run_checked(
             env=env,
         )
     if completed.returncode != 0:
-        raise RuntimeError(
-            f"command failed with exit {completed.returncode}; "
-            f"see {stdout} and {stderr}"
-        )
+        error_text = stderr.read_text(encoding="utf-8", errors="replace")
+        if not accepted_error_markers or any(
+            marker not in error_text for marker in accepted_error_markers
+        ):
+            raise RuntimeError(
+                f"command failed with exit {completed.returncode}; "
+                f"see {stdout} and {stderr}"
+            )
+    return completed.returncode
 
 
 def package_version(name: str) -> str | None:
@@ -423,7 +429,7 @@ def main() -> int:
     label_probe_input = input_root / "label_probe_tile.ply"
     make_label_probe(tile_paths[0], label_probe_input)
     label_probe_output = raw_root / "label_probe"
-    run_checked(
+    label_probe_exit_code = run_checked(
         [
             python,
             str(pointcloud_root / "eval.py"),
@@ -444,6 +450,10 @@ def main() -> int:
         cwd=runtime_root,
         stdout=raw_root / "label_probe.stdout",
         stderr=raw_root / "label_probe.stderr",
+        accepted_error_markers=(
+            "treeins_set1.py\", line 204, in final_eval",
+            "ZeroDivisionError: float division by zero",
+        ),
     )
     primary_output = batch_root / "batch_0000"
     comparisons = {}
@@ -472,6 +482,12 @@ def main() -> int:
             "reference_labels_used": False,
             "primary_bookkeeping": {"semantic_seg": 1, "treeID": -1},
             "probe_bookkeeping": {"semantic_seg": 2, "treeID": 0},
+            "official_eval_exit_code": label_probe_exit_code,
+            "accepted_reporting_failure": (
+                "official_final_eval_zero_denominator_on_artificial_labels"
+                if label_probe_exit_code
+                else None
+            ),
             "comparison": comparisons,
         },
     )

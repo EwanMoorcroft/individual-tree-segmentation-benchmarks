@@ -112,6 +112,12 @@ run-local relative data root and verifies every model tensor exactly against the
 unchanged official archive. Both hashes and the exact metadata-only change are
 retained; no weight is altered.
 
+The label-independence probe changes both artificial semantic and instance
+bookkeeping fields. The pinned upstream reporter can divide by zero after
+writing complete predictions for those deliberately nonreference labels. Only
+that exact post-output traceback is accepted; both official prediction arrays
+must still exist and match the primary arrays exactly.
+
 Full-development, fine-tuning and test submission routes remain deliberately
 blocked until the preceding evidence exists. In particular, no held-out job
 can be submitted from the current scaffold.

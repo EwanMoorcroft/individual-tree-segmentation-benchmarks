@@ -51,6 +51,12 @@
 - Recovery uses the pinned MinkowskiEngine setup interface
   `--blas_include_dirs` and `--blas_library_dirs`, validates the header and
   shared library first, and exports matching compiler search paths.
+- The corrected build compiled and installed the CUDA MinkowskiEngine extension
+  and built `torch-scatter` 2.0.9. Segmentator configuration then stopped
+  because `torch.utils.cmake_prefix_path` was called as a function even though
+  PyTorch 1.13.1 exposes it as a string property.
+- Recovery passes that property directly to CMake. This changes only the build
+  interface expression; it does not modify Segmentator or model source.
 
 ## Recorded observations
 

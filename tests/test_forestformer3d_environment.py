@@ -95,6 +95,8 @@ def test_rootless_builder_preserves_official_dependency_and_source_pins() -> Non
     assert '--install-option="--blas_include_dirs=$TOOLCHAIN/include"' in builder
     assert '--install-option="--blas_library_dirs=$TOOLCHAIN/lib"' in builder
     assert 'test -f "$TOOLCHAIN/include/cblas.h"' in builder
+    assert "torch.utils.cmake_prefix_path)')" in builder
+    assert "torch.utils.cmake_prefix_path())" not in builder
     assert "CONDA_PKGS_DIRS" in builder
     assert "PIP_CACHE_DIR" in builder
     assert 'export HOME="$BUILD_HOME"' in builder

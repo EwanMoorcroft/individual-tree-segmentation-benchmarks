@@ -154,7 +154,7 @@ echo "stage=segmentator_build"
 (
   cd "$SEGMENTATOR_BUILD"
   cmake .. \
-    -DCMAKE_PREFIX_PATH="$(python -c 'import torch; print(torch.utils.cmake_prefix_path())')" \
+    -DCMAKE_PREFIX_PATH="$(python -c 'import torch; print(torch.utils.cmake_prefix_path)')" \
     -DPYTHON_INCLUDE_DIR="$(python -c 'from distutils.sysconfig import get_python_inc; print(get_python_inc())')" \
     -DPYTHON_LIBRARY="$(python -c 'import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var("LIBDIR") + "/libpython3.10.so")')" \
     -DCMAKE_INSTALL_PREFIX="$(python -c 'from distutils.sysconfig import get_python_lib; print(get_python_lib())')"

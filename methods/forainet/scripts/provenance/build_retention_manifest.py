@@ -9,12 +9,17 @@ from pathlib import Path
 
 
 REQUIRED_SMOKE_ROLES = {
+    "aligned_prediction_metadata",
     "official_raw_output",
     "aligned_prediction",
     "checkpoint_provenance",
     "environment_manifest",
+    "input_conversion",
+    "label_independence_probe",
+    "merge_alignment",
     "plot_metadata",
     "plot_metrics",
+    "raw_output_inventory",
     "matched_pairs",
     "unmatched_predictions",
     "unmatched_references",

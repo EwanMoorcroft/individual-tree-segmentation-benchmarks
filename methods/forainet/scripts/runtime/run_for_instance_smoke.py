@@ -224,6 +224,22 @@ def prediction_values(path: Path) -> np.ndarray:
     return np.asarray(vertex["preds"], dtype=np.int64)
 
 
+def prediction_values_sha256(values: np.ndarray) -> str:
+    canonical = np.asarray(values, dtype="<i8", order="C")
+    digest = hashlib.sha256()
+    digest.update(b"forainet_prediction_values_v1\n")
+    digest.update(
+        json.dumps(
+            {"dtype": canonical.dtype.str, "shape": list(canonical.shape)},
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    )
+    digest.update(b"\n")
+    digest.update(canonical.tobytes(order="C"))
+    return digest.hexdigest()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--benchmark-root", required=True, type=Path)
@@ -463,11 +479,20 @@ def main() -> int:
     ):
         primary = primary_output / filename
         probe = label_probe_output / filename
-        equal = np.array_equal(prediction_values(primary), prediction_values(probe))
+        primary_values = prediction_values(primary)
+        probe_values = prediction_values(probe)
+        equal = np.array_equal(primary_values, probe_values)
         comparisons[kind] = {
             "prediction_equal": bool(equal),
-            "primary_sha256": sha256(primary),
-            "probe_sha256": sha256(probe),
+            "point_count": int(primary_values.size),
+            "primary_file_sha256": sha256(primary),
+            "probe_file_sha256": sha256(probe),
+            "primary_prediction_values_sha256": prediction_values_sha256(
+                primary_values
+            ),
+            "probe_prediction_values_sha256": prediction_values_sha256(
+                probe_values
+            ),
         }
         if not equal:
             raise ValueError(
@@ -477,7 +502,7 @@ def main() -> int:
     write_json(
         label_probe_metadata,
         {
-            "schema": "forainet_label_independence_probe_v1",
+            "schema": "forainet_label_independence_probe_v2",
             "status": "verified",
             "reference_labels_used": False,
             "primary_bookkeeping": {"semantic_seg": 1, "treeID": -1},
@@ -665,6 +690,16 @@ def main() -> int:
             f"environment_manifest={metadata_root / 'environment.json'}",
             "--file",
             f"checkpoint_provenance={metadata_root / 'checkpoint.json'}",
+            "--file",
+            f"input_conversion={metadata_root / 'conversion.json'}",
+            "--file",
+            f"label_independence_probe={label_probe_metadata}",
+            "--file",
+            f"merge_alignment={merge_metadata}",
+            "--file",
+            f"aligned_prediction_metadata={aligned_metadata}",
+            "--file",
+            f"raw_output_inventory={raw_inventory}",
             "--output-json",
             str(manifest),
         ],

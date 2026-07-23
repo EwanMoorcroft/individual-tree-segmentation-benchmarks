@@ -116,7 +116,10 @@ The label-independence probe changes both artificial semantic and instance
 bookkeeping fields. The pinned upstream reporter can divide by zero after
 writing complete predictions for those deliberately nonreference labels. Only
 that exact post-output traceback is accepted; both official prediction arrays
-must still exist and match the primary arrays exactly.
+must still exist and match the primary arrays exactly. Its provenance records
+separate hashes for the complete PLY files and for canonicalised `preds`
+arrays, because the deliberately changed bookkeeping labels make the complete
+files differ even when predictions are identical.
 
 Full-development, fine-tuning and test submission routes remain deliberately
 blocked until the preceding evidence exists. In particular, no held-out job

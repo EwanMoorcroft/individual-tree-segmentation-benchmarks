@@ -207,6 +207,11 @@ def test_image_build_is_cpu_only_and_qualification_targets_a100() -> None:
     assert 'treeins_set1.py\\", line 204, in final_eval' in runtime
     assert "ZeroDivisionError: float division by zero" in runtime
     assert '"official_eval_exit_code": label_probe_exit_code' in runtime
+    assert '"schema": "forainet_label_independence_probe_v2"' in runtime
+    assert '"primary_file_sha256": sha256(primary)' in runtime
+    assert '"probe_file_sha256": sha256(probe)' in runtime
+    assert '"primary_prediction_values_sha256"' in runtime
+    assert '"probe_prediction_values_sha256"' in runtime
     assert runtime.index("label_probe_exit_code = run_checked") > runtime.index(
         "label_probe_output"
     )
@@ -520,6 +525,13 @@ def test_shell_scripts_are_syntactically_valid() -> None:
 
 
 def test_retention_manifest_detects_missing_and_changed_files(tmp_path: Path) -> None:
+    assert {
+        "aligned_prediction_metadata",
+        "input_conversion",
+        "label_independence_probe",
+        "merge_alignment",
+        "raw_output_inventory",
+    } <= retention.REQUIRED_SMOKE_ROLES
     role_paths = {}
     for index, role in enumerate(sorted(retention.REQUIRED_SMOKE_ROLES)):
         path = tmp_path / f"artifact_{index}.txt"

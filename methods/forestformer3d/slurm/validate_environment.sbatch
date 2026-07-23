@@ -50,6 +50,8 @@ apptainer exec --nv --cleanenv \
   --env PYTHONPATH="/ff3d_environment/source/ForestFormer3D" \
   --env PYTHONDONTWRITEBYTECODE=1 \
   "$FF3D_BASE_SIF" \
+  /usr/bin/env \
+  LD_LIBRARY_PATH="/ff3d_environment/toolchain/lib:/usr/local/cuda/lib64:/.singularity.d/libs" \
   /ff3d_environment/venv/bin/python \
   /benchmark/methods/forestformer3d/scripts/runtime/validate_environment.py \
     --environment-root /ff3d_environment \
@@ -63,6 +65,8 @@ apptainer exec --nv --cleanenv \
   --env PATH="/ff3d_environment/venv/bin:/opt/conda/bin:/usr/bin:/bin" \
   --env PYTHONDONTWRITEBYTECODE=1 \
   "$FF3D_BASE_SIF" \
+  /usr/bin/env \
+  LD_LIBRARY_PATH="/ff3d_environment/toolchain/lib:/usr/local/cuda/lib64:/.singularity.d/libs" \
   /ff3d_environment/venv/bin/python -m pip freeze \
   > "$FF3D_RUN_ROOT/pip_freeze.txt"
 

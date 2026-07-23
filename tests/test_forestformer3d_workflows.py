@@ -93,6 +93,11 @@ def test_build_and_validation_jobs_freeze_identity_and_dependency_outputs() -> N
     assert "FF3D_BASE_SIF_SHA256" in validate
     assert '--bind "$FF3D_ENV_ROOT:/ff3d_environment:ro"' in validate
     assert "--environment-root /ff3d_environment" in validate
+    assert (
+        'LD_LIBRARY_PATH="/ff3d_environment/toolchain/lib:'
+        '/usr/local/cuda/lib64:/.singularity.d/libs"'
+    ) in validate
+    assert validate.count("/usr/bin/env") == 2
 
 
 def test_all_method_shell_entrypoints_parse() -> None:

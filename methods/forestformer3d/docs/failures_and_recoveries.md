@@ -57,6 +57,18 @@
   PyTorch 1.13.1 exposes it as a string property.
 - Recovery passes that property directly to CMake. This changes only the build
   interface expression; it does not modify Segmentator or model source.
+- Build job `9895175` then completed the full rootless environment in 38 minutes
+  30 seconds and wrote the pinned pip and Conda manifests. Its A100 validation
+  job `9895176` reached module imports, then failed when Apptainer's `--nv`
+  injection placed the Rocky Linux host `libGLX.so.0` ahead of the Ubuntu 18
+  container libraries. That host library requires GLIBC 2.34, which the
+  qualified base image intentionally does not provide.
+- Recovery preserves the official `opencv-python` package and all built
+  artifacts. The validation command reorders the already-bound library
+  directories inside the container so the compatible external-toolchain GLVND
+  library is selected first while `/.singularity.d/libs` remains available for
+  the host NVIDIA driver. A validation-only retry must establish both successful
+  OpenCV import and CUDA visibility before this recovery is accepted.
 
 ## Recorded observations
 

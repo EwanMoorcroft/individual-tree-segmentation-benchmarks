@@ -95,6 +95,11 @@ def test_rootless_builder_preserves_official_dependency_and_source_pins() -> Non
     assert "CONDA_PKGS_DIRS" in builder
     assert "PIP_CACHE_DIR" in builder
     assert 'export HOME="$BUILD_HOME"' in builder
+    assert "set +u" in builder
+    assert "conda activate" in builder
+    assert builder.index("set +u") < builder.index("conda activate") < builder.index(
+        "set -u", builder.index("conda activate")
+    )
     assert "mmengine==0.7.3" in builder
     assert "mmcv==2.0.0" in builder
     assert validate_environment.SOURCE_COMMIT in builder

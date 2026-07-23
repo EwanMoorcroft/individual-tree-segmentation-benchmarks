@@ -54,8 +54,12 @@ echo "stage=conda_toolchain_create"
   xorg-libxext=1.3.4 \
   xorg-libxrender
 
+# Conda compiler activation scripts reference variables before assigning them.
+# Limit nounset suspension to activation, then restore the fail-closed shell.
+set +u
 eval "$(/opt/conda/bin/conda shell.bash hook)"
 conda activate "$TOOLCHAIN"
+set -u
 
 echo "stage=virtual_environment_create"
 /opt/conda/bin/python -m venv --system-site-packages "$VENV"

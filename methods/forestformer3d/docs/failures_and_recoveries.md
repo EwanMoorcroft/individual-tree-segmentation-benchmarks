@@ -36,6 +36,12 @@
   Conda selected the non-writable default cache `$HOME/.conda/pkgs`.
 - Recovery redirects all dependency and compiler caches under the timestamped
   environment root. Home-directory ownership is not changed.
+- The following attempt successfully resolved and installed the 2.9 GB
+  toolchain, then stopped during activation because Conda's compiler activation
+  script references `ADDR2LINE` before assignment and is incompatible with
+  Bash nounset mode.
+- Recovery suspends nounset only for the Conda hook and activation statements,
+  then restores it before source retrieval or dependency installation.
 
 ## Recorded observations
 

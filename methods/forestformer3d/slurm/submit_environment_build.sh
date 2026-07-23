@@ -40,11 +40,6 @@ echo "$CHECKPOINT_SHA256  $CHECKPOINT" | sha256sum --check --status
 test ! -e "$RUN_ROOT"
 test ! -e "$ENV_ROOT"
 test ! -e "$STATE_FILE"
-if ! sbatch --help 2>&1 | grep -q -- "--kill-on-invalid-dep"; then
-  echo "This Slurm client does not expose --kill-on-invalid-dep." >&2
-  echo "No jobs were submitted." >&2
-  exit 2
-fi
 
 mkdir -p "$ENVIRONMENTS_DIR" "$RUNS_DIR" "$STATE_DIR"
 mkdir "$RUN_ROOT"
@@ -61,7 +56,6 @@ BUILD_JOB="$(
 VALIDATE_JOB="$(
   sbatch --parsable \
     --dependency="afterok:$BUILD_JOB" \
-    --kill-on-invalid-dep=yes \
     --output="$RUN_ROOT/logs/validate_%j.out" \
     --error="$RUN_ROOT/logs/validate_%j.err" \
     --export=ALL,FF3D_BENCHMARK_ROOT="$BENCHMARK_ROOT",FF3D_BENCHMARK_COMMIT="$BENCHMARK_COMMIT",FF3D_BASE_SIF="$BASE_SIF",FF3D_BASE_SIF_SHA256="$BASE_SIF_SHA256",FF3D_ENV_ROOT="$ENV_ROOT",FF3D_CHECKPOINT="$CHECKPOINT",FF3D_CHECKPOINT_SHA256="$CHECKPOINT_SHA256",FF3D_RUN_ROOT="$RUN_ROOT" \
@@ -82,6 +76,7 @@ EXPECTED_FILES="$ENV_ROOT/environment_build.complete|$ENV_ROOT/pip_freeze.txt|$E
   printf 'FF3D_EXPECTED_FILES=%q\n' "$EXPECTED_FILES"
   printf 'FF3D_BENCHMARK_COMMIT=%q\n' "$BENCHMARK_COMMIT"
   printf 'FF3D_BUILD_INPUT_SHA256=%q\n' "$BUILD_INPUT_SHA256"
+  printf 'FF3D_CANCEL_INVALID_DEPENDENCIES=%q\n' "1"
   printf 'FF3D_CREATED_AT=%q\n' "$(date -Is)"
 } > "$STATE_FILE"
 

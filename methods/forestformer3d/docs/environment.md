@@ -46,8 +46,9 @@ selected package. Upstream modelling source is not edited.
 10. starts a 30-second live monitor automatically.
 
 The environment is not accepted if any dependent validation job fails. Build
-queue time is reported separately from runtime. A dependency with scheduler
-reason `DependencyNeverSatisfied` is terminal for monitoring purposes.
+queue time is reported separately from runtime. If Barkla reports
+`DependencyNeverSatisfied`, the monitor cancels only that workflow-owned
+downstream job and treats it as terminal.
 
 ## Remaining gates
 

@@ -38,9 +38,8 @@ def test_environment_submitter_is_guarded_and_auto_starts_live_monitor() -> None
     assert "test ! -e \"$ENV_ROOT\"" in submit
     assert "FF3D_BASE_SIF_SHA256" in submit
     assert "build_rootless_environment.sh" in submit
-    assert 'sbatch --help 2>&1 | grep -q -- "--kill-on-invalid-dep"' in submit
     assert '--dependency="afterok:$BUILD_JOB"' in submit
-    assert "--kill-on-invalid-dep=yes" in submit
+    assert "FF3D_CANCEL_INVALID_DEPENDENCIES" in submit
     assert "monitor_workflow.sh" in submit
     assert 'FF3D_MONITOR_SECONDS:-30' in submit
     assert "scancel $BUILD_JOB $VALIDATE_JOB" in submit
@@ -65,6 +64,7 @@ def test_live_monitor_combines_scheduler_and_expected_file_state() -> None:
     ):
         assert state in monitor
     assert "DependencyNeverSatisfied" in monitor
+    assert 'scancel "$job_id"' in monitor
 
 
 def test_build_and_validation_jobs_freeze_identity_and_dependency_outputs() -> None:

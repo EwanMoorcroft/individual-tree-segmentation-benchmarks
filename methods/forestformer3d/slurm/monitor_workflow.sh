@@ -94,6 +94,13 @@ render() {
     )"
     if [[ "$reason" == *"DependencyNeverSatisfied"* ]]; then
       printf 'blocked_dependency job_id=%s reason=%s\n' "$job_id" "$reason"
+      if [[ "${FF3D_CANCEL_INVALID_DEPENDENCIES:-0}" == "1" ]]; then
+        if scancel "$job_id"; then
+          printf 'cancelled_invalid_dependency job_id=%s\n' "$job_id"
+        else
+          printf 'dependency_job_already_terminal job_id=%s\n' "$job_id"
+        fi
+      fi
     elif ! is_terminal_state "$state"; then
       all_terminal=0
     fi

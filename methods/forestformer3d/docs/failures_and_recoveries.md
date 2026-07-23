@@ -1,5 +1,16 @@
 # ForestFormer3D failures and recoveries
 
+## 2026-07-23 development array task-parent omission
+
+- Array job `9895688` created the immutable run root and logs but not the
+  shared `tasks/` parent.
+- All 21 elements failed at their first per-plot `mkdir` in one or two seconds,
+  before opening a development LAS, starting Apptainer or running inference.
+- Dependent summary job `9895689` was cancelled.
+- Recovery creates `tasks/` before `sbatch`, retains the failed run unchanged
+  and submits a new immutable run root.
+- A structural regression test requires the parent creation in the submitter.
+
 ## 2026-07-23 rootful Apptainer build
 
 - Build job: `9894850`

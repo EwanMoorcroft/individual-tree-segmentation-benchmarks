@@ -107,6 +107,7 @@ def test_development_workflow_is_guarded_bounded_and_development_only() -> None:
     assert "FF3D_SMOKE_CONFIRMATION" in submit
     assert "--array=0-20%2" in submit
     assert 'afterany:$ARRAY_JOB' in submit
+    assert '"$RUN_ROOT/tasks"' in submit
     assert "monitor_workflow.sh" in submit
     assert "#SBATCH --partition=gpu-a100-lowbig" in task
     assert "#SBATCH --gres=gpu:a100:1" in task

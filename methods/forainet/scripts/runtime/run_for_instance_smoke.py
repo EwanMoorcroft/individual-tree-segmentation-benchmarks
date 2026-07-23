@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
+import os
 import resource
 import subprocess
 import sys
@@ -47,7 +48,12 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 def run_checked(
-    command: list[str], *, cwd: Path, stdout: Path, stderr: Path
+    command: list[str],
+    *,
+    cwd: Path,
+    stdout: Path,
+    stderr: Path,
+    env: dict[str, str] = None,
 ) -> None:
     stdout.parent.mkdir(parents=True, exist_ok=True)
     with stdout.open("w", encoding="utf-8") as out_handle, stderr.open(
@@ -60,6 +66,7 @@ def run_checked(
             stderr=err_handle,
             text=True,
             check=False,
+            env=env,
         )
     if completed.returncode != 0:
         raise RuntimeError(
@@ -266,6 +273,8 @@ def main() -> int:
         "run_config.data.dataroot_only; all model tensors exactly equal"
     )
     write_json(metadata_root / "checkpoint.json", checkpoint_payload)
+    cpu_open3d_env = dict(os.environ)
+    cpu_open3d_env["LD_LIBRARY_PATH"] = ""
     write_json(
         metadata_root / "environment.json",
         {
@@ -292,6 +301,8 @@ def main() -> int:
             "gpu": (
                 torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
             ),
+            "cpu_open3d_child_ld_library_path": "",
+            "cpu_open3d_uses_container_glx": True,
         },
     )
     if not torch.cuda.is_available():
@@ -349,6 +360,7 @@ def main() -> int:
         cwd=runtime_root,
         stdout=metadata_root / "tiling.stdout",
         stderr=metadata_root / "tiling.stderr",
+        env=cpu_open3d_env,
     )
     tile_root = input_root / f"tiles_{TILE_SIZE_M}_{inference_ply.stem}"
     tile_list_path = tile_root / "ply_output_file_paths.txt"
@@ -479,6 +491,7 @@ def main() -> int:
         cwd=runtime_root,
         stdout=metadata_root / "merge.stdout",
         stderr=metadata_root / "merge.stderr",
+        env=cpu_open3d_env,
     )
 
     raw_prediction = raw_root / "prediction_source_order.npz"

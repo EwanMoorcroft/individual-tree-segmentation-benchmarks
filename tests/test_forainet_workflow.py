@@ -188,6 +188,12 @@ def test_image_build_is_cpu_only_and_qualification_targets_a100() -> None:
     assert 'mkdir "$FORAINET_RUN_ROOT"' in smoke
     assert "rev-parse --git-common-dir" in smoke
     assert '--bind "$benchmark_git_common:$benchmark_git_common:ro"' in smoke
+    runtime = (
+        METHOD / "scripts/runtime/run_for_instance_smoke.py"
+    ).read_text(encoding="utf-8")
+    assert 'cpu_open3d_env["LD_LIBRARY_PATH"] = ""' in runtime
+    assert runtime.count("env=cpu_open3d_env") == 2
+    assert '"cpu_open3d_uses_container_glx": True' in runtime
 
 
 def test_exposure_table_is_exact_and_test_only() -> None:

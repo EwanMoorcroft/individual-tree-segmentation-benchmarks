@@ -194,6 +194,9 @@ def test_image_build_is_cpu_only_and_qualification_targets_a100() -> None:
     assert 'cpu_open3d_env["LD_LIBRARY_PATH"] = ""' in runtime
     assert runtime.count("env=cpu_open3d_env") == 2
     assert '"cpu_open3d_uses_container_glx": True' in runtime
+    assert '"treeinsfused" / "raw"' in runtime
+    assert "os.link(inference_ply, raw_catalogue_input)" in runtime
+    assert '"dataset_raw_catalogue": "hardlink_to_label_isolated_input"' in runtime
 
 
 def test_exposure_table_is_exact_and_test_only() -> None:

@@ -250,13 +250,16 @@ def main() -> int:
     aligned_root = args.run_root / "aligned"
     evaluation_root = args.run_root / "evaluation"
     runtime_root = args.run_root / "runtime"
+    dataset_raw_root = (
+        runtime_root / "data_set1_5classes" / "treeinsfused" / "raw"
+    )
     for directory in (
         input_root,
         raw_root,
         metadata_root,
         aligned_root,
         evaluation_root,
-        runtime_root / "data_set1_5classes" / "treeinsfused",
+        dataset_raw_root,
     ):
         directory.mkdir(parents=True, exist_ok=False)
 
@@ -303,6 +306,7 @@ def main() -> int:
             ),
             "cpu_open3d_child_ld_library_path": "",
             "cpu_open3d_uses_container_glx": True,
+            "dataset_raw_catalogue": "hardlink_to_label_isolated_input",
         },
     )
     if not torch.cuda.is_available():
@@ -344,6 +348,8 @@ def main() -> int:
         or conversion["reference_tree_count"] != EXPECTED_REFERENCE_TREE_COUNT
     ):
         raise ValueError("frozen smoke plot identity or development split failed")
+    raw_catalogue_input = dataset_raw_root / inference_ply.name
+    os.link(inference_ply, raw_catalogue_input)
 
     pointcloud_root = args.upstream_root / "PointCloudSegmentation"
     run_checked(

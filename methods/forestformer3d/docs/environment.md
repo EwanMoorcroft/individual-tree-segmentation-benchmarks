@@ -24,6 +24,9 @@ The selected host environment directory is always mounted at
 compiled-extension prefixes therefore remain stable and do not embed a
 username or timestamped host path. `/environment` is not used because
 Apptainer reserves it as a symlink to its generated environment script.
+Conda, pip, CUDA, PyTorch-extension and plotting caches are redirected beneath
+the same timestamped environment directory; the base image's default
+`$HOME/.conda` cache is not writable on Barkla.
 
 The rootless builder, CPU job and GPU-validation job are hashed together before
 submission. The resolved Conda explicit

@@ -7,6 +7,8 @@ set -euo pipefail
 TOOLCHAIN="$FF3D_ENV_ROOT/toolchain"
 VENV="$FF3D_ENV_ROOT/venv"
 SOURCE_ROOT="$FF3D_ENV_ROOT/source"
+CACHE_ROOT="$FF3D_ENV_ROOT/cache"
+BUILD_HOME="$FF3D_ENV_ROOT/home"
 
 printf 'stage=rootless_builder_start environment_root=%s\n' "$FF3D_ENV_ROOT"
 test -d "$FF3D_ENV_ROOT"
@@ -14,7 +16,25 @@ test ! -e "$TOOLCHAIN"
 test ! -e "$VENV"
 test ! -e "$SOURCE_ROOT"
 
-mkdir "$SOURCE_ROOT"
+mkdir "$SOURCE_ROOT" "$CACHE_ROOT" "$BUILD_HOME"
+
+export HOME="$BUILD_HOME"
+export CONDA_PKGS_DIRS="$CACHE_ROOT/conda_pkgs"
+export CONDA_ENVS_PATH="$CACHE_ROOT/conda_envs"
+export PIP_CACHE_DIR="$CACHE_ROOT/pip"
+export TORCH_EXTENSIONS_DIR="$CACHE_ROOT/torch_extensions"
+export CUDA_CACHE_PATH="$CACHE_ROOT/cuda"
+export XDG_CACHE_HOME="$CACHE_ROOT/xdg"
+export MPLCONFIGDIR="$CACHE_ROOT/matplotlib"
+
+mkdir -p \
+  "$CONDA_PKGS_DIRS" \
+  "$CONDA_ENVS_PATH" \
+  "$PIP_CACHE_DIR" \
+  "$TORCH_EXTENSIONS_DIR" \
+  "$CUDA_CACHE_PATH" \
+  "$XDG_CACHE_HOME" \
+  "$MPLCONFIGDIR"
 
 echo "stage=conda_toolchain_create"
 /opt/conda/bin/conda create --yes \

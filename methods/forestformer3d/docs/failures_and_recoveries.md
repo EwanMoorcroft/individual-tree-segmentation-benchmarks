@@ -24,6 +24,19 @@
 - Missing base tools: Git and Ninja. These are supplied through the external
   toolchain prefix.
 
+## 2026-07-23 rootless build-path qualification
+
+- The initial external-environment attempt did not enter the container because
+  the host path was mounted onto `/environment`, which Apptainer reserves as a
+  symlink to `.singularity.d/env/90-environment.sh`.
+- Bind probe `9895092` proved both the logical and canonical fastscratch paths
+  are valid directory sources when mounted onto an ordinary destination.
+- The stable internal prefix is `/ff3d_environment`.
+- The next attempt entered the builder and reached Conda, then failed because
+  Conda selected the non-writable default cache `$HOME/.conda/pkgs`.
+- Recovery redirects all dependency and compiler caches under the timestamped
+  environment root. Home-directory ownership is not changed.
+
 ## Recorded observations
 
 - A foreground `srun` GPU probe was cancelled before allocation. It read no

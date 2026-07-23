@@ -92,6 +92,9 @@ def test_rootless_builder_preserves_official_dependency_and_source_pins() -> Non
     assert "fakeroot" not in builder
     assert "gcc_linux-64=9" in builder
     assert "openblas=0.3.21" in builder
+    assert "CONDA_PKGS_DIRS" in builder
+    assert "PIP_CACHE_DIR" in builder
+    assert 'export HOME="$BUILD_HOME"' in builder
     assert "mmengine==0.7.3" in builder
     assert "mmcv==2.0.0" in builder
     assert validate_environment.SOURCE_COMMIT in builder

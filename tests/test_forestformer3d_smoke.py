@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import laspy
@@ -32,7 +33,7 @@ def _metadata(dataset_root: Path) -> str:
 
 
 def _source_las(path: Path) -> None:
-    path.parent.mkdir(parents=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
     header = laspy.LasHeader(point_format=3, version="1.2")
     cloud = laspy.LasData(header)
     cloud.x = np.array([10.0, 11.0, 12.0, 13.0])
@@ -283,7 +284,7 @@ def test_smoke_submitter_is_guarded_development_only_and_monitored() -> None:
 def test_preparation_cli_resolves_shared_package() -> None:
     completed = subprocess.run(
         [
-            "python",
+            sys.executable,
             "methods/forestformer3d/scripts/data/prepare_one_plot_smoke.py",
             "--help",
         ],

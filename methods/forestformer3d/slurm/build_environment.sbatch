@@ -11,6 +11,7 @@ set -euo pipefail
 : "${FF3D_BENCHMARK_ROOT:?Missing FF3D_BENCHMARK_ROOT}"
 : "${FF3D_BENCHMARK_COMMIT:?Missing FF3D_BENCHMARK_COMMIT}"
 : "${FF3D_ROOTLESS_BUILDER:?Missing FF3D_ROOTLESS_BUILDER}"
+: "${FF3D_ROOTLESS_BUILDER_SHA256:?Missing FF3D_ROOTLESS_BUILDER_SHA256}"
 : "${FF3D_BUILD_INPUT_SHA256:?Missing FF3D_BUILD_INPUT_SHA256}"
 : "${FF3D_BASE_SIF:?Missing FF3D_BASE_SIF}"
 : "${FF3D_BASE_SIF_SHA256:?Missing FF3D_BASE_SIF_SHA256}"
@@ -27,7 +28,7 @@ test "$(git rev-parse HEAD)" = "$FF3D_BENCHMARK_COMMIT"
 test "$(git branch --show-current)" = "method/forestformer3d"
 test -z "$(git status --porcelain)"
 test "$(sha256sum "$FF3D_ROOTLESS_BUILDER" | cut -d ' ' -f 1)" = \
-  "$FF3D_BUILD_INPUT_SHA256"
+  "$FF3D_ROOTLESS_BUILDER_SHA256"
 
 module purge
 module load apptainer/1.3.6
@@ -46,8 +47,8 @@ printf 'base_sif_sha256=%s\n' "$FF3D_BASE_SIF_SHA256"
 
 apptainer exec --cleanenv \
   --bind "$FF3D_BENCHMARK_ROOT:/benchmark:ro" \
-  --bind "$FF3D_ENV_ROOT:/environment" \
-  --env FF3D_ENV_ROOT=/environment \
+  --bind "$FF3D_ENV_ROOT:/ff3d_environment" \
+  --env FF3D_ENV_ROOT=/ff3d_environment \
   "$FF3D_BASE_SIF" \
   bash /benchmark/methods/forestformer3d/scripts/runtime/build_rootless_environment.sh
 

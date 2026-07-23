@@ -19,11 +19,14 @@ The Barkla route is a composite environment:
 4. exact upstream source checkouts; and
 5. the authors' three replacement files copied into the virtual environment.
 
-The selected host environment directory is always mounted at `/environment`
-inside Apptainer. Conda, virtual-environment and compiled-extension prefixes
-therefore remain stable and do not embed a username or timestamped host path.
+The selected host environment directory is always mounted at
+`/ff3d_environment` inside Apptainer. Conda, virtual-environment and
+compiled-extension prefixes therefore remain stable and do not embed a
+username or timestamped host path. `/environment` is not used because
+Apptainer reserves it as a symlink to its generated environment script.
 
-The build script is hashed before submission. The resolved Conda explicit
+The rootless builder, CPU job and GPU-validation job are hashed together before
+submission. The resolved Conda explicit
 specification, `pip freeze`, source commits, base SIF hash and validation JSON
 are retained. The first successful resolution remains a qualification artefact;
 its explicit Conda specification must be promoted to a frozen input before any

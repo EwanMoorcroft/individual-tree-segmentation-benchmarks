@@ -13,6 +13,8 @@ CHECKPOINT="${FF3D_CHECKPOINT:-$HOME/fastscratch/forestformer3d/checkpoints/clea
 CHECKPOINT_SHA256="01037a648596832238ac72ea2f5eef87ceaf5aeb399e56ff4b760ba1ed1c777e"
 METHOD_ROOT="$BENCHMARK_ROOT/methods/forestformer3d"
 ROOTLESS_BUILDER="$METHOD_ROOT/scripts/runtime/build_rootless_environment.sh"
+BUILD_JOB_FILE="$METHOD_ROOT/slurm/build_environment.sbatch"
+VALIDATE_JOB_FILE="$METHOD_ROOT/slurm/validate_environment.sbatch"
 ROOT="${FF3D_RUNTIME_ROOT:-$HOME/fastscratch/forestformer3d}"
 BASE_SIF="${FF3D_BASE_SIF:-$ROOT/containers/pytorch_1.13.1_cuda11.6_cudnn8_devel.sif}"
 BASE_SIF_SHA256="4a35d5a57c1d57061f899b514329ad8ec2bf74a9ff31d103c0a53a289e07c84f"
@@ -24,7 +26,14 @@ cd "$BENCHMARK_ROOT"
 test "$(git branch --show-current)" = "method/forestformer3d"
 test -z "$(git status --porcelain)"
 BENCHMARK_COMMIT="$(git rev-parse HEAD)"
-BUILD_INPUT_SHA256="$(sha256sum "$ROOTLESS_BUILDER" | cut -d ' ' -f 1)"
+ROOTLESS_BUILDER_SHA256="$(sha256sum "$ROOTLESS_BUILDER" | cut -d ' ' -f 1)"
+BUILD_INPUT_SHA256="$(
+  {
+    printf '%s\n' "$ROOTLESS_BUILDER_SHA256"
+    sha256sum "$BUILD_JOB_FILE" | cut -d ' ' -f 1
+    sha256sum "$VALIDATE_JOB_FILE" | cut -d ' ' -f 1
+  } | sha256sum | cut -d ' ' -f 1
+)"
 BUILD_SHORT="${BUILD_INPUT_SHA256:0:12}"
 SOURCE_SHORT="6a75c3735e4a"
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%S)"
@@ -49,8 +58,8 @@ BUILD_JOB="$(
   sbatch --parsable \
     --output="$RUN_ROOT/logs/build_%j.out" \
     --error="$RUN_ROOT/logs/build_%j.err" \
-    --export=ALL,FF3D_BUILD_CONFIRMED=1,FF3D_BENCHMARK_ROOT="$BENCHMARK_ROOT",FF3D_BENCHMARK_COMMIT="$BENCHMARK_COMMIT",FF3D_ROOTLESS_BUILDER="$ROOTLESS_BUILDER",FF3D_BUILD_INPUT_SHA256="$BUILD_INPUT_SHA256",FF3D_BASE_SIF="$BASE_SIF",FF3D_BASE_SIF_SHA256="$BASE_SIF_SHA256",FF3D_ENV_ROOT="$ENV_ROOT",FF3D_RUN_ROOT="$RUN_ROOT" \
-    "$METHOD_ROOT/slurm/build_environment.sbatch"
+    --export=ALL,FF3D_BUILD_CONFIRMED=1,FF3D_BENCHMARK_ROOT="$BENCHMARK_ROOT",FF3D_BENCHMARK_COMMIT="$BENCHMARK_COMMIT",FF3D_ROOTLESS_BUILDER="$ROOTLESS_BUILDER",FF3D_ROOTLESS_BUILDER_SHA256="$ROOTLESS_BUILDER_SHA256",FF3D_BUILD_INPUT_SHA256="$BUILD_INPUT_SHA256",FF3D_BASE_SIF="$BASE_SIF",FF3D_BASE_SIF_SHA256="$BASE_SIF_SHA256",FF3D_ENV_ROOT="$ENV_ROOT",FF3D_RUN_ROOT="$RUN_ROOT" \
+    "$BUILD_JOB_FILE"
 )"
 
 VALIDATE_JOB="$(
@@ -59,7 +68,7 @@ VALIDATE_JOB="$(
     --output="$RUN_ROOT/logs/validate_%j.out" \
     --error="$RUN_ROOT/logs/validate_%j.err" \
     --export=ALL,FF3D_BENCHMARK_ROOT="$BENCHMARK_ROOT",FF3D_BENCHMARK_COMMIT="$BENCHMARK_COMMIT",FF3D_BASE_SIF="$BASE_SIF",FF3D_BASE_SIF_SHA256="$BASE_SIF_SHA256",FF3D_ENV_ROOT="$ENV_ROOT",FF3D_CHECKPOINT="$CHECKPOINT",FF3D_CHECKPOINT_SHA256="$CHECKPOINT_SHA256",FF3D_RUN_ROOT="$RUN_ROOT" \
-    "$METHOD_ROOT/slurm/validate_environment.sbatch"
+    "$VALIDATE_JOB_FILE"
 )"
 
 EXPECTED_FILES="$ENV_ROOT/environment_build.complete|$ENV_ROOT/pip_freeze.txt|$ENV_ROOT/conda_explicit.txt|$RUN_ROOT/base_sif_sha256.txt|$RUN_ROOT/environment_validation.json|$RUN_ROOT/pip_freeze.txt|$RUN_ROOT/environment_validation.complete"
@@ -76,6 +85,7 @@ EXPECTED_FILES="$ENV_ROOT/environment_build.complete|$ENV_ROOT/pip_freeze.txt|$E
   printf 'FF3D_EXPECTED_FILES=%q\n' "$EXPECTED_FILES"
   printf 'FF3D_BENCHMARK_COMMIT=%q\n' "$BENCHMARK_COMMIT"
   printf 'FF3D_BUILD_INPUT_SHA256=%q\n' "$BUILD_INPUT_SHA256"
+  printf 'FF3D_ROOTLESS_BUILDER_SHA256=%q\n' "$ROOTLESS_BUILDER_SHA256"
   printf 'FF3D_CANCEL_INVALID_DEPENDENCIES=%q\n' "1"
   printf 'FF3D_CREATED_AT=%q\n' "$(date -Is)"
 } > "$STATE_FILE"

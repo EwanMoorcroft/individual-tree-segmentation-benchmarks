@@ -42,28 +42,28 @@ apptainer inspect --json "$FF3D_BASE_SIF" \
   > "$FF3D_RUN_ROOT/runtime_base_sif_inspect.json"
 apptainer exec --nv --cleanenv \
   --bind "$FF3D_BENCHMARK_ROOT:/benchmark:ro" \
-  --bind "$FF3D_ENV_ROOT:/environment:ro" \
+  --bind "$FF3D_ENV_ROOT:/ff3d_environment:ro" \
   --bind "$FF3D_CHECKPOINT:/inputs/epoch_3000_fix.pth:ro" \
   --bind "$FF3D_RUN_ROOT:/run" \
-  --env PATH="/environment/venv/bin:/environment/toolchain/bin:/usr/local/cuda/bin:/opt/conda/bin:/usr/bin:/bin" \
-  --env LD_LIBRARY_PATH="/environment/toolchain/lib:/usr/local/cuda/lib64" \
-  --env PYTHONPATH="/environment/source/ForestFormer3D" \
+  --env PATH="/ff3d_environment/venv/bin:/ff3d_environment/toolchain/bin:/usr/local/cuda/bin:/opt/conda/bin:/usr/bin:/bin" \
+  --env LD_LIBRARY_PATH="/ff3d_environment/toolchain/lib:/usr/local/cuda/lib64" \
+  --env PYTHONPATH="/ff3d_environment/source/ForestFormer3D" \
   --env PYTHONDONTWRITEBYTECODE=1 \
   "$FF3D_BASE_SIF" \
-  /environment/venv/bin/python \
+  /ff3d_environment/venv/bin/python \
   /benchmark/methods/forestformer3d/scripts/runtime/validate_environment.py \
-    --environment-root /environment \
-    --source-root /environment/source/ForestFormer3D \
+    --environment-root /ff3d_environment \
+    --source-root /ff3d_environment/source/ForestFormer3D \
     --checkpoint /inputs/epoch_3000_fix.pth \
     --output /run/environment_validation.json \
     --require-cuda
 
 apptainer exec --nv --cleanenv \
-  --bind "$FF3D_ENV_ROOT:/environment:ro" \
-  --env PATH="/environment/venv/bin:/opt/conda/bin:/usr/bin:/bin" \
+  --bind "$FF3D_ENV_ROOT:/ff3d_environment:ro" \
+  --env PATH="/ff3d_environment/venv/bin:/opt/conda/bin:/usr/bin:/bin" \
   --env PYTHONDONTWRITEBYTECODE=1 \
   "$FF3D_BASE_SIF" \
-  /environment/venv/bin/python -m pip freeze \
+  /ff3d_environment/venv/bin/python -m pip freeze \
   > "$FF3D_RUN_ROOT/pip_freeze.txt"
 
 touch "$FF3D_RUN_ROOT/environment_validation.complete"

@@ -35,13 +35,15 @@ Two future result roles are separated:
 The official checkpoint-initialisation hook is
 `models.PointGroup-PAPER.path_pretrained` with `weight_name=latest` and an
 empty training checkpoint directory. It is a weight-initialisation route, not
-a resume route. The fixed fine-tuning plan uses the official 150 epochs,
-3,000 samples per epoch, batch size four, FP32 Adam optimiser and augmentation
-pipeline. The upstream trainer hard-codes training RNG seed 2022; seed 42 is
-used separately by the official `random.sample` train/validation split. The
-predeclared candidate epochs are 30, 60, 90, 120 and 150, selected only by
-canonical five-plot validation micro-F1, then lower false positives and earlier
-epoch. No training or held-out inference has been run by this branch.
+a resume route. The fixed fine-tuning plan uses the official exclusive epoch
+limit 150, 3,000 samples per epoch, batch size four, FP32 Adam optimiser and
+augmentation pipeline. The pinned trainer starts a new run at epoch label one,
+so `range(1, 150)` performs 149 effective epochs and ends at label 149. It also
+hard-codes training RNG seed 2022; seed 42 is used separately by the official
+`random.sample` train/validation split. The predeclared candidate epochs are
+30, 60, 90, 120 and 149, selected only by canonical five-plot validation
+micro-F1, then lower false positives and earlier epoch. No training or held-out
+inference has been run by this branch.
 
 ## Input Requirements
 

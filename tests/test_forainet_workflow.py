@@ -377,8 +377,10 @@ def test_finetune_plan_is_checkpoint_initialised_and_test_locked() -> None:
     assert config["dataset"]["held_out_access"] == "forbidden"
     assert plan["split_seed"] == 42
     assert plan["upstream_training_seed"] == 2022
-    assert plan["epochs"] == 150
-    assert plan["checkpoint_epochs"] == [30, 60, 90, 120, 150]
+    assert plan["configured_epoch_limit_exclusive"] == 150
+    assert plan["upstream_epoch_labels"] == [1, 149]
+    assert plan["effective_epoch_count"] == 149
+    assert plan["checkpoint_epochs"] == [30, 60, 90, 120, 149]
     assert plan["batch_size"] == 4
     assert plan["samples_per_epoch"] == 3000
     assert plan["precision"] == "fp32"
@@ -390,6 +392,52 @@ def test_finetune_plan_is_checkpoint_initialised_and_test_locked() -> None:
     assert plan["selection_metric"] == "canonical_validation_micro_f1"
     assert plan["evaluation_protocol"] == "for_instance_pointwise_v1"
     assert plan["held_out_access"] == "forbidden"
+
+
+def test_finetune_smoke_is_development_gated_and_official() -> None:
+    prepare = (
+        METHOD / "slurm/prepare_forainet_finetune.sbatch"
+    ).read_text(encoding="utf-8")
+    smoke = (
+        METHOD / "slurm/run_forainet_finetune_smoke.sbatch"
+    ).read_text(encoding="utf-8")
+    submit = (
+        METHOD / "slurm/submit_forainet_finetune_smoke.sh"
+    ).read_text(encoding="utf-8")
+    monitor = (
+        METHOD / "slurm/monitor_forainet_finetune_smoke.sh"
+    ).read_text(encoding="utf-8")
+    assert 'test -f "$FORAINET_DEVELOPMENT_ROOT/final_gate.json"' in prepare
+    assert "--development-final-gate" in prepare
+    assert "--seed 42" in prepare
+    assert "#SBATCH --gres" not in prepare
+    assert "#SBATCH --gres=gpu:a100:1" in smoke
+    assert "data=panoptic/treeins_set1_treemix3d" in smoke
+    assert "models=panoptic/FORpartseg_3heads" in smoke
+    assert "training=treeins_set1_mixtree" in smoke
+    assert "stage_finetune_model_config.py" in smoke
+    assert (
+        '--bind "$staged_model_config:$official_model_config:ro"' in smoke
+    )
+    assert "models.PointGroup-PAPER.path_pretrained=" not in smoke
+    assert "training.epochs=2" in smoke
+    assert "debugging.early_break=true" in smoke
+    assert "visualization.activate=false" in smoke
+    assert "validate_finetune_smoke.py" in smoke
+    assert '--dependency="afterok:$prepare_job"' in submit
+    assert "FORAINET_FINETUNE_CONFIRMED" in submit
+    assert "held_out_access=forbidden full_training_submitted=no" in monitor
+    assert "No held-out" not in smoke
+
+    stage = (
+        METHOD / "scripts/provenance/stage_finetune_model_config.py"
+    ).read_text(encoding="utf-8")
+    assert (
+        "cfa698af22a4f545436aaf7285d46bc1d3690044c4d4de9db40bcac8ed90c2f5"
+        in stage
+    )
+    assert '"models.PointGroup-PAPER.path_pretrained_only"' in stage
+    assert "differences != [177]" in stage
 
 
 def test_exposure_validator_rejects_test_training_role(tmp_path: Path) -> None:

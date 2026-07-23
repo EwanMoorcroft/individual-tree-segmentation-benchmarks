@@ -29,8 +29,10 @@ training_plan:
   tiling_and_clustering: official
   split_seed: 42
   upstream_training_seed: 2022
-  epochs: 150
-  checkpoint_epochs: [30, 60, 90, 120, 150]
+  configured_epoch_limit_exclusive: 150
+  upstream_epoch_labels: [1, 149]
+  effective_epoch_count: 149
+  checkpoint_epochs: [30, 60, 90, 120, 149]
   batch_size: 4
   samples_per_epoch: 3000
   precision: fp32

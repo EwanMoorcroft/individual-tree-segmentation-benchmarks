@@ -1,0 +1,64 @@
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: forestformer3d
+  protocol_id: for_instance_pointwise_v1
+
+dataset:
+  slug: for-instance
+  name: FOR-instance
+  catalogue_source: shared/for_instance_manifest.py
+  file_count: 32
+  development_count: 21
+  held_out_test_count: 11
+  local_root_env: FF3D_DATASET_ROOT
+  split_metadata: data_split_metadata.csv
+  split_metadata_sha256: dd64aa338681f8f4166f8d175879a2b0b0158ecf222497ec6f7f0b23bc4fce94
+
+method:
+  slug: forestformer3d
+  name: ForestFormer3D
+  variants:
+    - published_pretrained
+    - fine_tuned_on_dev
+
+reference:
+  semantic_field: classification
+  instance_field: treeID
+  tree_classes:
+    - 4
+    - 5
+    - 6
+  ignored_semantic_classes:
+    - 0
+    - 1
+    - 2
+    - 3
+  ignored_instance_labels:
+    - 0
+    - -1
+
+prediction:
+  required_fields:
+    - pred_tree_id
+    - target_tree_id
+    - classification
+    - pred_classification
+    - source_row_index
+  primary_correspondence: exact_source_row_index
+  coordinate_matching_permitted: false
+  unassigned_instance_label: -1
+  raw_and_harmonised_retention_required: true
+
+evaluation:
+  mask: union_of_reference_tree_and_predicted_tree_points
+  iou_operator: greater_than_or_equal
+  iou_threshold: 0.5
+  matching: maximum_cardinality_one_to_one
+  aggregation: sum_counts_then_compute_micro_metrics
+
+guards:
+  development_may_read_test: false
+  test_requires_frozen_readiness_manifest: true
+  test_requires_explicit_authorisation: true
+  retries_require_new_roots: true

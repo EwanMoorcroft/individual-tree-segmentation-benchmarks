@@ -1,0 +1,26 @@
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: forestformer3d
+  protocol_id: for_instance_pointwise_v1
+
+dataset:
+  slug: for-instance
+  split: development
+  expected_plot_count: 21
+  held_out_access_permitted: false
+
+method:
+  slug: forestformer3d
+  name: ForestFormer3D
+  training_mode: published_pretrained
+  selection_mode: unchanged_official_checkpoint
+  learning_regime: supervised
+  dataset_exposure: published_checkpoint
+
+execution:
+  prerequisite: accepted_one_plot_smoke
+  maximum_concurrent_gpu_tasks: 2
+  overwrite_existing_roots: false
+  raw_predictions_retained: true
+  harmonised_predictions_retained: true

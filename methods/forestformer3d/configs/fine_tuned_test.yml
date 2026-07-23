@@ -1,0 +1,24 @@
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: forestformer3d
+  protocol_id: for_instance_pointwise_v1
+
+dataset:
+  slug: for-instance
+  split: held_out_test
+  expected_plot_count: 11
+  expected_reference_tree_count: 323
+
+method:
+  slug: forestformer3d
+  name: ForestFormer3D
+  training_mode: fine_tuned_on_dev
+  selected_checkpoint_status: not_yet_frozen
+  selection_mode: frozen_development_validation_rule
+
+guard:
+  status: locked_until_development_selection_readiness_and_explicit_authorisation
+  stable_lock_name: forestformer3d_fine_tuned_on_dev_held_out_test.lock
+  one_time_submission: true
+  retries_require_authorisation: true

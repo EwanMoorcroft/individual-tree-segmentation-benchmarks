@@ -1,0 +1,40 @@
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: forestformer3d
+  protocol_id: for_instance_pointwise_v1
+
+dataset:
+  slug: for-instance
+  source_point_clouds_committed: false
+
+method:
+  slug: forestformer3d
+  name: ForestFormer3D
+
+retention:
+  run_root_env: FF3D_RUN_ROOT
+  immutable_run_roots: true
+  overwrite_permitted: false
+  required_classes:
+    - source_identity_metadata
+    - converted_official_inputs
+    - raw_official_outputs
+    - harmonised_source_row_predictions
+    - evaluation_tables
+    - run_provenance
+  manifest_fields:
+    - logical_role
+    - relative_path
+    - size_bytes
+    - sha256
+  final_verification_requires_all_expected_files: true
+
+public_safety:
+  commit_coordinates: false
+  commit_point_clouds: false
+  commit_checkpoints: false
+  commit_containers: false
+  commit_raw_predictions: false
+  commit_full_logs: false
+  commit_private_paths: false

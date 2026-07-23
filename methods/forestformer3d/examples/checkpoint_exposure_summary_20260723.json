@@ -1,0 +1,21 @@
+{
+  "checkpoint_record": "https://doi.org/10.5281/zenodo.16742708",
+  "decision": "eligible_exposure_gate_passed",
+  "development_row_count": 21,
+  "development_train_val_exposed_count": 21,
+  "held_out_row_count": 11,
+  "held_out_train_val_match_count": 0,
+  "held_out_train_val_matches": [],
+  "inventory_snapshot": "methods/forestformer3d/examples/zenodo_v2_archive_inventory_20260723.csv",
+  "inventory_snapshot_sha256": "348199b3818381b949b8a335ecd789fc41f9247b1086f2a8e82f1cfbb0357138",
+  "manual_review_status": "reviewed_20260723",
+  "normalisation_rule": "exact:<collection>/<stem>.las-><collection>_<collection>_<stem>_<official-role>.ply",
+  "official_role_counts": {
+    "test": 11,
+    "train": 13,
+    "val": 8
+  },
+  "protocol_id": "forestformer3d_checkpoint_exposure_v1",
+  "row_count": 32,
+  "unmatched_or_multiple": []
+}

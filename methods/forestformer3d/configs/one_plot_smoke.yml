@@ -1,0 +1,36 @@
+project:
+  name: tree-seg-benchmark
+  dataset_slug: for-instance
+  method_slug: forestformer3d
+  protocol_id: for_instance_pointwise_v1
+
+dataset:
+  slug: for-instance
+  split: development
+  relative_path: CULS/plot_1_annotated.las
+  expected_point_count: 1816672
+  expected_reference_tree_count: 6
+  allow_held_out_test: false
+
+method:
+  slug: forestformer3d
+  name: ForestFormer3D
+  training_mode: published_pretrained
+  checkpoint_sha256: 01037a648596832238ac72ea2f5eef87ceaf5aeb399e56ff4b760ba1ed1c777e
+  upstream_commit: 6a75c3735e4a4108d02ee944a8b93177f2360a4f
+  configuration: configs/oneformer3d_qs_radius16_qp300_2many.py
+
+runtime:
+  partition: gpu-a100-lowbig
+  gres: gpu:a100:1
+  cpus_per_task: 12
+  memory: 128G
+  time_limit: "02:00:00"
+  live_monitor_seconds: 30
+
+gates:
+  environment_validation_required: true
+  checkpoint_load_required: true
+  dummy_label_counterfactual_required: true
+  exact_row_alignment_required: true
+  manual_alignment_review_required: true

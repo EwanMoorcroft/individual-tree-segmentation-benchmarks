@@ -8,6 +8,7 @@ TOOLCHAIN="$FF3D_ENV_ROOT/toolchain"
 VENV="$FF3D_ENV_ROOT/venv"
 SOURCE_ROOT="$FF3D_ENV_ROOT/source"
 
+printf 'stage=rootless_builder_start environment_root=%s\n' "$FF3D_ENV_ROOT"
 test -d "$FF3D_ENV_ROOT"
 test ! -e "$TOOLCHAIN"
 test ! -e "$VENV"
@@ -15,6 +16,7 @@ test ! -e "$SOURCE_ROOT"
 
 mkdir "$SOURCE_ROOT"
 
+echo "stage=conda_toolchain_create"
 /opt/conda/bin/conda create --yes \
   --prefix "$TOOLCHAIN" \
   --override-channels \
@@ -35,6 +37,7 @@ mkdir "$SOURCE_ROOT"
 eval "$(/opt/conda/bin/conda shell.bash hook)"
 conda activate "$TOOLCHAIN"
 
+echo "stage=virtual_environment_create"
 /opt/conda/bin/python -m venv --system-site-packages "$VENV"
 source "$VENV/bin/activate"
 
@@ -90,6 +93,7 @@ clone_exact \
 test "$(git -C "$SOURCE_ROOT/segmentator" rev-parse HEAD)" = \
   "76efe46d03dd27afa78df972b17d07f2c6cfb696"
 
+echo "stage=python_dependencies_install"
 python -m pip install debugpy
 
 python -m pip install --no-deps \
@@ -114,6 +118,7 @@ python -m pip install "$SOURCE_ROOT/pytorch_scatter"
 
 SEGMENTATOR_BUILD="$SOURCE_ROOT/segmentator/csrc/build"
 mkdir "$SEGMENTATOR_BUILD"
+echo "stage=segmentator_build"
 (
   cd "$SEGMENTATOR_BUILD"
   cmake .. \
@@ -193,6 +198,7 @@ SITE_PACKAGES="$(
 )"
 FOREST_SOURCE="$SOURCE_ROOT/ForestFormer3D"
 
+echo "stage=official_replacements_install"
 test "$(sha256sum "$FOREST_SOURCE/replace_mmdetection_files/loops.py" | cut -d ' ' -f 1)" = \
   "df3b0d6688ae4f911fa6cbe8b1afb90520b1d147b3da800ee22075993a0bae27"
 test "$(sha256sum "$FOREST_SOURCE/replace_mmdetection_files/base_model.py" | cut -d ' ' -f 1)" = \

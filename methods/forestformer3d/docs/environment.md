@@ -19,6 +19,10 @@ The Barkla route is a composite environment:
 4. exact upstream source checkouts; and
 5. the authors' three replacement files copied into the virtual environment.
 
+The selected host environment directory is always mounted at `/environment`
+inside Apptainer. Conda, virtual-environment and compiled-extension prefixes
+therefore remain stable and do not embed a username or timestamped host path.
+
 The build script is hashed before submission. The resolved Conda explicit
 specification, `pip freeze`, source commits, base SIF hash and validation JSON
 are retained. The first successful resolution remains a qualification artefact;

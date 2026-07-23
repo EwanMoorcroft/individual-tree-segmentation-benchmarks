@@ -79,6 +79,8 @@ def test_build_and_validation_jobs_freeze_identity_and_dependency_outputs() -> N
     assert 'test ! -e "$FF3D_ENV_ROOT"' in build
     assert "base_sif_sha256.txt" in build
     assert "conda_explicit.txt" in build
+    assert '--bind "$FF3D_ENV_ROOT:/environment"' in build
+    assert "--env FF3D_ENV_ROOT=/environment" in build
 
     assert "#SBATCH --partition=gpu-a100-lowbig" in validate
     assert "#SBATCH --gres=gpu:a100:1" in validate
@@ -88,6 +90,8 @@ def test_build_and_validation_jobs_freeze_identity_and_dependency_outputs() -> N
     assert "epoch_3000_fix.pth:ro" in validate
     assert "--environment-root" in validate
     assert "FF3D_BASE_SIF_SHA256" in validate
+    assert '--bind "$FF3D_ENV_ROOT:/environment:ro"' in validate
+    assert "--environment-root /environment" in validate
 
 
 def test_all_method_shell_entrypoints_parse() -> None:

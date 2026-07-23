@@ -46,8 +46,8 @@ printf 'base_sif_sha256=%s\n' "$FF3D_BASE_SIF_SHA256"
 
 apptainer exec --cleanenv \
   --bind "$FF3D_BENCHMARK_ROOT:/benchmark:ro" \
-  --bind "$FF3D_ENV_ROOT:$FF3D_ENV_ROOT" \
-  --env FF3D_ENV_ROOT="$FF3D_ENV_ROOT" \
+  --bind "$FF3D_ENV_ROOT:/environment" \
+  --env FF3D_ENV_ROOT=/environment \
   "$FF3D_BASE_SIF" \
   bash /benchmark/methods/forestformer3d/scripts/runtime/build_rootless_environment.sh
 

@@ -92,9 +92,13 @@ def test_rootless_builder_preserves_official_dependency_and_source_pins() -> Non
     assert "fakeroot" not in builder
     assert "gcc_linux-64=9" in builder
     assert "openblas=0.3.21" in builder
+    assert "libgl=1.7.0" in builder
+    assert "libglx=1.7.0" in builder
     assert '--install-option="--blas_include_dirs=$TOOLCHAIN/include"' in builder
     assert '--install-option="--blas_library_dirs=$TOOLCHAIN/lib"' in builder
     assert 'test -f "$TOOLCHAIN/include/cblas.h"' in builder
+    assert 'test -e "$TOOLCHAIN/lib/libGL.so.1"' in builder
+    assert 'test -e "$TOOLCHAIN/lib/libGLX.so.0"' in builder
     assert "torch.utils.cmake_prefix_path)')" in builder
     assert "torch.utils.cmake_prefix_path())" not in builder
     assert "CONDA_PKGS_DIRS" in builder

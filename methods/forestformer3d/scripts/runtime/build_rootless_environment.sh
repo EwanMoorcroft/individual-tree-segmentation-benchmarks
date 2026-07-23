@@ -46,7 +46,9 @@ echo "stage=conda_toolchain_create"
   gxx_linux-64=9 \
   git=2.40 \
   glib \
+  libgl=1.7.0 \
   libglvnd \
+  libglx=1.7.0 \
   ninja=1.11.1 \
   openblas=0.3.21 \
   pkg-config=0.29.2 \
@@ -77,6 +79,8 @@ export LIBRARY_PATH="$TOOLCHAIN/lib:${LIBRARY_PATH:-}"
 echo "stage=blas_toolchain_validate"
 test -f "$TOOLCHAIN/include/cblas.h"
 test -e "$TOOLCHAIN/lib/libopenblas.so"
+test -e "$TOOLCHAIN/lib/libGL.so.1"
+test -e "$TOOLCHAIN/lib/libGLX.so.0"
 
 clone_exact() {
   local repository="$1"

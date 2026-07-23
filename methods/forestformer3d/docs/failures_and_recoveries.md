@@ -69,6 +69,14 @@
   library is selected first while `/.singularity.d/libs` remains available for
   the host NVIDIA driver. A validation-only retry must establish both successful
   OpenCV import and CUDA visibility before this recovery is accepted.
+- Validation-only job `9895299` proved that path order alone is insufficient:
+  Conda's `libglvnd` package contains `libGLdispatch` but not the split
+  `libGL.so.1` or `libGLX.so.0` libraries. The cached, same-channel solve
+  provides both as `libgl=1.7.0` and `libglx=1.7.0`. Recovery pins those
+  packages in the rootless toolchain and validates both sonames before source
+  retrieval. Because the completed environment is immutable, this correction
+  requires a fresh timestamped environment build rather than an in-place
+  package amendment.
 
 ## Recorded observations
 

@@ -17,6 +17,12 @@ deterministic implementation. Both fresh processes still use seed 3407, and
 the exact counterfactual comparison fails closed if realized nondeterminism or
 loader labels alter any prediction.
 
+The effective whole-plot method writes
+`forestformer3d_smoke_test.ply`. Upstream's `UnifiedSegMetric` is incompatible
+with this whole-plot path because the returned in-memory prediction represents
+only the last region. The smoke registers a no-op MMEngine metric and validates
+the complete official PLY independently; model prediction logic is unchanged.
+
 The raw official PLY rows must exactly equal the normalized staged float32 XYZ.
 The accepted NPZ restores the zero-based identity `source_row_index`, maps
 upstream non-negative instance IDs to positive benchmark IDs and maps predicted

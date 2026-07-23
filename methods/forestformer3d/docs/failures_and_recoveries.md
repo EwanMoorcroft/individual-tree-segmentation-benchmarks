@@ -122,6 +122,15 @@
   strict deterministic-algorithm enforcement. Exact counterfactual output
   comparison remains the fail-closed gate: any realized kernel nondeterminism
   or label effect prevents acceptance.
+- Recovery run `9895608` loaded the checkpoint cleanly, processed all 64
+  whole-plot regions and wrote a 1,816,672-row official PLY. It then failed in
+  upstream `UnifiedSegMetric`, which indexes full-plot ground truth using the
+  last-region in-memory prediction and raised `IndexError`. The later effective
+  duplicate `predict` method also writes `<name>.ply`, not the
+  `<name>_final_results.ply` path used by the earlier overridden definition.
+- Recovery uses the effective filename and replaces only the incompatible
+  post-inference metric with a registered no-op. The complete official PLY is
+  validated independently for fields, row identity and counterfactual equality.
 
 ## Recovery rules
 

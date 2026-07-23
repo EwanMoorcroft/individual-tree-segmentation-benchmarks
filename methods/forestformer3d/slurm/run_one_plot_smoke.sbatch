@@ -98,14 +98,14 @@ apptainer exec --cleanenv \
   LD_LIBRARY_PATH="/ff3d_environment/toolchain/lib:/usr/local/cuda/lib64:/.singularity.d/libs" \
   /ff3d_environment/venv/bin/python \
   /benchmark/methods/forestformer3d/scripts/evaluation/validate_one_plot_smoke.py \
-    --reference-ply /ff3d_output/reference/forestformer3d_smoke_test_final_results.ply \
-    --dummy-ply /ff3d_output/dummy/forestformer3d_smoke_test_final_results.ply \
+    --reference-ply /ff3d_output/reference/forestformer3d_smoke_test.ply \
+    --dummy-ply /ff3d_output/dummy/forestformer3d_smoke_test.ply \
     --sidecar /ff3d_input/evaluation_sidecar.npz \
     --output-root /run/validation
 
 sha256sum \
-  "$FF3D_RUN_ROOT/raw/reference/forestformer3d_smoke_test_final_results.ply" \
-  "$FF3D_RUN_ROOT/raw/dummy/forestformer3d_smoke_test_final_results.ply" \
+  "$FF3D_RUN_ROOT/raw/reference/forestformer3d_smoke_test.ply" \
+  "$FF3D_RUN_ROOT/raw/dummy/forestformer3d_smoke_test.ply" \
   "$FF3D_RUN_ROOT/validation/forestformer3d_smoke_predictions.npz" \
   > "$FF3D_RUN_ROOT/artifact_sha256.txt"
 touch "$FF3D_RUN_ROOT/one_plot_smoke.complete"

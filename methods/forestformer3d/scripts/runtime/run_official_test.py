@@ -137,6 +137,21 @@ def main(argv: list[str] | None = None) -> int:
     # Supplying the missing global preserves the exact upstream file and model
     # path; no model logic or source file is patched.
     import torch
+    from mmengine.evaluator import BaseMetric
+    from mmdet3d.registry import METRICS
+
+    @METRICS.register_module(force=True)
+    class ForestFormer3DSmokeNoOpMetric(BaseMetric):
+        """Leave raw whole-plot validation to the benchmark adapter."""
+
+        def __init__(self, **_kwargs: object) -> None:
+            super().__init__()
+
+        def process(self, _data_batch: object, _data_samples: object) -> None:
+            return None
+
+        def compute_metrics(self, _results: list[object]) -> dict[str, float]:
+            return {}
 
     entrypoint_checkpoint = prepare_entrypoint_checkpoint(
         args.checkpoint, args.work_dir
@@ -154,6 +169,7 @@ def main(argv: list[str] | None = None) -> int:
         "test_dataloader.batch_size=1",
         "test_dataloader.num_workers=0",
         "test_dataloader.persistent_workers=False",
+        "test_evaluator.type=ForestFormer3DSmokeNoOpMetric",
         "randomness.seed=3407",
         "randomness.deterministic=False",
     ]

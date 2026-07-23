@@ -188,6 +188,7 @@ def test_smoke_submitter_is_guarded_development_only_and_monitored() -> None:
     assert "#SBATCH --partition=gpu-a100-lowbig" in job
     assert "run_case reference" in job
     assert "run_case dummy" in job
+    assert job.count("forestformer3d_smoke_test.ply") == 4
     assert "validate_one_plot_smoke.py" in job
     assert "runpy.run_path" in runner
     assert 'init_globals={"torch": torch}' in runner
@@ -196,6 +197,8 @@ def test_smoke_submitter_is_guarded_development_only_and_monitored() -> None:
     assert "converted != 49" in runner
     assert '"randomness.seed=3407"' in runner
     assert '"randomness.deterministic=False"' in runner
+    assert "ForestFormer3DSmokeNoOpMetric" in runner
+    assert "test_evaluator.type=ForestFormer3DSmokeNoOpMetric" in runner
 
 
 def test_preparation_cli_resolves_shared_package() -> None:

@@ -186,6 +186,8 @@ def test_image_build_is_cpu_only_and_qualification_targets_a100() -> None:
     assert "ForAINet smoke failed at line" in smoke
     assert 'mkdir -p "$(dirname "$FORAINET_RUN_ROOT")"' in smoke
     assert 'mkdir "$FORAINET_RUN_ROOT"' in smoke
+    assert "rev-parse --git-common-dir" in smoke
+    assert '--bind "$benchmark_git_common:$benchmark_git_common:ro"' in smoke
 
 
 def test_exposure_table_is_exact_and_test_only() -> None:

@@ -93,6 +93,20 @@ mkdir "$FORAINET_RUN_ROOT"
 module load apptainer/1.3.6
 
 benchmark_root="$(readlink -f "$FORAINET_BENCHMARK_ROOT")"
+benchmark_git_common_raw="$(
+  git -C "$benchmark_root" rev-parse --git-common-dir
+)"
+case "$benchmark_git_common_raw" in
+  /*)
+    benchmark_git_common="$benchmark_git_common_raw"
+    ;;
+  *)
+    benchmark_git_common="$(
+      readlink -f "$benchmark_root/$benchmark_git_common_raw"
+    )"
+    ;;
+esac
+test -d "$benchmark_git_common"
 upstream_root="$(readlink -f "$FORAINET_UPSTREAM_ROOT")"
 checkpoint="$(readlink -f "$FORAINET_CHECKPOINT")"
 image="$(readlink -f "$FORAINET_IMAGE")"
@@ -104,6 +118,7 @@ export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-12}"
 apptainer exec --nv --cleanenv \
   --env "OMP_NUM_THREADS=$OMP_NUM_THREADS" \
   --bind "$benchmark_root:$benchmark_root:ro" \
+  --bind "$benchmark_git_common:$benchmark_git_common:ro" \
   --bind "$upstream_root:$upstream_root:ro" \
   --bind "$checkpoint:$checkpoint:ro" \
   --bind "$dataset_root:$dataset_root:ro" \

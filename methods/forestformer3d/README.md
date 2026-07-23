@@ -116,7 +116,10 @@ retains the required `test` filename and validates the bookkeeping
 counterfactually. The official `tools/test.py` uses `torch.load` without
 importing `torch`; the adapter supplies that missing module through
 `runpy.init_globals` after hashing the unchanged file. No upstream modelling
-source is patched.
+source is patched. The published checkpoint is already in the fixed sparse
+layout, although the entrypoint applies the fix unconditionally. The adapter
+accepts only the published hash and supplies the inverse layout so the
+entrypoint reconstructs the original tensors exactly before loading.
 
 Several official Docker dependencies are intentionally unpinned. The branch
 therefore records the qualified base-SIF hash, Conda explicit specification

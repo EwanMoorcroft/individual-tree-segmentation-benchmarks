@@ -22,6 +22,13 @@ the source commit and file SHA-256, then supplies `torch` as an initial global
 when executing the unchanged file. This is an interface compatibility shim,
 not a model-source or checkpoint modification.
 
+The published checkpoint is already in the fixed RSKC sparse-weight layout,
+but pinned `tools/test.py` applies the fix unconditionally. The adapter accepts
+only the exact published checkpoint SHA-256 and preconditions its 49 sparse
+tensors with the inverse permutation. It proves that the unchanged upstream
+permutation reconstructs every original tensor exactly and records this in
+`checkpoint_entrypoint_adapter.json`.
+
 Submission from the clean Barkla `method/forestformer3d` checkout:
 
 ```bash

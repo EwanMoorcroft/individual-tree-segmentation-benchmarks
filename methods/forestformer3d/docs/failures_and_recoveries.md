@@ -96,6 +96,24 @@
 - The authors' faster inference repository changes iteration count,
   configuration and post-processing and is not the unchanged default route.
 
+## 2026-07-23 first official-runner smoke
+
+- Development smoke job `9895488` failed after 32 seconds during the first
+  reference-label inference. Preprocessing completed and accessed only
+  `CULS/plot_1_annotated.las`; no prediction PLY was produced.
+- The official runner reported shape mismatch for all 49 sparse-convolution
+  weights, then failed in the decoder. The published archive contains only
+  `epoch_3000_fix.pth`, already in the RSKC layout accepted by the qualified
+  spconv loader, while pinned `tools/test.py` applies the same fix
+  unconditionally.
+- A direct runtime probe established that the archived `input_conv` weight
+  loads successfully into the qualified spconv layer. The recovery accepts only
+  the exact published checkpoint hash, applies the inverse permutation before
+  invoking the unchanged official entrypoint, and verifies that the
+  entrypoint's own permutation reconstructs every archived tensor exactly.
+- The failed run root and logs remain retained. Any retry must use a fresh
+  timestamped run root.
+
 ## Recovery rules
 
 Failed environment builds retain their run root, incomplete environment and

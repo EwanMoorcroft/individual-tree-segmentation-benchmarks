@@ -191,6 +191,9 @@ def test_smoke_submitter_is_guarded_development_only_and_monitored() -> None:
     assert "validate_one_plot_smoke.py" in job
     assert "runpy.run_path" in runner
     assert 'init_globals={"torch": torch}' in runner
+    assert "prepare_entrypoint_checkpoint" in runner
+    assert "permute(4, 0, 1, 2, 3)" in runner
+    assert "converted != 49" in runner
 
 
 def test_preparation_cli_resolves_shared_package() -> None:

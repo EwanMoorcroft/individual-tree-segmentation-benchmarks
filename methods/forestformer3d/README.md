@@ -68,18 +68,20 @@ exact row alignment and a manually reviewed development smoke.
 ## Barkla Environment
 
 The official PyTorch 1.13.1/CUDA 11.6 base was qualified on an A100-SXM4-80GB
-with compute capability 8.0. The reproducible image recipe pins the base
-manifest digest, upstream commit, official replacement-file hashes and
-authors' dependency commands. The final SIF hash and resolved package
-inventory will be recorded after the full build.
+with compute capability 8.0. Barkla cannot execute the rootful
+package-installation steps in the auditable image recipe because subordinate
+ID mapping and the `fakeroot` helper are unavailable. The executable route
+combines the hash-qualified base SIF with a user-owned Conda toolchain,
+rootless virtual environment and exact source checkouts.
 
 See [`docs/environment.md`](docs/environment.md).
 
 ## Slurm Workflow
 
-`slurm/submit_environment_build.sh` submits a CPU image build followed by an
-A100 validation job. It refuses dirty or incorrect benchmark branches,
-existing image/run roots, recipe drift and checkpoint hash mismatch.
+`slurm/submit_environment_build.sh` submits a CPU rootless-environment build
+followed by an A100 validation job. It refuses dirty or incorrect benchmark
+branches, existing environment/run roots, build-script drift, base-SIF drift
+and checkpoint hash mismatch.
 
 Every submission writes a shell-safe state file and starts
 `slurm/monitor_workflow.sh --watch 30` automatically. The monitor refreshes
@@ -103,12 +105,13 @@ use `torch.load` without importing `torch`. No upstream modelling source will
 be patched to conceal these issues.
 
 Several official Docker dependencies are intentionally unpinned. The branch
-therefore records the final SIF hash and complete resolved package inventory;
-rebuild equivalence cannot be claimed from the authors' Dockerfile alone.
+therefore records the qualified base-SIF hash, Conda explicit specification
+and complete pip inventory. The first successful resolution must become an
+exact reusable lock before prediction runs.
 
 ## Current Benchmark Status
 
-Upstream source, base environment, checkpoint identity and checkpoint exposure
-are qualified. The full ForestFormer3D image build and checkpoint-load
-validation are the next gate. No development or held-out inference has run,
+Upstream source, base environment, checkpoint identity, checkpoint exposure
+and rootless feasibility are qualified. The composite dependency build and
+checkpoint-load validation are the next gate. No development or held-out inference has run,
 and no ForestFormer3D accuracy result exists.

@@ -51,6 +51,8 @@ def test_upstream_config_freezes_observed_identities_and_remaining_gates() -> No
     assert container["qualified_base_sif_sha256"] == (
         "4a35d5a57c1d57061f899b514329ad8ec2bf74a9ff31d103c0a53a289e07c84f"
     )
+    assert container["full_image_status"].startswith("blocked_barkla_")
+    assert container["barkla_runtime"]["rootless_probe_status"] == "passed"
     assert config["eligibility"]["exposure_gate"] == "passed"
     assert config["eligibility"]["overall_admission"].startswith("conditional_")
 
@@ -79,6 +81,24 @@ def test_apptainer_recipe_pins_base_source_and_official_replacements() -> None:
     assert "test_data.zip" not in recipe
     assert "epoch_3000_fix.pth" not in recipe
     assert "TORCH_CUDA_ARCH_LIST=\"8.0\"" in recipe
+
+
+def test_rootless_builder_preserves_official_dependency_and_source_pins() -> None:
+    builder = (
+        METHOD / "scripts/runtime/build_rootless_environment.sh"
+    ).read_text(encoding="utf-8")
+
+    assert "apt-get" not in builder
+    assert "fakeroot" not in builder
+    assert "gcc_linux-64=9" in builder
+    assert "openblas=0.3.21" in builder
+    assert "mmengine==0.7.3" in builder
+    assert "mmcv==2.0.0" in builder
+    assert validate_environment.SOURCE_COMMIT in builder
+    for digest in validate_environment.INSTALLED_REPLACEMENTS.values():
+        assert digest in builder
+    assert "conda_explicit.txt" in builder
+    assert "pip_freeze.txt" in builder
 
 
 def test_hash_validator_and_retention_inventory_are_fail_closed(

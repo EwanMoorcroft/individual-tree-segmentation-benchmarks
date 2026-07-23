@@ -8,6 +8,7 @@ import hashlib
 import importlib
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import Sequence
 
@@ -38,13 +39,13 @@ SOURCE_HASHES = {
     ),
 }
 INSTALLED_REPLACEMENTS = {
-    "/opt/conda/lib/python3.10/site-packages/mmengine/runner/loops.py": (
+    "venv/lib/python3.10/site-packages/mmengine/runner/loops.py": (
         SOURCE_HASHES["replace_mmdetection_files/loops.py"]
     ),
-    "/opt/conda/lib/python3.10/site-packages/mmengine/model/base_model/base_model.py": (
+    "venv/lib/python3.10/site-packages/mmengine/model/base_model/base_model.py": (
         SOURCE_HASHES["replace_mmdetection_files/base_model.py"]
     ),
-    "/opt/conda/lib/python3.10/site-packages/mmdet3d/datasets/transforms/transforms_3d.py": (
+    "venv/lib/python3.10/site-packages/mmdet3d/datasets/transforms/transforms_3d.py": (
         SOURCE_HASHES["replace_mmdetection_files/transforms_3d.py"]
     ),
 }
@@ -95,7 +96,8 @@ def module_versions() -> dict[str, str]:
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source-root", type=Path, default=Path("/opt/forestformer3d"))
+    parser.add_argument("--environment-root", type=Path, required=True)
+    parser.add_argument("--source-root", type=Path, required=True)
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--require-cuda", action="store_true")
@@ -104,6 +106,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
+    environment_root = args.environment_root.resolve()
     source_root = args.source_root.resolve()
     checkpoint = args.checkpoint.resolve()
     output = args.output.resolve()
@@ -128,7 +131,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise ValueError(f"Unexpected ForestFormer3D source state: {commit}, dirty={bool(dirty)}")
 
     source_hashes = validate_hashes(source_root, SOURCE_HASHES)
-    installed_hashes = validate_hashes(Path("/"), INSTALLED_REPLACEMENTS)
+    if Path(sys.prefix).resolve() != (environment_root / "venv").resolve():
+        raise ValueError(
+            f"Unexpected Python prefix: expected {environment_root / 'venv'}, "
+            f"found {sys.prefix}"
+        )
+    if not (environment_root / "environment_build.complete").is_file():
+        raise FileNotFoundError("Rootless environment completion marker is missing")
+
+    installed_hashes = validate_hashes(environment_root, INSTALLED_REPLACEMENTS)
     versions = module_versions()
 
     import torch
@@ -152,6 +163,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         "status": "forestformer3d_environment_validated",
         "source_commit": commit,
         "source_clean": True,
+        "environment_root": str(environment_root),
+        "python_prefix": sys.prefix,
         "source_hashes": source_hashes,
         "installed_replacement_hashes": installed_hashes,
         "checkpoint_sha256": CHECKPOINT_SHA256,

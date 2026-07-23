@@ -51,7 +51,7 @@ is_terminal_state() {
 
 render() {
   local all_terminal=1
-  local job_id state expected
+  local job_id state reason expected
 
   date -Is
   echo "workflow=$FF3D_WORKFLOW"
@@ -89,7 +89,12 @@ render() {
         | awk -F'|' 'NF && $1 != "" {print $1; exit}'
     )"
     state="${state:-UNKNOWN}"
-    if ! is_terminal_state "$state"; then
+    reason="$(
+      squeue -h -j "$job_id" -o "%R" 2>/dev/null | head -n 1
+    )"
+    if [[ "$reason" == *"DependencyNeverSatisfied"* ]]; then
+      printf 'blocked_dependency job_id=%s reason=%s\n' "$job_id" "$reason"
+    elif ! is_terminal_state "$state"; then
       all_terminal=0
     fi
   done

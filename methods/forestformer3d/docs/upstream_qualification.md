@@ -23,10 +23,12 @@ The official training entrypoint is `tools/train.py`. The official inference
 entrypoint is `tools/test.py`; the released checkpoint is paired with
 `configs/oneformer3d_qs_radius16_qp300_2many.py`. The official README instructs
 users to install three bundled replacement files into MMEngine and
-MMDetection3D. The image recipe follows that documented installation and
-verifies each replacement file before copying it.
+MMDetection3D. The auditable image recipe follows that documented installation
+and verifies each replacement file before copying it. Barkla executes the same
+Python/source route through a verified base SIF and rootless external
+environment because rootful package installation is unavailable.
 
-The full image must still prove that the checkpoint loads through the official
+The full composite environment must still prove that the checkpoint loads through the official
 framework for inference and can initialise the official training runner.
 Loading the file with `torch.load` is necessary but not sufficient.
 
@@ -49,6 +51,6 @@ No third-party source or binary artifact is redistributed through Git.
 ## Qualification status
 
 The upstream identity and checkpoint byte identity are qualified. Final
-upstream qualification remains conditional on full-image imports, official
+upstream qualification remains conditional on full-environment imports, official
 runner checkpoint loading, prediction-label independence and source-row output
 alignment without modifying upstream modelling code.

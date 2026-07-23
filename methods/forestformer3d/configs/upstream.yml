@@ -39,7 +39,7 @@ method:
     sha256: 01037a648596832238ac72ea2f5eef87ceaf5aeb399e56ff4b760ba1ed1c777e
     zenodo_licence_statement: GPL-3.0-or-later
     training_dataset_statement: FOR-instanceV2 training split
-    inference_load_status: pending_full_image_validation
+    inference_load_status: pending_composite_environment_validation
     fine_tuning_initialisation_status: pending_official_runner_validation
   official_config:
     path: configs/oneformer3d_qs_radius16_qp300_2many.py
@@ -67,6 +67,7 @@ method:
 
 container:
   recipe: methods/forestformer3d/container/forestformer3d.def
+  recipe_role: auditable_rootful_reference_not_executable_on_barkla
   bootstrap: docker
   base_reference: pytorch/pytorch:1.13.1-cuda11.6-cudnn8-devel
   base_manifest_digest: sha256:58d848c38665fd3ed20bee65918255cb083637c860eb4fae67face2fb2ff5702
@@ -79,7 +80,17 @@ container:
     base_torch: 1.13.1
     base_cuda: "11.6"
     base_cudnn: 8.4.0.27
-  full_image_status: pending_build
+  full_image_status: blocked_barkla_missing_subuid_and_fakeroot
+  barkla_runtime:
+    mode: verified_base_sif_plus_rootless_external_environment
+    builder: methods/forestformer3d/scripts/runtime/build_rootless_environment.sh
+    base_sif_sha256: 4a35d5a57c1d57061f899b514329ad8ec2bf74a9ff31d103c0a53a289e07c84f
+    rootless_probe_job: 9894987
+    rootless_probe_status: passed
+    base_python: 3.10.8
+    base_pip: 22.3.1
+    base_conda: 22.11.1
+    environment_validation_status: pending_composite_build
 
 eligibility:
   exposure_protocol: forestformer3d_checkpoint_exposure_v1

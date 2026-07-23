@@ -14,5 +14,5 @@ inverse map. Coordinate rounding is prohibited as the primary route. The
 adapter will fail on dropped, duplicated or reordered rows unless the official
 inverse mapping accounts for every source row.
 
-Implementation of the converter and normaliser follows successful full-image
+Implementation of the converter and normaliser follows successful environment
 qualification; no inference job is available yet.

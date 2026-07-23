@@ -26,7 +26,7 @@ test "$FORAINET_DEFINITION" = "$expected_definition"
 test -f "$FORAINET_DEFINITION"
 test -f "$requirements"
 test -x "$apptainer"
-test "$("$apptainer" --version)" = "apptainer version 1.3.6"
+test "$("$apptainer" --version)" = "apptainer version 1.3.6-1"
 test ! -e "$FORAINET_IMAGE"
 test ! -e "$FORAINET_IMAGE_BUILD_ROOT"
 test "$(git -C "$FORAINET_BENCHMARK_ROOT" rev-parse HEAD)" = \

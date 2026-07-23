@@ -50,8 +50,10 @@ bash "$installer" -e -d el8 -v "$release_rpm" "$FORAINET_TOOLCHAIN_ROOT" \
 apptainer="$FORAINET_TOOLCHAIN_ROOT/bin/apptainer"
 test -x "$apptainer"
 test -x "$FORAINET_TOOLCHAIN_ROOT/x86_64/utils/bin/fakeroot-sysv"
-test "$("$apptainer" --version)" = "apptainer version 1.3.6"
-"$apptainer" --version > "$FORAINET_TOOLCHAIN_EVIDENCE_ROOT/apptainer_version.txt"
+apptainer_version="$("$apptainer" --version)"
+test "$apptainer_version" = "apptainer version 1.3.6-1"
+printf '%s\n' "$apptainer_version" \
+  > "$FORAINET_TOOLCHAIN_EVIDENCE_ROOT/apptainer_version.txt"
 
 node_tmp="$(mktemp -d "/tmp/forai-tool-${SLURM_JOB_ID}-XXXXXXXX")"
 cleanup_node_tmp() {

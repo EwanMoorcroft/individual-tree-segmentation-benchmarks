@@ -141,7 +141,9 @@ def test_image_build_is_cpu_only_and_qualification_targets_a100() -> None:
     assert '-d el8 -v "$release_rpm"' in installer
     assert "41574717e85e03cdf40597819c927250d0772186b943b8869c8ec8dfcb5b86d1" in installer
     assert "1890dd3df87b06b0a9b2845b81b5709c0033fcca5673b03cc69ce9cb755e9605" in installer
+    assert '"apptainer version 1.3.6-1"' in installer
     assert '"$apptainer" build --fakeroot' in installer
+    assert '"apptainer version 1.3.6-1"' in build
     qualification = (METHOD / "slurm/qualify_forainet_assets.sbatch").read_text(
         encoding="utf-8"
     )

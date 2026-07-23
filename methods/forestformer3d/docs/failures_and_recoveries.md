@@ -113,6 +113,15 @@
   entrypoint's own permutation reconstructs every archived tensor exactly.
 - The failed run root and logs remain retained. Any retry must use a fresh
   timestamped run root.
+- Recovery run `9895601` proved that all checkpoint keys load without mismatch
+  and reached the first real inference region. It failed after 29 seconds
+  because strict deterministic-algorithm mode rejects upstream CUDA
+  `index_reduce_(reduce='amax')`, which PyTorch 1.13.1 marks as lacking a
+  deterministic implementation.
+- The next retry keeps the identical seed in both fresh processes but disables
+  strict deterministic-algorithm enforcement. Exact counterfactual output
+  comparison remains the fail-closed gate: any realized kernel nondeterminism
+  or label effect prevents acceptance.
 
 ## Recovery rules
 

@@ -6,10 +6,16 @@ contains no held-out path or held-out opt-in.
 
 The workflow stages exact source-order XYZ and two loader-label cases. Both
 cases use the same point binary, official source commit, official config,
-unchanged checkpoint and deterministic seed. The reference case supplies
+unchanged checkpoint and identical seed. The reference case supplies
 mapped classes 4/5/6 and positive tree IDs; the dummy case supplies zero labels.
 The adapter rejects any difference in official `semantic_pred`,
 `instance_pred` or `score` fields.
+
+Strict PyTorch deterministic-algorithm mode is disabled because upstream uses
+CUDA `index_reduce_(reduce='amax')`, for which PyTorch 1.13.1 exposes no
+deterministic implementation. Both fresh processes still use seed 3407, and
+the exact counterfactual comparison fails closed if realized nondeterminism or
+loader labels alter any prediction.
 
 The raw official PLY rows must exactly equal the normalized staged float32 XYZ.
 The accepted NPZ restores the zero-based identity `source_row_index`, maps

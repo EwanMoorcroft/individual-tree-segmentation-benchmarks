@@ -155,7 +155,7 @@ def main(argv: list[str] | None = None) -> int:
         "test_dataloader.num_workers=0",
         "test_dataloader.persistent_workers=False",
         "randomness.seed=3407",
-        "randomness.deterministic=True",
+        "randomness.deterministic=False",
     ]
     os.chdir(args.source_root.resolve())
     try:

@@ -95,10 +95,22 @@ Every submission writes a shell-safe state file and starts
 queue, accounting and expected-file state every 30 seconds and exits on a
 terminal Slurm state. Ctrl-C stops monitoring without cancelling jobs.
 
-`slurm/submit_one_plot_smoke.sh` is the only inference submitter currently
-available. It is hard-coded to development plot `CULS/plot_1_annotated.las`,
-checks the frozen split-metadata, environment, base-image and checkpoint
-hashes, then runs both label-counterfactual cases in one A100 allocation.
+`slurm/submit_one_plot_smoke.sh` is hard-coded to development plot
+`CULS/plot_1_annotated.las`, checks the frozen split-metadata, environment,
+base-image and checkpoint hashes, then runs both label-counterfactual cases in
+one A100 allocation.
+
+The smoke completed on an A100 and the benchmark operator accepted the manual
+geometry alignment review. The public-safe decision record is
+`examples/manual_alignment_confirmation_20260723.json`.
+
+`slurm/submit_development_preflight.sh` freezes and inventories only the 21
+development paths. Once that manifest is reviewed,
+`slurm/submit_published_pretrained_development.sh` runs the unchanged official
+checkpoint as a 21-task A100 array with maximum concurrency two, followed by a
+CPU completeness, aggregation and retention gate. Both submitters start the
+30-second live monitor. See
+[`docs/published_pretrained_development.md`](docs/published_pretrained_development.md).
 
 ## Evaluation Route
 
@@ -132,8 +144,9 @@ to the versions that passed A100 validation.
 
 ## Current Benchmark Status
 
-Upstream source, base environment, checkpoint identity, checkpoint exposure and
-the composite A100 runtime are qualified. The development-only official-runner
-smoke workflow is implemented and its revised label-independence gate awaits a
-fresh Barkla run. No held-out
-inference is available, and no ForestFormer3D accuracy result exists.
+Upstream source, base environment, checkpoint identity, checkpoint exposure,
+the composite A100 runtime, label-independence evidence, exact row alignment
+and the manually reviewed one-plot development smoke are qualified. The full
+21-plot published-pretrained development diagnostic workflow is implemented
+and awaits its frozen preflight. No held-out inference is available. No
+held-out ForestFormer3D accuracy result exists.

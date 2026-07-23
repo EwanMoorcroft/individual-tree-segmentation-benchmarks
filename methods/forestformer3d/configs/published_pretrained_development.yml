@@ -19,8 +19,22 @@ method:
   dataset_exposure: published_checkpoint
 
 execution:
-  prerequisite: accepted_one_plot_smoke
+  prerequisite: accepted_one_plot_smoke_and_frozen_development_manifest
   maximum_concurrent_gpu_tasks: 2
+  array_task_count: 21
+  array_task_time_limit: 02:00:00
+  cpus_per_task: 12
+  memory_per_task_gib: 128
+  gpu: a100
   overwrite_existing_roots: false
   raw_predictions_retained: true
   harmonised_predictions_retained: true
+  summary_dependency: afterany
+
+gates:
+  manual_alignment_confirmation:
+    status: confirmed
+    run_id: forestformer3d__for-instance__published-pretrained__not-applicable__development-smoke__20260723T213106
+    public_record: examples/manual_alignment_confirmation_20260723.json
+  all_21_tasks_required: true
+  retention_manifest_required: true

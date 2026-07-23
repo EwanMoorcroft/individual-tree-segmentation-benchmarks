@@ -1,0 +1,12 @@
+{
+  "confirmed_at_utc": "2026-07-23T21:56:01Z",
+  "confirmed_by": "benchmark_operator",
+  "decision": "prediction and reference geometry are acceptably aligned",
+  "held_out_access": false,
+  "manual_alignment_report_sha256": "32398587d4273400f3564f4774a320af8e46b896826d6f822700d17ff19f2680",
+  "next_gate": "published_pretrained_full_development_diagnostics",
+  "public_safe": true,
+  "run_id": "forestformer3d__for-instance__published-pretrained__not-applicable__development-smoke__20260723T213106",
+  "schema": "forestformer3d_manual_alignment_confirmation_v1",
+  "status": "confirmed"
+}

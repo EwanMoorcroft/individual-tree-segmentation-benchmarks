@@ -24,7 +24,9 @@ def test_readme_has_repository_method_contract_sections() -> None:
         "Current Benchmark Status",
     }:
         assert f"## {section}" in text
-    assert "no ForestFormer3D accuracy result exists" in text
+    assert "no held-out forestformer3d accuracy result exists" in " ".join(
+        text.lower().split()
+    )
 
 
 def test_environment_submitter_is_guarded_and_auto_starts_live_monitor() -> None:
@@ -80,6 +82,41 @@ def test_live_monitor_combines_scheduler_and_expected_file_state() -> None:
         assert state in monitor
     assert "DependencyNeverSatisfied" in monitor
     assert 'scancel "$job_id"' in monitor
+    assert "tasks_complete=" in monitor
+
+
+def test_development_workflow_is_guarded_bounded_and_development_only() -> None:
+    preflight = (METHOD / "slurm/submit_development_preflight.sh").read_text(
+        encoding="utf-8"
+    )
+    preflight_job = (
+        METHOD / "slurm/prepare_development_preflight.sbatch"
+    ).read_text(encoding="utf-8")
+    submit = (
+        METHOD / "slurm/submit_published_pretrained_development.sh"
+    ).read_text(encoding="utf-8")
+    task = (
+        METHOD / "slurm/run_published_pretrained_development.sbatch"
+    ).read_text(encoding="utf-8")
+    summary = (
+        METHOD / "slurm/summarise_published_pretrained_development.sbatch"
+    ).read_text(encoding="utf-8")
+    assert "FF3D_PREFLIGHT_CONFIRMED" in preflight
+    assert "prepare_development_manifest.py" in preflight_job
+    assert "FF3D_DEVELOPMENT_CONFIRMED" in submit
+    assert "FF3D_SMOKE_CONFIRMATION" in submit
+    assert "--array=0-20%2" in submit
+    assert 'afterany:$ARRAY_JOB' in submit
+    assert "monitor_workflow.sh" in submit
+    assert "#SBATCH --partition=gpu-a100-lowbig" in task
+    assert "#SBATCH --gres=gpu:a100:1" in task
+    assert "prepare_development_plot.py" in task
+    assert "validate_development_plot.py" in task
+    assert "evaluate_development_plot.py" in task
+    assert "dummy" not in task
+    assert "#SBATCH --partition=nodes" in summary
+    assert "summarise_development.py" in summary
+    assert "held_out_access=false" in task
 
 
 def test_build_and_validation_jobs_freeze_identity_and_dependency_outputs() -> None:

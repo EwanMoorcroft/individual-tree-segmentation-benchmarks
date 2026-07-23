@@ -105,6 +105,16 @@ render() {
       all_terminal=0
     fi
   done
+  if [[ -n "${FF3D_EXPECTED_TASKS_ROOT:-}" && -n "${FF3D_EXPECTED_TASK_COUNT:-}" ]]; then
+    completed_tasks=0
+    failed_tasks=0
+    if [[ -d "$FF3D_EXPECTED_TASKS_ROOT" ]]; then
+      completed_tasks="$(find "$FF3D_EXPECTED_TASKS_ROOT" -mindepth 2 -maxdepth 2 -type f -name task.complete | wc -l | tr -d ' ')"
+      failed_tasks="$(find "$FF3D_EXPECTED_TASKS_ROOT" -mindepth 2 -maxdepth 2 -type f -name task.failed | wc -l | tr -d ' ')"
+    fi
+    printf 'tasks_complete=%s/%s tasks_failed=%s\n' \
+      "$completed_tasks" "$FF3D_EXPECTED_TASK_COUNT" "$failed_tasks"
+  fi
   if [[ "$all_terminal" == "1" ]]; then
     echo
     echo "monitor_status=terminal"

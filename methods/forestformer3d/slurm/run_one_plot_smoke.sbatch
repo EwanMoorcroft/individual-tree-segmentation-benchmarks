@@ -107,6 +107,17 @@ apptainer exec --cleanenv \
     --sidecar /ff3d_input/evaluation_sidecar.npz \
     --output-root /run/validation
 
+"$FF3D_TREEBENCH_PYTHON" \
+  methods/forestformer3d/scripts/evaluation/evaluate_one_plot_smoke.py \
+  --prediction-npz "$FF3D_RUN_ROOT/validation/forestformer3d_smoke_predictions.npz" \
+  --validation-json "$FF3D_RUN_ROOT/validation/smoke_validation.json" \
+  --reference-resource-json "$FF3D_RUN_ROOT/raw/reference/resource_usage.json" \
+  --dummy-resource-json "$FF3D_RUN_ROOT/raw/dummy/resource_usage.json" \
+  --output-root "$FF3D_RUN_ROOT/evaluation" \
+  --run-id "$(basename "$FF3D_RUN_ROOT")" \
+  --inference-benchmark-commit "$FF3D_BENCHMARK_COMMIT" \
+  --evaluation-benchmark-commit "$FF3D_BENCHMARK_COMMIT"
+
 sha256sum \
   "$FF3D_RUN_ROOT/raw/reference/forestformer3d_smoke_test.ply" \
   "$FF3D_RUN_ROOT/raw/dummy/forestformer3d_smoke_test.ply" \
@@ -114,7 +125,11 @@ sha256sum \
   "$FF3D_RUN_ROOT/raw/dummy/model_input_fingerprint.json" \
   "$FF3D_RUN_ROOT/raw/reference/effective_predict_audit.json" \
   "$FF3D_RUN_ROOT/raw/dummy/effective_predict_audit.json" \
+  "$FF3D_RUN_ROOT/raw/reference/resource_usage.json" \
+  "$FF3D_RUN_ROOT/raw/dummy/resource_usage.json" \
   "$FF3D_RUN_ROOT/validation/forestformer3d_smoke_predictions.npz" \
+  "$FF3D_RUN_ROOT/evaluation/metrics.json" \
+  "$FF3D_RUN_ROOT/evaluation/manual_alignment_report.json" \
   > "$FF3D_RUN_ROOT/artifact_sha256.txt"
 touch "$FF3D_RUN_ROOT/one_plot_smoke.complete"
 echo "status=forestformer3d-development-one-plot-smoke-passed"

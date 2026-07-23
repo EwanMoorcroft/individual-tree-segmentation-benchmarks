@@ -13,7 +13,10 @@ import numpy as np
 import pytest
 
 from methods.forestformer3d.scripts.data import prepare_one_plot_smoke
-from methods.forestformer3d.scripts.evaluation import validate_one_plot_smoke
+from methods.forestformer3d.scripts.evaluation import (
+    evaluate_one_plot_smoke,
+    validate_one_plot_smoke,
+)
 from shared.for_instance_manifest import EXPECTED_PATHS
 
 
@@ -248,6 +251,75 @@ def test_validation_rejects_different_model_input_fingerprint(
         )
 
 
+def test_shared_protocol_evaluation_writes_manual_review_package(
+    tmp_path: Path,
+) -> None:
+    prediction = tmp_path / "prediction.npz"
+    np.savez_compressed(
+        prediction,
+        pred_tree_id=np.array([-1, 1, 1, 2]),
+        target_tree_id=np.array([-1, 7, 7, 9]),
+        classification=np.array([2, 4, 5, 6]),
+        pred_classification=np.array([0, 4, 4, 4]),
+        source_row_index=np.arange(4),
+    )
+    validation = tmp_path / "validation.json"
+    validation.write_text(
+        json.dumps(
+            {
+                "status": "passed",
+                "split": "development",
+                "relative_path": "CULS/plot_1_annotated.las",
+                "held_out_access": False,
+                "exact_row_alignment": True,
+                "artifacts": {
+                    "harmonised_npz": {
+                        "sha256": evaluate_one_plot_smoke.sha256_file(prediction)
+                    },
+                    "reference_ply": {"sha256": "raw-ply-sha"},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    resource = tmp_path / "resource.json"
+    resource.write_text(
+        json.dumps(
+            {
+                "schema": "forestformer3d_case_resource_usage_v1",
+                "wall_seconds": 1.0,
+                "cuda_peak_memory_allocated_bytes": 10,
+            }
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "evaluation"
+    result = evaluate_one_plot_smoke.evaluate(
+        prediction,
+        validation,
+        resource,
+        resource,
+        output,
+        run_id="forestformer3d-test",
+        inference_benchmark_commit="a" * 40,
+        evaluation_benchmark_commit="b" * 40,
+        expected_point_count=4,
+    )
+    assert result["evaluation_protocol"] == "for_instance_pointwise_v1"
+    assert result["true_positives"] == 2
+    assert result["false_positives"] == 0
+    assert result["false_negatives"] == 0
+    report = json.loads(
+        (output / "manual_alignment_report.json").read_text(encoding="utf-8")
+    )
+    assert report["status"] == "awaiting_human_confirmation"
+    assert report["contains_coordinates"] is False
+    assert (output / "matches.csv").is_file()
+    assert (output / "unmatched_predictions.csv").is_file()
+    assert (output / "unmatched_references.csv").is_file()
+    assert (output / "evaluation.complete").is_file()
+
+
 def test_smoke_submitter_is_guarded_development_only_and_monitored() -> None:
     submitter = (METHOD / "slurm/submit_one_plot_smoke.sh").read_text(
         encoding="utf-8"
@@ -279,6 +351,9 @@ def test_smoke_submitter_is_guarded_development_only_and_monitored() -> None:
     assert "install_model_input_fingerprint" in runner
     assert "model_input_fingerprint.json" in job
     assert "effective_predict_audit.json" in job
+    assert "resource_usage.json" in job
+    assert "evaluate_one_plot_smoke.py" in job
+    assert "manual_alignment_report.json" in job
 
 
 def test_preparation_cli_resolves_shared_package() -> None:

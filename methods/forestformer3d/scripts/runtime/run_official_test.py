@@ -11,6 +11,7 @@ import runpy
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 
@@ -290,11 +291,38 @@ def main(argv: list[str] | None = None) -> int:
         "randomness.deterministic=False",
     ]
     os.chdir(args.source_root.resolve())
+    started = time.monotonic()
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
     try:
         runpy.run_path(
             str(test_py), run_name="__main__", init_globals={"torch": torch}
         )
     finally:
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        resource_evidence = {
+            "schema": "forestformer3d_case_resource_usage_v1",
+            "wall_seconds": time.monotonic() - started,
+            "cuda_available": torch.cuda.is_available(),
+            "cuda_device": (
+                torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
+            ),
+            "cuda_peak_memory_allocated_bytes": (
+                int(torch.cuda.max_memory_allocated())
+                if torch.cuda.is_available()
+                else 0
+            ),
+            "cuda_peak_memory_reserved_bytes": (
+                int(torch.cuda.max_memory_reserved())
+                if torch.cuda.is_available()
+                else 0
+            ),
+        }
+        (args.work_dir / "resource_usage.json").write_text(
+            json.dumps(resource_evidence, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
         entrypoint_checkpoint.unlink(missing_ok=True)
     return 0
 

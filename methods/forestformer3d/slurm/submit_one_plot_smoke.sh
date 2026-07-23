@@ -64,7 +64,7 @@ SMOKE_JOB="$(
     "$JOB_FILE"
 )"
 
-EXPECTED_FILES="$RUN_ROOT/staged_input/input_manifest.json|$RUN_ROOT/staged_input/input_preparation.complete|$RUN_ROOT/raw/reference/forestformer3d_smoke_test.ply|$RUN_ROOT/raw/dummy/forestformer3d_smoke_test.ply|$RUN_ROOT/raw/reference/model_input_fingerprint.json|$RUN_ROOT/raw/dummy/model_input_fingerprint.json|$RUN_ROOT/raw/reference/effective_predict_audit.json|$RUN_ROOT/raw/dummy/effective_predict_audit.json|$RUN_ROOT/validation/smoke_validation.json|$RUN_ROOT/validation/forestformer3d_smoke_predictions.npz|$RUN_ROOT/validation/smoke_validation.complete|$RUN_ROOT/artifact_sha256.txt|$RUN_ROOT/one_plot_smoke.complete"
+EXPECTED_FILES="$RUN_ROOT/staged_input/input_manifest.json|$RUN_ROOT/staged_input/input_preparation.complete|$RUN_ROOT/raw/reference/forestformer3d_smoke_test.ply|$RUN_ROOT/raw/dummy/forestformer3d_smoke_test.ply|$RUN_ROOT/raw/reference/model_input_fingerprint.json|$RUN_ROOT/raw/dummy/model_input_fingerprint.json|$RUN_ROOT/raw/reference/effective_predict_audit.json|$RUN_ROOT/raw/dummy/effective_predict_audit.json|$RUN_ROOT/raw/reference/resource_usage.json|$RUN_ROOT/raw/dummy/resource_usage.json|$RUN_ROOT/validation/smoke_validation.json|$RUN_ROOT/validation/forestformer3d_smoke_predictions.npz|$RUN_ROOT/validation/smoke_validation.complete|$RUN_ROOT/evaluation/metrics.json|$RUN_ROOT/evaluation/matches.csv|$RUN_ROOT/evaluation/unmatched_predictions.csv|$RUN_ROOT/evaluation/unmatched_references.csv|$RUN_ROOT/evaluation/manual_alignment_report.json|$RUN_ROOT/evaluation/artifact_sha256.txt|$RUN_ROOT/evaluation/evaluation.complete|$RUN_ROOT/artifact_sha256.txt|$RUN_ROOT/one_plot_smoke.complete"
 
 {
   printf 'FF3D_WORKFLOW=%q\n' "development_one_plot_smoke"

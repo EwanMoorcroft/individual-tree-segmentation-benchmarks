@@ -43,9 +43,19 @@ the complete official PLY independently; model prediction logic is unchanged.
 The raw official PLY rows must exactly equal the normalized staged float32 XYZ.
 The accepted NPZ restores the zero-based identity `source_row_index`, maps
 upstream non-negative instance IDs to positive benchmark IDs and maps predicted
-tree rows to benchmark class 4. Both official raw PLY files, the evaluation
-sidecar, model-input fingerprints, effective-source audits, hashes and
-validation JSON are retained.
+tree rows to benchmark class 4. The smoke evaluates this NPZ with
+`for_instance_pointwise_v1`, including the union mask, IoU `>= 0.5` and
+maximum-cardinality one-to-one matching. It writes metrics, matches and both
+unmatched tables. Both official raw PLY files, the evaluation sidecar,
+model-input fingerprints, effective-source audits, per-case wall/GPU-memory
+records, hashes and validation JSON are retained.
+
+The generated public-safe manual-alignment report contains counts, hashes and
+viewer instructions but no coordinates. Its status remains
+`awaiting_human_confirmation` until the retained reference PLY is viewed by
+instance prediction and compared with its retained instance ground truth. A
+successful automated smoke does not authorise full development diagnostics
+without that confirmation.
 
 The pinned official `tools/test.py` omits `import torch`. The adapter verifies
 the source commit and file SHA-256, then supplies `torch` as an initial global

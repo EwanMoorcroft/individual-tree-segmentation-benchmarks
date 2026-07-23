@@ -45,6 +45,21 @@ def test_environment_submitter_is_guarded_and_auto_starts_live_monitor() -> None
     assert "scancel $BUILD_JOB $VALIDATE_JOB" in submit
 
 
+def test_validation_only_submitter_reuses_completed_environment_with_new_evidence() -> None:
+    submit = (METHOD / "slurm/submit_environment_validation.sh").read_text(
+        encoding="utf-8"
+    )
+    assert "FF3D_ENVIRONMENT_VALIDATION_CONFIRMED" in submit
+    assert ': "${FF3D_ENV_ROOT:?Missing FF3D_ENV_ROOT}"' in submit
+    assert 'test -f "$FF3D_ENV_ROOT/environment_build.complete"' in submit
+    assert 'test ! -e "$FF3D_ENV_ROOT/environment_build.incomplete"' in submit
+    assert "environment_manifest_sha256.txt" in submit
+    assert "environment-validation" in submit
+    assert "FF3D_BENCHMARK_COMMIT" in submit
+    assert "monitor_workflow.sh" in submit
+    assert 'FF3D_MONITOR_SECONDS:-30' in submit
+
+
 def test_live_monitor_combines_scheduler_and_expected_file_state() -> None:
     monitor = (METHOD / "slurm/monitor_workflow.sh").read_text(encoding="utf-8")
     assert "squeue -j" in monitor

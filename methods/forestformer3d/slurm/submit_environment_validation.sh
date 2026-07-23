@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ "${FF3D_ENVIRONMENT_VALIDATION_CONFIRMED:-0}" != "1" ]]; then
+  echo "Refusing ForestFormer3D environment validation." >&2
+  echo "Set FF3D_ENVIRONMENT_VALIDATION_CONFIRMED=1 after reviewing the job." >&2
+  exit 2
+fi
+
+: "${FF3D_ENV_ROOT:?Missing FF3D_ENV_ROOT}"
+
+BENCHMARK_ROOT="${FF3D_BENCHMARK_ROOT:-$(pwd)}"
+CHECKPOINT="${FF3D_CHECKPOINT:-$HOME/fastscratch/forestformer3d/checkpoints/clean_forestformer/clean_forestformer/epoch_3000_fix.pth}"
+CHECKPOINT_SHA256="01037a648596832238ac72ea2f5eef87ceaf5aeb399e56ff4b760ba1ed1c777e"
+METHOD_ROOT="$BENCHMARK_ROOT/methods/forestformer3d"
+VALIDATE_JOB_FILE="$METHOD_ROOT/slurm/validate_environment.sbatch"
+ROOT="${FF3D_RUNTIME_ROOT:-$HOME/fastscratch/forestformer3d}"
+BASE_SIF="${FF3D_BASE_SIF:-$ROOT/containers/pytorch_1.13.1_cuda11.6_cudnn8_devel.sif}"
+BASE_SIF_SHA256="4a35d5a57c1d57061f899b514329ad8ec2bf74a9ff31d103c0a53a289e07c84f"
+RUNS_DIR="$ROOT/runs/environment-validation"
+STATE_DIR="$ROOT/state"
+
+cd "$BENCHMARK_ROOT"
+test "$(git branch --show-current)" = "method/forestformer3d"
+test -z "$(git status --porcelain)"
+BENCHMARK_COMMIT="$(git rev-parse HEAD)"
+
+test -f "$BASE_SIF"
+echo "$BASE_SIF_SHA256  $BASE_SIF" | sha256sum --check --status
+test -f "$CHECKPOINT"
+echo "$CHECKPOINT_SHA256  $CHECKPOINT" | sha256sum --check --status
+test -f "$FF3D_ENV_ROOT/environment_build.complete"
+test ! -e "$FF3D_ENV_ROOT/environment_build.incomplete"
+test -f "$FF3D_ENV_ROOT/pip_freeze.txt"
+test -f "$FF3D_ENV_ROOT/conda_explicit.txt"
+
+TIMESTAMP="$(date -u +%Y%m%dT%H%M%S)"
+RUN_ID="forestformer3d__for-instance__published-pretrained__not-applicable__environment-validation__${TIMESTAMP}"
+RUN_ROOT="$RUNS_DIR/$RUN_ID"
+STATE_FILE="$STATE_DIR/${RUN_ID}.env"
+
+test ! -e "$RUN_ROOT"
+test ! -e "$STATE_FILE"
+mkdir -p "$RUNS_DIR" "$STATE_DIR"
+mkdir "$RUN_ROOT"
+mkdir "$RUN_ROOT/logs"
+
+sha256sum \
+  "$FF3D_ENV_ROOT/pip_freeze.txt" \
+  "$FF3D_ENV_ROOT/conda_explicit.txt" \
+  > "$RUN_ROOT/environment_manifest_sha256.txt"
+
+VALIDATE_JOB="$(
+  sbatch --parsable \
+    --output="$RUN_ROOT/logs/validate_%j.out" \
+    --error="$RUN_ROOT/logs/validate_%j.err" \
+    --export=ALL,FF3D_BENCHMARK_ROOT="$BENCHMARK_ROOT",FF3D_BENCHMARK_COMMIT="$BENCHMARK_COMMIT",FF3D_BASE_SIF="$BASE_SIF",FF3D_BASE_SIF_SHA256="$BASE_SIF_SHA256",FF3D_ENV_ROOT="$FF3D_ENV_ROOT",FF3D_CHECKPOINT="$CHECKPOINT",FF3D_CHECKPOINT_SHA256="$CHECKPOINT_SHA256",FF3D_RUN_ROOT="$RUN_ROOT" \
+    "$VALIDATE_JOB_FILE"
+)"
+
+EXPECTED_FILES="$RUN_ROOT/environment_manifest_sha256.txt|$RUN_ROOT/runtime_base_sif_inspect.json|$RUN_ROOT/environment_validation.json|$RUN_ROOT/pip_freeze.txt|$RUN_ROOT/environment_validation.complete"
+
+{
+  printf 'FF3D_WORKFLOW=%q\n' "environment_validation"
+  printf 'FF3D_RUN_ID=%q\n' "$RUN_ID"
+  printf 'FF3D_RUN_ROOT=%q\n' "$RUN_ROOT"
+  printf 'FF3D_JOB_IDS=%q\n' "$VALIDATE_JOB"
+  printf 'FF3D_VALIDATE_JOB=%q\n' "$VALIDATE_JOB"
+  printf 'FF3D_BASE_SIF=%q\n' "$BASE_SIF"
+  printf 'FF3D_ENV_ROOT=%q\n' "$FF3D_ENV_ROOT"
+  printf 'FF3D_EXPECTED_FILES=%q\n' "$EXPECTED_FILES"
+  printf 'FF3D_BENCHMARK_COMMIT=%q\n' "$BENCHMARK_COMMIT"
+  printf 'FF3D_CREATED_AT=%q\n' "$(date -Is)"
+} > "$STATE_FILE"
+
+echo "run_id=$RUN_ID"
+echo "state_file=$STATE_FILE"
+echo "validate_job=$VALIDATE_JOB"
+echo "environment_root=$FF3D_ENV_ROOT"
+echo "cancel_command=scancel $VALIDATE_JOB"
+
+if [[ "${FF3D_NO_WATCH:-0}" != "1" ]]; then
+  exec bash "$METHOD_ROOT/slurm/monitor_workflow.sh" \
+    "$STATE_FILE" --watch "${FF3D_MONITOR_SECONDS:-30}"
+fi

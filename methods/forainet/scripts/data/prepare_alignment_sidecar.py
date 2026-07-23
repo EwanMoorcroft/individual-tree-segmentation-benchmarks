@@ -30,7 +30,11 @@ def validate_relative_path(value: str) -> str:
 def catalogue_split(metadata: Path, relative_path: str) -> str:
     with metadata.open(encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
-    matches = [row for row in rows if row.get("relative_path") == relative_path]
+    matches = [
+        row
+        for row in rows
+        if (row.get("relative_path") or row.get("path")) == relative_path
+    ]
     if len(matches) != 1:
         raise ValueError("relative_path must occur exactly once in split metadata")
     split = matches[0].get("split", "")

@@ -105,11 +105,17 @@ def align_full_resolution_prediction(
         [FORAINET_TO_BENCHMARK_CLASS[int(value)] for value in aligned_semantics],
         dtype=np.uint8,
     )
-    pred_tree_id = np.where(
-        np.isin(aligned_semantics, (2, 3, 4)) & (aligned_instances > 0),
-        aligned_instances,
-        0,
-    ).astype(np.int64)
+    if np.any(aligned_instances < -1):
+        raise ValueError("ForAINet instance IDs must be -1 or non-negative")
+    predicted_tree = np.isin(aligned_semantics, (2, 3, 4)) & (
+        aligned_instances >= 0
+    )
+    pred_tree_id = np.zeros(expected_point_count, dtype=np.int64)
+    if np.any(predicted_tree):
+        maximum = int(np.max(aligned_instances[predicted_tree]))
+        if maximum == np.iinfo(np.int64).max:
+            raise ValueError("ForAINet instance ID cannot be shifted into int64")
+        pred_tree_id[predicted_tree] = aligned_instances[predicted_tree] + 1
     return AlignedPrediction(
         pred_tree_id=pred_tree_id,
         pred_classification=pred_classification,
@@ -136,7 +142,7 @@ def collapse_identical_overlap_rows(
         raise ValueError("overlap arrays have mismatched lengths")
 
     retained: dict[int, tuple[int, int]] = {}
-    for row, semantic, instance in zip(rows, semantics, instances, strict=True):
+    for row, semantic, instance in zip(rows, semantics, instances):
         candidate = (int(semantic), int(instance))
         previous = retained.get(int(row))
         if previous is not None and previous != candidate:

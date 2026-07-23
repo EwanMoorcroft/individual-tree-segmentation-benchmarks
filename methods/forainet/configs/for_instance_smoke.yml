@@ -3,7 +3,7 @@ project:
   dataset_slug: for-instance
   method_slug: forainet
   protocol_id: for_instance_pointwise_v1
-  status: scaffolded_not_run
+  status: ready_for_guarded_submission
 
 dataset:
   slug: for-instance
@@ -51,13 +51,25 @@ roots:
   metadata_root_env: FORAINET_METADATA_ROOT
 
 resources:
-  partition: gpu-l40s-low
-  gpu_type: l40s
+  partition: gpu-a-lowsmall
+  gpu_type: a100
   gpus: 1
   cpus: 12
   memory_gb: 128
   wall_time: "04:00:00"
   runtime_estimate_status: unmeasured
+
+inference:
+  official_entrypoint: PointCloudSegmentation/eval.py
+  official_tiler: PointCloudSegmentation/split_largePC_to_tiles.py
+  official_merger: PointCloudSegmentation/merge_tiles.py
+  tile_size_m: 50
+  tile_overlap_m: 5
+  eval_batch_size: 5
+  input_semantic_seg: constant_low_vegetation_bookkeeping
+  input_tree_id: constant_unassigned_bookkeeping
+  reference_labels_supplied_to_model: false
+  reference_label_dependent_filtering: false
 
 evaluation:
   iou_threshold: 0.5

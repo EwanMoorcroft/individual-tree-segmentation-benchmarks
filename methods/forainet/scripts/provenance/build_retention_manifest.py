@@ -11,6 +11,8 @@ from pathlib import Path
 REQUIRED_SMOKE_ROLES = {
     "official_raw_output",
     "aligned_prediction",
+    "checkpoint_provenance",
+    "environment_manifest",
     "plot_metadata",
     "plot_metrics",
     "matched_pairs",
@@ -38,7 +40,9 @@ def build(root: Path, role_paths: dict[str, Path]) -> dict[str, object]:
     for role in sorted(role_paths):
         path = role_paths[role]
         resolved = path.resolve()
-        if not resolved.is_relative_to(resolved_root):
+        try:
+            resolved.relative_to(resolved_root)
+        except ValueError:
             raise ValueError(f"retained path for {role} is outside the run root")
         if not resolved.is_file():
             raise FileNotFoundError(resolved)

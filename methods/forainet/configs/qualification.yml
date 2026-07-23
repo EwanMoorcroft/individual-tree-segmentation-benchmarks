@@ -3,7 +3,7 @@ project:
   dataset_slug: for-instance
   method_slug: forainet
   protocol_id: for_instance_method_adapter_acceptance_v1
-  status: qualification_in_progress
+  status: qualified_for_development_smoke
 
 dataset:
   slug: for-instance
@@ -73,6 +73,18 @@ method:
       release_rpm_sha256: 1890dd3df87b06b0a9b2845b81b5709c0033fcca5673b03cc69ce9cb755e9605
       compatibility_distribution: el8
       node_local_tmp_required: true
+    qualified_image:
+      sha256: 4b8835107800c5a368e4073aade1fee5b94e436693e13ab351fe8c2a250d898e
+      build_benchmark_commit: af7e58e643ccd2075d2a8bea57b6de5e31e918f2
+      cuda_arch: "8.0"
+    checkpoint_load_evidence:
+      benchmark_commit: ac27a9fcd2a68d38ad62c115071892a35c53111e
+      report_sha256: 37c9396574da0fd6a9338d312304986e9bc9b08e6145cdb9bd570df7edca0989
+      tensor_count: 755
+      compatible_fraction: 1.0
+      missing_keys: []
+      unexpected_keys: []
+      shape_mismatches: []
 
 gates:
   v2_availability_resolved: true
@@ -82,9 +94,9 @@ gates:
   barkla_root_mapped_fakeroot_probe_passed: true
   barkla_root_mapped_apt_build_blocked: true
   barkla_koji_version_discovery_blocked: true
-  barkla_userlocal_fakeroot_toolchain_verified: false
-  barkla_image_verified: false
-  checkpoint_full_load_verified: false
+  barkla_userlocal_fakeroot_toolchain_verified: true
+  barkla_image_verified: true
+  checkpoint_full_load_verified: true
   prediction_label_independence_verified: false
   source_row_inverse_map_verified: false
   held_out_authorised: false

@@ -70,20 +70,20 @@ checkpoint. The loader accepts same-shaped parameters with `strict=False`;
 therefore Barkla qualification must record all loaded, missing and unexpected
 keys and must reject an incomplete load.
 
-## Remaining qualification gates
+## Environment and checkpoint qualification
 
 The checkpoint and source were independently acquired on Barkla and passed the
-frozen size, hash and commit checks. A minimal Apptainer 1.3.6 root-mapped
-fakeroot extraction build also succeeded on 2026-07-23. The first full build
-then failed when `apt` attempted to change identity inside that single-UID
-namespace. The account has no `/etc/subuid` entry and no system fakeroot helper.
-Barkla does provide the prerequisites for the official relocatable
-unprivileged Apptainer installer and a large node-local ext filesystem. A
-pinned user-local Apptainer 1.3.6 plus fakeroot `apt` probe is therefore the
-next gate. The official installer's automatic Koji lookup did not locate a
-1.3.6 EL8 package, so the retry uses the checksum-verified RPM published on the
-official v1.3.6 GitHub release. The failed build and installer evidence remain
-retained.
+frozen size, hash and commit checks. The pinned relocatable Apptainer 1.3.6
+toolchain then passed its fakeroot package-install probe. The completed A100
+image has SHA-256
+`4b8835107800c5a368e4073aade1fee5b94e436693e13ab351fe8c2a250d898e`.
+
+The official checkpoint was loaded on an A100 80 GB with Python 3.8.10,
+PyTorch 1.9.0+cu111, MinkowskiEngine 0.5.4, torch-geometric 1.7.2,
+TorchSparse 1.4.0 and hdbscan 0.8.28. All 755 checkpoint tensors matched all
+755 model tensors; there were no missing, unexpected or shape-mismatched keys.
+The retained load report has SHA-256
+`37c9396574da0fd6a9338d312304986e9bc9b08e6145cdb9bd570df7edca0989`.
 
 The committed definition derives from official Dockerfile blob
 `1daea67cfae9e44a0de439f06896320d9723c209`. It pins the CUDA base image and
@@ -91,10 +91,9 @@ MinkowskiEngine, TorchSparse and hdbscan source commits. It targets an A100
 (compute capability 8.0) because the official CUDA 11.1 toolchain predates
 native L40S/Ada support.
 
-1. Install and verify the pinned user-local build toolchain.
-2. Build the pinned image and record its SHA-256 and package inventory.
-3. Load the checkpoint against the selected architecture and prove complete
-   parameter compatibility.
-4. Prove prediction invariance when bookkeeping reference labels are changed.
-5. Prove that official full-resolution output maps back to retained source rows
-   without coordinate matching.
+The remaining development-smoke gates are:
+
+1. prove prediction independence from reference-label bookkeeping;
+2. prove that the official tiler and merger return exactly one prediction for
+   every original source row without coordinate matching; and
+3. complete manual alignment review before full-development inference.

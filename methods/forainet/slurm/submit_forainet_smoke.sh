@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+: "${FORAINET_BENCHMARK_ROOT:?set FORAINET_BENCHMARK_ROOT}"
+: "${FORAINET_EXPECTED_BENCHMARK_COMMIT:?set FORAINET_EXPECTED_BENCHMARK_COMMIT}"
+: "${FORAINET_UPSTREAM_ROOT:?set FORAINET_UPSTREAM_ROOT}"
+: "${FORAINET_CHECKPOINT:?set FORAINET_CHECKPOINT}"
+: "${FORAINET_IMAGE:?set FORAINET_IMAGE}"
+: "${FORAINET_QUALIFICATION_ROOT:?set FORAINET_QUALIFICATION_ROOT}"
+: "${FORAINET_DATASET_ROOT:?set FORAINET_DATASET_ROOT}"
+: "${FORAINET_RUN_ROOT:?set FORAINET_RUN_ROOT}"
+: "${FORAINET_RUN_ID:?set FORAINET_RUN_ID}"
+: "${FORAINET_SMOKE_STATE_FILE:?set FORAINET_SMOKE_STATE_FILE}"
+
+if [[ "${FORAINET_SMOKE_CONFIRMED:-0}" != "1" ]]; then
+  echo "Refusing submission without FORAINET_SMOKE_CONFIRMED=1."
+  exit 2
+fi
+if [[ ! "$FORAINET_RUN_ID" =~ ^forainet__for-instance__published-pretrained__none__dev-smoke__[0-9]{8}T[0-9]{6}$ ]]; then
+  echo "FORAINET_RUN_ID does not match the frozen smoke pattern."
+  exit 2
+fi
+
+git -C "$FORAINET_BENCHMARK_ROOT" rev-parse --git-dir >/dev/null
+git -C "$FORAINET_UPSTREAM_ROOT" rev-parse --git-dir >/dev/null
+test -f "$FORAINET_CHECKPOINT"
+test -f "$FORAINET_IMAGE"
+test -d "$FORAINET_QUALIFICATION_ROOT"
+test -r "$FORAINET_DATASET_ROOT/CULS/plot_1_annotated.las"
+test -r "$FORAINET_DATASET_ROOT/data_split_metadata.csv"
+test ! -e "$FORAINET_RUN_ROOT"
+test ! -e "$FORAINET_SMOKE_STATE_FILE"
+test "$(git -C "$FORAINET_BENCHMARK_ROOT" rev-parse HEAD)" = \
+  "$FORAINET_EXPECTED_BENCHMARK_COMMIT"
+test -z "$(git -C "$FORAINET_BENCHMARK_ROOT" status --porcelain)"
+
+mkdir -p "$FORAINET_BENCHMARK_ROOT/logs" \
+  "$(dirname "$FORAINET_SMOKE_STATE_FILE")"
+job_id="$(
+  cd "$FORAINET_BENCHMARK_ROOT"
+  sbatch --parsable \
+    --export=ALL,FORAINET_BENCHMARK_ROOT,FORAINET_EXPECTED_BENCHMARK_COMMIT,FORAINET_UPSTREAM_ROOT,FORAINET_CHECKPOINT,FORAINET_IMAGE,FORAINET_QUALIFICATION_ROOT,FORAINET_DATASET_ROOT,FORAINET_RUN_ROOT,FORAINET_RUN_ID,FORAINET_SMOKE_CONFIRMED \
+    methods/forainet/slurm/run_forainet_smoke.sbatch
+)"
+{
+  printf 'FORAINET_SMOKE_JOB_ID=%q\n' "$job_id"
+  printf 'FORAINET_RUN_ID=%q\n' "$FORAINET_RUN_ID"
+  printf 'FORAINET_RUN_ROOT=%q\n' "$FORAINET_RUN_ROOT"
+  printf 'FORAINET_EXPECTED_BENCHMARK_COMMIT=%q\n' \
+    "$FORAINET_EXPECTED_BENCHMARK_COMMIT"
+  printf 'FORAINET_SUBMITTED_AT_EPOCH=%q\n' "$(date +%s)"
+} > "$FORAINET_SMOKE_STATE_FILE"
+printf '%s\n' "$job_id"

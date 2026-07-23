@@ -11,6 +11,7 @@ import laspy
 import numpy as np
 import pytest
 import yaml
+from plyfile import PlyData, PlyElement
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +34,12 @@ evaluator = load_script(
 )
 sidecar = load_script(
     "scripts/data/prepare_alignment_sidecar.py", "forainet_sidecar"
+)
+input_adapter = load_script(
+    "scripts/data/prepare_label_isolated_input.py", "forainet_input_adapter"
+)
+merge_extractor = load_script(
+    "scripts/runtime/extract_official_merge.py", "forainet_merge_extractor"
 )
 exposure = load_script(
     "scripts/provenance/validate_exposure_audit.py", "forainet_exposure"
@@ -96,7 +103,13 @@ def test_qualification_identity_is_frozen() -> None:
     )
     assert config["gates"]["barkla_root_mapped_fakeroot_probe_passed"] is True
     assert config["gates"]["barkla_root_mapped_apt_build_blocked"] is True
-    assert config["gates"]["barkla_userlocal_fakeroot_toolchain_verified"] is False
+    assert config["gates"]["barkla_userlocal_fakeroot_toolchain_verified"] is True
+    assert config["gates"]["barkla_image_verified"] is True
+    assert config["gates"]["checkpoint_full_load_verified"] is True
+    assert container["qualified_image"]["sha256"] == (
+        "4b8835107800c5a368e4073aade1fee5b94e436693e13ab351fe8c2a250d898e"
+    )
+    assert container["checkpoint_load_evidence"]["compatible_fraction"] == 1.0
     assert config["gates"]["held_out_authorised"] is False
 
 
@@ -160,6 +173,14 @@ def test_image_build_is_cpu_only_and_qualification_targets_a100() -> None:
     assert "run_config.data.fold = []" in checkpoint_probe
     assert "checkpoint.dataset_properties" in checkpoint_probe
     assert "PretainedRegistry" not in checkpoint_probe
+    smoke = (METHOD / "slurm/run_forainet_smoke.sbatch").read_text(
+        encoding="utf-8"
+    )
+    assert "#SBATCH --partition=gpu-a-lowsmall" in smoke
+    assert "#SBATCH --gres=gpu:a100:1" in smoke
+    assert "CULS/plot_1_annotated.las" in smoke
+    assert "FORAINET_SMOKE_CONFIRMED" in smoke
+    assert "data_split_metadata.csv" in smoke
 
 
 def test_exposure_table_is_exact_and_test_only() -> None:
@@ -214,7 +235,7 @@ def test_alignment_reorders_by_exact_source_index() -> None:
     )
     assert result.source_row_index.tolist() == [0, 1, 2, 3]
     assert result.pred_classification.tolist() == [0, 4, 6, 0]
-    assert result.pred_tree_id.tolist() == [0, 11, 22, 0]
+    assert result.pred_tree_id.tolist() == [0, 12, 23, 0]
 
 
 @pytest.mark.parametrize(
@@ -253,13 +274,20 @@ def test_unassigned_tree_semantics_remain_in_prediction_union() -> None:
         pred_instance_id=np.asarray([-1, 0, 99]),
         expected_point_count=3,
     )
-    assert result.pred_tree_id.tolist() == [0, 0, 99]
+    assert result.pred_tree_id.tolist() == [0, 1, 100]
     assert result.pred_classification.tolist() == [4, 5, 6]
     with pytest.raises(ValueError, match="stuff classes"):
         contract.align_full_resolution_prediction(
             source_row_index=np.arange(2),
             pred_semantic_internal=np.asarray([0, 2]),
             pred_instance_id=np.asarray([5, 7]),
+            expected_point_count=2,
+        )
+    with pytest.raises(ValueError, match="must be -1 or non-negative"):
+        contract.align_full_resolution_prediction(
+            source_row_index=np.arange(2),
+            pred_semantic_internal=np.asarray([2, 3]),
+            pred_instance_id=np.asarray([-2, 0]),
             expected_point_count=2,
         )
 
@@ -370,6 +398,77 @@ def test_generated_las_sidecar_preserves_exact_rows(tmp_path: Path) -> None:
     assert arrays["target_tree_id"].tolist() == [0, 10, 11]
 
 
+def test_label_isolated_input_retains_every_row_and_hides_labels(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "plot.las"
+    write_las(source)
+    split = tmp_path / "split.csv"
+    split.write_text(
+        "path,folder,split\nSYNTHETIC/plot.las,SYNTHETIC,dev\n",
+        encoding="utf-8",
+    )
+    metadata, arrays = sidecar.prepare(
+        source=source,
+        relative_path="SYNTHETIC/plot.las",
+        split_metadata=split,
+    )
+    assert metadata["split"] == "dev"
+    assert arrays["source_row_index"].tolist() == [0, 1, 2]
+
+    cloud = laspy.read(source)
+    inference_ply = tmp_path / "input.ply"
+    conversion = input_adapter.write_label_isolated_ply(inference_ply, cloud)
+    vertex = PlyData.read(inference_ply)["vertex"].data
+    assert len(vertex) == 3
+    assert np.asarray(vertex["semantic_seg"]).tolist() == [1.0, 1.0, 1.0]
+    assert np.asarray(vertex["treeID"]).tolist() == [-1.0, -1.0, -1.0]
+    assert conversion["reference_classification_supplied_to_model"] is False
+    assert conversion["reference_tree_id_supplied_to_model"] is False
+    assert conversion["dropped_source_rows"] == 0
+
+
+def write_prediction_ply(path: Path, source_ply: Path) -> None:
+    source = PlyData.read(source_ply)["vertex"].data
+    vertices = np.zeros(
+        len(source),
+        dtype=[
+            ("x", "f4"),
+            ("y", "f4"),
+            ("z", "f4"),
+            ("instance_preds", "i2"),
+            ("semantic_preds", "i2"),
+        ],
+    )
+    for name in ("x", "y", "z"):
+        vertices[name] = source[name]
+    vertices["instance_preds"] = np.asarray([-1, 0, 7], dtype=np.int16)
+    vertices["semantic_preds"] = np.asarray([0, 2, 4], dtype=np.int16)
+    PlyData([PlyElement.describe(vertices, "vertex")], byte_order="<").write(path)
+
+
+def test_official_merge_extraction_uses_original_array_order(tmp_path: Path) -> None:
+    source = tmp_path / "plot.las"
+    write_las(source)
+    cloud = laspy.read(source)
+    inference_ply = tmp_path / "input.ply"
+    input_adapter.write_label_isolated_ply(inference_ply, cloud)
+    merged = tmp_path / "merged.ply"
+    write_prediction_ply(merged, inference_ply)
+    arrays, metadata = merge_extractor.extract(merged, inference_ply, 3)
+    assert arrays["source_row_index"].tolist() == [0, 1, 2]
+    assert arrays["pred_instance_id"].tolist() == [-1, 0, 7]
+    assert metadata["coordinate_matching_used"] is False
+    assert metadata["coordinate_order_valid"] is True
+
+    reordered = PlyData.read(merged)
+    reordered["vertex"].data = reordered["vertex"].data[::-1].copy()
+    reordered_path = tmp_path / "reordered.ply"
+    reordered.write(reordered_path)
+    with pytest.raises(ValueError, match="exact inference-Ply row order"):
+        merge_extractor.extract(reordered_path, inference_ply, 3)
+
+
 def test_sidecar_refuses_test_split_and_missing_fields(tmp_path: Path) -> None:
     source = tmp_path / "plot.las"
     write_las(source)
@@ -431,6 +530,8 @@ def test_public_files_do_not_contain_private_paths() -> None:
 def test_cli_help_is_available() -> None:
     scripts = [
         METHOD / "scripts/data/prepare_alignment_sidecar.py",
+        METHOD / "scripts/data/prepare_label_isolated_input.py",
+        METHOD / "scripts/runtime/extract_official_merge.py",
         METHOD / "scripts/runtime/normalise_forainet_predictions.py",
         METHOD / "scripts/evaluation/evaluate_for_instance.py",
         METHOD / "scripts/provenance/validate_exposure_audit.py",

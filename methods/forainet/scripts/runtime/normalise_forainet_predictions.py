@@ -101,6 +101,9 @@ def main() -> int:
             "3": 5,
             "4": 6,
         },
+        "forainet_instance_mapping": (
+            "official_nonnegative_id_plus_one; official_minus_one_to_zero"
+        ),
     }
     args.metadata_json.write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"

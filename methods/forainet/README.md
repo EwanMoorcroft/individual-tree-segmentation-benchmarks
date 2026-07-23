@@ -5,7 +5,9 @@
 This directory integrates the original ForAINet release as the reproducible
 fallback for the unavailable ForAINetV2 release. The selected method slug is
 `forainet`. The integration is development-only until every readiness gate in
-the FOR-instance method-adapter protocol has passed.
+the FOR-instance method-adapter protocol has passed. The environment, image
+and complete checkpoint-load gates have passed; the guarded one-plot
+development smoke is ready for submission.
 
 ## Upstream Repository And Citation
 
@@ -43,9 +45,12 @@ input must be a repository-catalogued relative path with `classification` and
 source hash, point count, semantic values and positive reference-tree count.
 
 The official five-class preparation maps original classes 1, 2, 4, 5 and 6 to
-model classes 0 through 4 and drops class 3 outliers. A Barkla qualification
-run must prove the retained-row inverse map before the official converter can
-be accepted. Development and held-out roots are physically separate.
+model classes 0 through 4 and drops class 3 outliers for labelled training and
+evaluation. Benchmark inference cannot use that reference-label-dependent
+filter: all source rows are retained, and the loader receives constant
+low-vegetation and unassigned-instance bookkeeping values. Real
+`classification` and `treeID` values remain only in the evaluation sidecar.
+Development and held-out roots are physically separate.
 
 ## Output Contract
 
@@ -59,7 +64,10 @@ The primary retained artefact is a compressed, source-row-aligned array with:
 
 Raw official outputs remain separate. The adapter accepts only stable integer
 row identifiers. It rejects missing, duplicated, out-of-range or conflicting
-rows and never falls back to rounded-coordinate matching.
+rows and never falls back to rounded-coordinate matching. Official
+non-negative, zero-based instance IDs are shifted by one so that the first
+official cluster remains a valid positive benchmark tree ID; official `-1`
+remains unassigned.
 
 ## FOR-instance Compatibility
 
@@ -92,11 +100,17 @@ package inventory must be retained before inference.
 ## Slurm Workflow
 
 The committed Slurm chain covers a guarded user-local Apptainer/fakeroot probe,
-a CPU image build, and then asset/environment qualification on an A100. Job
-names use the `forai_` prefix and submission refuses colliding evidence roots.
-The development-only sidecar, normalisation and evaluation components are
-ready, but an inference submission job is intentionally withheld until the
-container and complete checkpoint load have been verified.
+a CPU image build, asset/environment qualification on an A100, and a guarded
+one-plot development smoke. Job names use the `forai_` prefix and submission
+refuses colliding evidence roots. The smoke uses the official 50 m tiler with
+5 m overlap, `eval.py`, and official merger; it then enforces exact source-row
+normalisation and shared-protocol evaluation.
+
+The saved checkpoint configuration may contain a non-portable data-root field.
+Each run stages a derivative archive that changes only this path to the
+run-local relative data root and verifies every model tensor exactly against the
+unchanged official archive. Both hashes and the exact metadata-only change are
+retained; no weight is altered.
 
 Full-development, fine-tuning and test submission routes remain deliberately
 blocked until the preceding evidence exists. In particular, no held-out job
@@ -115,20 +129,16 @@ and unmatched references.
 - No complete official ForAINetV2 release was located.
 - The checkpoint provider publishes no checksum or immutable source tag.
 - The exact official 42/14 train/validation membership is not released.
-- Root-mapped extraction passed, but root-mapped `apt` failed because Barkla
-  provides neither a subordinate-ID mapping nor a system fakeroot helper. The
-  pinned user-local fakeroot probe and full package-import report are pending.
-- Current upstream source/checkpoint compatibility still needs a clean Barkla
-  import and full state-dict load report.
+- Root-mapped `apt` is unavailable, so rebuilding depends on the qualified
+  pinned user-local toolchain.
 - Official conversion, tiling, merging and label-independence still require a
   retained development smoke and manual alignment confirmation.
 - No runtime or memory estimate is evidence-backed yet.
 
 ## Current Benchmark Status
 
-Status: `root_mapped_apt_blocked; userlocal_fakeroot_probe_not_run`.
+Status: `environment_and_checkpoint_qualified; development_smoke_ready`.
 
-The method is not eligible for the held-out ranking. The next gate is a clean
-environment/checkpoint-load test followed by the frozen
-`CULS/plot_1_annotated.las` development smoke. No shared repository files are
-modified by this branch.
+The method is not eligible for the held-out ranking. The next gate is the
+frozen `CULS/plot_1_annotated.las` development smoke followed by manual
+alignment review. No shared repository files are modified by this branch.

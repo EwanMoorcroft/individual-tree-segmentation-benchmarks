@@ -3,7 +3,7 @@ project:
   dataset_slug: for-instance
   method_slug: forainet
   protocol_id: for_instance_method_adapter_acceptance_v1
-  status: schema_only
+  status: smoke_schema_implemented
 
 dataset:
   slug: for-instance

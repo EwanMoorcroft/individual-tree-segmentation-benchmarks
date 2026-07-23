@@ -817,8 +817,52 @@ def test_official_merge_extraction_uses_original_array_order(tmp_path: Path) -> 
     reordered["vertex"].data = reordered["vertex"].data[::-1].copy()
     reordered_path = tmp_path / "reordered.ply"
     reordered.write(reordered_path)
-    with pytest.raises(ValueError, match="exact inference-Ply row order"):
+    with pytest.raises(ValueError, match="exact covered source-row order"):
         merge_extractor.extract(reordered_path, inference_ply, 3)
+
+
+def test_official_merge_extraction_preserves_uncovered_source_rows(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "plot.las"
+    write_las(source)
+    cloud = laspy.read(source)
+    inference_ply = tmp_path / "input.ply"
+    input_adapter.write_label_isolated_ply(inference_ply, cloud)
+    source_vertices = PlyData.read(inference_ply)["vertex"].data
+    merged_vertices = np.zeros(
+        2,
+        dtype=[
+            ("x", "f4"),
+            ("y", "f4"),
+            ("z", "f4"),
+            ("instance_preds", "i2"),
+            ("semantic_preds", "i2"),
+        ],
+    )
+    for name in ("x", "y", "z"):
+        merged_vertices[name] = source_vertices[name][[0, 2]]
+    merged_vertices["instance_preds"] = np.asarray([4, 9], dtype=np.int16)
+    merged_vertices["semantic_preds"] = np.asarray([2, 4], dtype=np.int16)
+    merged = tmp_path / "merged.ply"
+    PlyData(
+        [PlyElement.describe(merged_vertices, "vertex")], byte_order="<"
+    ).write(merged)
+    tile_dir = tmp_path / "tiles"
+    tile_dir.mkdir()
+    np.savetxt(tile_dir / "tile_0_0_indices.txt", [0, 2], fmt="%d")
+
+    arrays, metadata = merge_extractor.extract(
+        merged, inference_ply, 3, tile_dir
+    )
+
+    assert arrays["source_row_index"].tolist() == [0, 1, 2]
+    assert arrays["pred_instance_id"].tolist() == [4, -1, 9]
+    assert arrays["pred_semantic_internal"].tolist() == [2, -1, 4]
+    assert metadata["covered_source_point_count"] == 2
+    assert metadata["uncovered_source_point_count"] == 1
+    assert metadata["uncovered_source_row_indices"] == [1]
+    assert metadata["coordinate_matching_used"] is False
 
 
 def test_sidecar_refuses_test_split_and_missing_fields(tmp_path: Path) -> None:

@@ -668,6 +668,8 @@ def main() -> int:
             str(merged_ply),
             "--inference-ply",
             str(inference_ply),
+            "--tile-index-dir",
+            str(tile_list_path.parent),
             "--expected-point-count",
             str(
                 args.expected_point_count

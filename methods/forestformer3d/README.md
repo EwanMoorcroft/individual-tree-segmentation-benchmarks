@@ -41,10 +41,12 @@ Inputs are the repository's frozen 32 original FOR-instance LAS files.
 Development commands may read only the 21 development paths. Every source must
 contain finite XYZ coordinates, `classification` and `treeID`.
 
-Conversion will assign `source_row_index = 0..N-1` before transformation and
-will supply XYZ to the model. Reference labels remain in a separate evaluation
-sidecar unless an official loader bookkeeping requirement is proven unable to
-affect predictions.
+Conversion assigns `source_row_index = 0..N-1` before transformation and
+supplies XYZ to the model. Shared tree-material classes 4, 5 and 6 map to the
+official internal wood label; all other classes map to loader-required ground.
+Reference labels remain in an evaluation sidecar. The official loader also
+receives masks, so the smoke runs the same XYZ once with mapped reference masks
+and once with all-zero masks and requires identical raw prediction fields.
 
 ## Output Contract
 
@@ -93,6 +95,11 @@ Every submission writes a shell-safe state file and starts
 queue, accounting and expected-file state every 30 seconds and exits on a
 terminal Slurm state. Ctrl-C stops monitoring without cancelling jobs.
 
+`slurm/submit_one_plot_smoke.sh` is the only inference submitter currently
+available. It is hard-coded to development plot `CULS/plot_1_annotated.las`,
+checks the frozen split-metadata, environment, base-image and checkpoint
+hashes, then runs both label-counterfactual cases in one A100 allocation.
+
 ## Evaluation Route
 
 Development smoke and full evaluation will use the shared
@@ -104,10 +111,12 @@ until a frozen readiness record is reviewed and explicitly authorised.
 ## Known Limitations
 
 The official inference code selects its whole-plot route using a filename
-substring and reads ground-truth arrays for output bookkeeping. Both behaviours
-require counterfactual validation. The official `tools/test.py` also appears to
-use `torch.load` without importing `torch`. No upstream modelling source will
-be patched to conceal these issues.
+substring and reads ground-truth arrays for output bookkeeping. The smoke
+retains the required `test` filename and validates the bookkeeping
+counterfactually. The official `tools/test.py` uses `torch.load` without
+importing `torch`; the adapter supplies that missing module through
+`runpy.init_globals` after hashing the unchanged file. No upstream modelling
+source is patched.
 
 Several official Docker dependencies are intentionally unpinned. The branch
 therefore records the qualified base-SIF hash, Conda explicit specification
@@ -118,7 +127,6 @@ to the versions that passed A100 validation.
 ## Current Benchmark Status
 
 Upstream source, base environment, checkpoint identity, checkpoint exposure and
-the composite A100 runtime are qualified. The next gate is a development-only
-official-runner smoke proving label independence, deterministic conversion and
-exact source-row alignment. No development or held-out inference has run, and
-no ForestFormer3D accuracy result exists.
+the composite A100 runtime are qualified. The development-only official-runner
+smoke workflow is implemented but has not yet passed on Barkla. No held-out
+inference is available, and no ForestFormer3D accuracy result exists.

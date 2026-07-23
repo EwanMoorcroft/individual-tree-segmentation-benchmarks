@@ -1,6 +1,7 @@
 # ForestFormer3D results
 
-No ForestFormer3D development or held-out accuracy result exists.
+No ForestFormer3D development or held-out accuracy result exists. The
+development one-plot smoke is an adapter-validity check, not an accuracy row.
 
 The source, base environment, composite A100 runtime, checkpoint identity and
 checkpoint-exposure gate are qualified. Accuracy tables will be added only from

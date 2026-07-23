@@ -32,6 +32,17 @@ SHA-256 plus the retained definition, lock file, image metadata and complete
 `pip freeze`. A later rebuild is not substituted without requalification.
 
 The Barkla root-mapped fakeroot probe completed on 2026-07-23 with Apptainer
-1.3.6. It warned that the account has no `/etc/subuid` entry and no `fakeroot`
-helper, but successfully extracted an OCI image and created a SIF. The full
-legacy package build remains a separate evidence gate until it completes.
+1.3.6. It successfully extracted an OCI image and created a SIF, but the first
+full build proved that `apt` cannot change to its `_apt` user without a
+subordinate-ID mapping or fakeroot helper. Fast-scratch also lacks the xattr
+support used by the rootless extractor.
+
+The guarded toolchain job downloads the official Apptainer v1.3.6
+`install-unprivileged.sh`, verifies SHA-256
+`41574717e85e03cdf40597819c927250d0772186b943b8869c8ec8dfcb5b86d1`, and
+installs its EL8 compatibility bundle outside Git. This supplies the
+old-glibc-compatible fakeroot helper recommended for older Ubuntu containers.
+It must install a package into the exact digest-pinned CUDA base before the
+ForAINet image can be retried. Both the toolchain probe and full image build use
+node-local `/tmp`; the final SIF, cache and evidence remain in persistent
+external storage.

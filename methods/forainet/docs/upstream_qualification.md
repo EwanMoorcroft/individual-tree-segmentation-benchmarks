@@ -74,9 +74,13 @@ keys and must reject an incomplete load.
 
 The checkpoint and source were independently acquired on Barkla and passed the
 frozen size, hash and commit checks. A minimal Apptainer 1.3.6 root-mapped
-fakeroot build also succeeded on 2026-07-23. The account has no `/etc/subuid`
-entry and no `fakeroot` helper, so the full dependency build remains the next
-gate.
+fakeroot extraction build also succeeded on 2026-07-23. The first full build
+then failed when `apt` attempted to change identity inside that single-UID
+namespace. The account has no `/etc/subuid` entry and no system fakeroot helper.
+Barkla does provide the prerequisites for the official relocatable
+unprivileged Apptainer installer and a large node-local ext filesystem. A
+pinned user-local Apptainer 1.3.6 plus fakeroot `apt` probe is therefore the
+next gate; the failed build evidence remains retained.
 
 The committed definition derives from official Dockerfile blob
 `1daea67cfae9e44a0de439f06896320d9723c209`. It pins the CUDA base image and
@@ -84,9 +88,10 @@ MinkowskiEngine, TorchSparse and hdbscan source commits. It targets an A100
 (compute capability 8.0) because the official CUDA 11.1 toolchain predates
 native L40S/Ada support.
 
-1. Build the pinned image and record its SHA-256 and package inventory.
-2. Load the checkpoint against the selected architecture and prove complete
+1. Install and verify the pinned user-local build toolchain.
+2. Build the pinned image and record its SHA-256 and package inventory.
+3. Load the checkpoint against the selected architecture and prove complete
    parameter compatibility.
-3. Prove prediction invariance when bookkeeping reference labels are changed.
-4. Prove that official full-resolution output maps back to retained source rows
+4. Prove prediction invariance when bookkeeping reference labels are changed.
+5. Prove that official full-resolution output maps back to retained source rows
    without coordinate matching.

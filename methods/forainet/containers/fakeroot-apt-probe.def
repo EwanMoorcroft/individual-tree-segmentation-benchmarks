@@ -1,0 +1,12 @@
+Bootstrap: docker
+From: nvidia/cuda@sha256:83e4b2841034cdf45ea5b9a5b472eb2c07b1b23d4836d32666a881db29a8dceb
+
+%post
+    set -eux
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends less
+    test -x /usr/bin/less
+
+%test
+    test -x /usr/bin/less

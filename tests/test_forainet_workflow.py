@@ -88,7 +88,12 @@ def test_qualification_identity_is_frozen() -> None:
     assert container["barkla_build_probe"]["sha256"] == (
         "2a111b22871288abe8eb205fe4a14424290bc4e2376e6c4c170f82260b3052db"
     )
+    assert container["build_toolchain"]["installer_sha256"] == (
+        "41574717e85e03cdf40597819c927250d0772186b943b8869c8ec8dfcb5b86d1"
+    )
     assert config["gates"]["barkla_root_mapped_fakeroot_probe_passed"] is True
+    assert config["gates"]["barkla_root_mapped_apt_build_blocked"] is True
+    assert config["gates"]["barkla_userlocal_fakeroot_toolchain_verified"] is False
     assert config["gates"]["held_out_authorised"] is False
 
 
@@ -107,6 +112,11 @@ def test_container_definition_pins_mutable_upstream_inputs() -> None:
     assert "TORCH_CUDA_ARCH_LIST=8.0" in definition
     assert "hdbscan/archive/master" not in definition
     assert "git+https://github.com/NVIDIA/MinkowskiEngine.git" not in definition
+    probe = (METHOD / "containers/fakeroot-apt-probe.def").read_text(
+        encoding="utf-8"
+    )
+    assert "From: nvidia/cuda@sha256:" in probe
+    assert "apt-get install -y --no-install-recommends less" in probe
     lock = (METHOD / "containers/requirements.lock").read_text(encoding="utf-8")
     assert "pylidar" not in lock
     assert "rios" not in lock
@@ -118,8 +128,16 @@ def test_image_build_is_cpu_only_and_qualification_targets_a100() -> None:
     )
     assert "#SBATCH --partition=nodes" in build
     assert "#SBATCH --gres" not in build
-    assert "apptainer build --fakeroot" in build
-    assert "${APPTAINER_TMPDIR:?set APPTAINER_TMPDIR}" in build
+    assert '"$apptainer" build --fakeroot' in build
+    assert 'mktemp -d "/tmp/forai-build-${SLURM_JOB_ID}-' in build
+    assert "${FORAINET_TOOLCHAIN_ROOT:?set FORAINET_TOOLCHAIN_ROOT}" in build
+
+    installer = (
+        METHOD / "slurm/install_forainet_apptainer_toolchain.sbatch"
+    ).read_text(encoding="utf-8")
+    assert "-d el8 -v 1.3.6" in installer
+    assert "41574717e85e03cdf40597819c927250d0772186b943b8869c8ec8dfcb5b86d1" in installer
+    assert '"$apptainer" build --fakeroot' in installer
     qualification = (METHOD / "slurm/qualify_forainet_assets.sbatch").read_text(
         encoding="utf-8"
     )

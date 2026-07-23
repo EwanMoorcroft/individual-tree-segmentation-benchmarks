@@ -15,15 +15,18 @@ set -euo pipefail
 : "${FORAINET_DEFINITION:?set FORAINET_DEFINITION}"
 : "${FORAINET_IMAGE:?set FORAINET_IMAGE}"
 : "${FORAINET_IMAGE_BUILD_ROOT:?set FORAINET_IMAGE_BUILD_ROOT}"
+: "${FORAINET_TOOLCHAIN_ROOT:?set FORAINET_TOOLCHAIN_ROOT}"
 : "${FORAINET_EXPECTED_BENCHMARK_COMMIT:?set FORAINET_EXPECTED_BENCHMARK_COMMIT}"
 : "${APPTAINER_CACHEDIR:?set APPTAINER_CACHEDIR}"
-: "${APPTAINER_TMPDIR:?set APPTAINER_TMPDIR}"
 
 expected_definition="$FORAINET_BENCHMARK_ROOT/methods/forainet/containers/forainet-cuda111-a100.def"
 requirements="$FORAINET_BENCHMARK_ROOT/methods/forainet/containers/requirements.lock"
+apptainer="$FORAINET_TOOLCHAIN_ROOT/bin/apptainer"
 test "$FORAINET_DEFINITION" = "$expected_definition"
 test -f "$FORAINET_DEFINITION"
 test -f "$requirements"
+test -x "$apptainer"
+test "$("$apptainer" --version)" = "apptainer version 1.3.6"
 test ! -e "$FORAINET_IMAGE"
 test ! -e "$FORAINET_IMAGE_BUILD_ROOT"
 test "$(git -C "$FORAINET_BENCHMARK_ROOT" rev-parse HEAD)" = \
@@ -33,9 +36,17 @@ test -z "$(git -C "$FORAINET_BENCHMARK_ROOT" status --porcelain)"
 mkdir -p \
   "$FORAINET_IMAGE_BUILD_ROOT" \
   "$APPTAINER_CACHEDIR" \
-  "$APPTAINER_TMPDIR" \
   "$(dirname "$FORAINET_IMAGE")"
-module load apptainer/1.3.6
+
+node_tmp="$(mktemp -d "/tmp/forai-build-${SLURM_JOB_ID}-XXXXXXXX")"
+cleanup_node_tmp() {
+  case "$node_tmp" in
+    "/tmp/forai-build-${SLURM_JOB_ID}-"*) rm -rf -- "$node_tmp" ;;
+    *) return 1 ;;
+  esac
+}
+trap cleanup_node_tmp EXIT
+export APPTAINER_TMPDIR="$node_tmp"
 
 partial_image="$(dirname "$FORAINET_IMAGE")/.forainet-${SLURM_JOB_ID}.partial.sif"
 test ! -e "$partial_image"
@@ -48,18 +59,18 @@ sha256sum "$FORAINET_DEFINITION" \
   > "$FORAINET_IMAGE_BUILD_ROOT/definition.sha256"
 sha256sum "$requirements" \
   > "$FORAINET_IMAGE_BUILD_ROOT/requirements.sha256"
-apptainer --version > "$FORAINET_IMAGE_BUILD_ROOT/apptainer_version.txt"
+"$apptainer" --version > "$FORAINET_IMAGE_BUILD_ROOT/apptainer_version.txt"
 
 cd "$FORAINET_BENCHMARK_ROOT"
-apptainer build --fakeroot "$partial_image" "$FORAINET_DEFINITION"
+"$apptainer" build --fakeroot "$partial_image" "$FORAINET_DEFINITION"
 
-apptainer test "$partial_image" \
+"$apptainer" test "$partial_image" \
   > "$FORAINET_IMAGE_BUILD_ROOT/container_test.txt"
-apptainer inspect --json "$partial_image" \
+"$apptainer" inspect --json "$partial_image" \
   > "$FORAINET_IMAGE_BUILD_ROOT/container_inspect.json"
-apptainer exec "$partial_image" python3.8 -m pip freeze --all \
+"$apptainer" exec "$partial_image" python3.8 -m pip freeze --all \
   > "$FORAINET_IMAGE_BUILD_ROOT/pip_freeze.txt"
-apptainer exec "$partial_image" python3.8 - <<'PY' \
+"$apptainer" exec "$partial_image" python3.8 - <<'PY' \
   > "$FORAINET_IMAGE_BUILD_ROOT/import_probe.txt"
 import json
 

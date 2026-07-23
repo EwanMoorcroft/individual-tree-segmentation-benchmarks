@@ -91,12 +91,12 @@ package inventory must be retained before inference.
 
 ## Slurm Workflow
 
-The committed Slurm chain covers a guarded CPU image build followed by
-asset/environment qualification on an A100. Job names use the `forai_` prefix
-and submission refuses colliding evidence roots. The development-only sidecar,
-normalisation and evaluation components are ready, but an inference submission
-job is intentionally withheld until the container and complete checkpoint load
-have been verified.
+The committed Slurm chain covers a guarded user-local Apptainer/fakeroot probe,
+a CPU image build, and then asset/environment qualification on an A100. Job
+names use the `forai_` prefix and submission refuses colliding evidence roots.
+The development-only sidecar, normalisation and evaluation components are
+ready, but an inference submission job is intentionally withheld until the
+container and complete checkpoint load have been verified.
 
 Full-development, fine-tuning and test submission routes remain deliberately
 blocked until the preceding evidence exists. In particular, no held-out job
@@ -115,8 +115,9 @@ and unmatched references.
 - No complete official ForAINetV2 release was located.
 - The checkpoint provider publishes no checksum or immutable source tag.
 - The exact official 42/14 train/validation membership is not released.
-- The root-mapped fakeroot extraction probe passed, but the full legacy image
-  build and package-import report are still pending.
+- Root-mapped extraction passed, but root-mapped `apt` failed because Barkla
+  provides neither a subordinate-ID mapping nor a system fakeroot helper. The
+  pinned user-local fakeroot probe and full package-import report are pending.
 - Current upstream source/checkpoint compatibility still needs a clean Barkla
   import and full state-dict load report.
 - Official conversion, tiling, merging and label-independence still require a
@@ -125,7 +126,7 @@ and unmatched references.
 
 ## Current Benchmark Status
 
-Status: `fakeroot_probe_passed; pinned_image_build_not_run`.
+Status: `root_mapped_apt_blocked; userlocal_fakeroot_probe_not_run`.
 
 The method is not eligible for the held-out ranking. The next gate is a clean
 environment/checkpoint-load test followed by the frozen

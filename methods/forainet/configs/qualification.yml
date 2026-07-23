@@ -64,6 +64,13 @@ method:
       fakeroot_mode: root_mapped_namespace
       size_bytes: 3559424
       sha256: 2a111b22871288abe8eb205fe4a14424290bc4e2376e6c4c170f82260b3052db
+    build_toolchain:
+      apptainer_version: 1.3.6
+      installation_mode: relocatable_unprivileged
+      installer_url: https://raw.githubusercontent.com/apptainer/apptainer/v1.3.6/tools/install-unprivileged.sh
+      installer_sha256: 41574717e85e03cdf40597819c927250d0772186b943b8869c8ec8dfcb5b86d1
+      compatibility_distribution: el8
+      node_local_tmp_required: true
 
 gates:
   v2_availability_resolved: true
@@ -71,6 +78,8 @@ gates:
   held_out_documentary_exposure_pass: true
   exact_train_validation_subdivision_published: false
   barkla_root_mapped_fakeroot_probe_passed: true
+  barkla_root_mapped_apt_build_blocked: true
+  barkla_userlocal_fakeroot_toolchain_verified: false
   barkla_image_verified: false
   checkpoint_full_load_verified: false
   prediction_label_independence_verified: false

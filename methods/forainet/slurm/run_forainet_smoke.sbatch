@@ -88,6 +88,7 @@ split="$(
 )"
 test "$split" = "dev"
 
+mkdir -p "$(dirname "$FORAINET_RUN_ROOT")"
 mkdir "$FORAINET_RUN_ROOT"
 module load apptainer/1.3.6
 

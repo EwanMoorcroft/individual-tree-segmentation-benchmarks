@@ -39,7 +39,7 @@ apptainer exec --nv \
   --bind "$FORAINET_BENCHMARK_ROOT:$FORAINET_BENCHMARK_ROOT:ro" \
   --bind "$FORAINET_QUALIFICATION_ROOT:$FORAINET_QUALIFICATION_ROOT" \
   "$FORAINET_IMAGE" \
-  python "$FORAINET_BENCHMARK_ROOT/methods/forainet/scripts/provenance/probe_checkpoint_load.py" \
+  python3.8 "$FORAINET_BENCHMARK_ROOT/methods/forainet/scripts/provenance/probe_checkpoint_load.py" \
     --upstream-root "$FORAINET_UPSTREAM_ROOT" \
     --checkpoint "$FORAINET_CHECKPOINT" \
     --output-json "$FORAINET_QUALIFICATION_ROOT/checkpoint_load.json"

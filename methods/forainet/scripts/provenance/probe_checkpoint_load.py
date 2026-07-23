@@ -33,11 +33,28 @@ def main() -> int:
     sys.path.insert(0, str(pointcloud_root))
 
     import torch
-    from torch_points3d.applications.pretrained_api import PretainedRegistry
+    from omegaconf import OmegaConf
+    from torch_points3d.datasets.base_dataset import BaseDataset
+    from torch_points3d.metrics.model_checkpoint import ModelCheckpoint
 
-    checkpoint = torch.load(args.checkpoint, map_location="cpu")
-    expected = checkpoint["models"]["latest"]
-    model = PretainedRegistry.from_file(str(args.checkpoint), weight_name="latest")
+    archive = torch.load(args.checkpoint, map_location="cpu")
+    expected = archive["models"]["latest"]
+    run_config = OmegaConf.create(archive["run_config"])
+    run_config.data.fold = []
+    checkpoint = ModelCheckpoint(
+        str(args.checkpoint.parent),
+        args.checkpoint.stem,
+        "latest",
+        run_config=run_config,
+        resume=False,
+        strict=True,
+    )
+    dataset_properties = checkpoint.dataset_properties
+    if not dataset_properties:
+        raise RuntimeError("checkpoint does not retain dataset properties")
+    dataset = OmegaConf.create(dataset_properties)
+    model = checkpoint.create_model(dataset, weight_name="latest")
+    BaseDataset.set_transform(model, checkpoint.data_config)
     actual = model.state_dict()
 
     expected_keys = set(expected)
@@ -53,7 +70,10 @@ def main() -> int:
     payload = {
         "schema": "forainet_checkpoint_load_probe_v1",
         "status": "verified" if compatible else "incompatible",
+        "loader": "official_model_checkpoint_with_saved_dataset_properties",
+        "data_fold_override": [],
         "weight_name": "latest",
+        "dataset_properties": dataset_properties,
         "checkpoint_tensor_count": len(expected_keys),
         "model_tensor_count": len(actual_keys),
         "missing_keys": missing,

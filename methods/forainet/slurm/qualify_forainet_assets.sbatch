@@ -31,6 +31,7 @@ upstream_root="$(readlink -f "$FORAINET_UPSTREAM_ROOT")"
 checkpoint="$(readlink -f "$FORAINET_CHECKPOINT")"
 image="$(readlink -f "$FORAINET_IMAGE")"
 qualification_root="$(readlink -f "$FORAINET_QUALIFICATION_ROOT")"
+export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}"
 
 python "$benchmark_root/methods/forainet/scripts/provenance/verify_forainet_assets.py" \
   --upstream-root "$upstream_root" \

@@ -153,6 +153,13 @@ def test_image_build_is_cpu_only_and_qualification_targets_a100() -> None:
     assert '"$image" \\\n  python3.8 ' in qualification
     assert 'benchmark_root="$(readlink -f "$FORAINET_BENCHMARK_ROOT")"' in qualification
     assert '--bind "$benchmark_root:$benchmark_root:ro"' in qualification
+    checkpoint_probe = (
+        METHOD / "scripts/provenance/probe_checkpoint_load.py"
+    ).read_text(encoding="utf-8")
+    assert "ModelCheckpoint(" in checkpoint_probe
+    assert "run_config.data.fold = []" in checkpoint_probe
+    assert "checkpoint.dataset_properties" in checkpoint_probe
+    assert "PretainedRegistry" not in checkpoint_probe
 
 
 def test_exposure_table_is_exact_and_test_only() -> None:

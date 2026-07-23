@@ -74,7 +74,7 @@ def _write_ply(
         vertices["instance_pred"][1] = 3
     vertices["semantic_gt"] = semantic_gt
     vertices["instance_gt"] = instance_gt
-    path.parent.mkdir(parents=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
     PlyData([PlyElement.describe(vertices, "vertex")], text=False).write(path)
 
 

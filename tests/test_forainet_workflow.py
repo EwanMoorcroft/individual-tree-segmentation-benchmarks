@@ -181,6 +181,9 @@ def test_image_build_is_cpu_only_and_qualification_targets_a100() -> None:
     assert "CULS/plot_1_annotated.las" in smoke
     assert "FORAINET_SMOKE_CONFIRMED" in smoke
     assert "data_split_metadata.csv" in smoke
+    assert 'sub(/\\r$/, "", header)' in smoke
+    assert 'sub(/\\r$/, "", value)' in smoke
+    assert "ForAINet smoke failed at line" in smoke
 
 
 def test_exposure_table_is_exact_and_test_only() -> None:

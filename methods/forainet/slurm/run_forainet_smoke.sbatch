@@ -9,6 +9,7 @@
 #SBATCH --error=logs/forai_smoke_%j.err
 
 set -euo pipefail
+trap 'status=$?; printf "ForAINet smoke failed at line %s: %s\n" "$LINENO" "$BASH_COMMAND" >&2; exit "$status"' ERR
 
 : "${FORAINET_BENCHMARK_ROOT:?set FORAINET_BENCHMARK_ROOT}"
 : "${FORAINET_EXPECTED_BENCHMARK_COMMIT:?set FORAINET_EXPECTED_BENCHMARK_COMMIT}"
@@ -71,13 +72,17 @@ split="$(
   awk -F, -v target="$relative_path" '
     NR == 1 {
       for (i = 1; i <= NF; i++) {
-        if ($i == "path" || $i == "relative_path") path_column = i
-        if ($i == "split") split_column = i
+        header = $i
+        sub(/\r$/, "", header)
+        if (header == "path" || header == "relative_path") path_column = i
+        if (header == "split") split_column = i
       }
       next
     }
     path_column && split_column && $path_column == target {
-      print $split_column
+      value = $split_column
+      sub(/\r$/, "", value)
+      print value
     }
   ' "$split_metadata"
 )"

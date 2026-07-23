@@ -74,14 +74,17 @@ method:
       compatibility_distribution: el8
       node_local_tmp_required: true
     qualified_image:
-      sha256: 4b8835107800c5a368e4073aade1fee5b94e436693e13ab351fe8c2a250d898e
-      build_benchmark_commit: af7e58e643ccd2075d2a8bea57b6de5e31e918f2
+      sha256: ad0df684209014c52421dc213cd0e15ddbb47214c00fac264e829f68dc17812d
+      size_bytes: 7488942080
+      build_benchmark_commit: a0a357fd9479041c9271013c981986c0e95e3f2c
       cuda_arch: "8.0"
+      numpy: 1.23.5
     checkpoint_load_evidence:
-      benchmark_commit: ac27a9fcd2a68d38ad62c115071892a35c53111e
-      report_sha256: 37c9396574da0fd6a9338d312304986e9bc9b08e6145cdb9bd570df7edca0989
+      benchmark_commit: a0a357fd9479041c9271013c981986c0e95e3f2c
+      report_sha256: 693c9e69f99d943a74ecf7318c5eb1c3968a437616fcc909fde5130579c93b1c
       tensor_count: 755
       compatible_fraction: 1.0
+      numpy: 1.23.5
       missing_keys: []
       unexpected_keys: []
       shape_mismatches: []

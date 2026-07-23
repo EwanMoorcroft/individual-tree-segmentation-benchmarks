@@ -28,7 +28,7 @@ fi
 
 expected_upstream="5fe600ae8f2fe913ae8740f475f0261a702f2a72"
 expected_checkpoint="97c03ce81621dc4193e55d2ca2294861b1f4421c94d192799e5fe031f9d35861"
-expected_image="4b8835107800c5a368e4073aade1fee5b94e436693e13ab351fe8c2a250d898e"
+expected_image="ad0df684209014c52421dc213cd0e15ddbb47214c00fac264e829f68dc17812d"
 relative_path="CULS/plot_1_annotated.las"
 source_las="$FORAINET_DATASET_ROOT/$relative_path"
 split_metadata="$FORAINET_DATASET_ROOT/data_split_metadata.csv"

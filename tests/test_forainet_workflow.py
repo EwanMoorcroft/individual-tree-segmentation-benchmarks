@@ -107,8 +107,10 @@ def test_qualification_identity_is_frozen() -> None:
     assert config["gates"]["barkla_image_verified"] is True
     assert config["gates"]["checkpoint_full_load_verified"] is True
     assert container["qualified_image"]["sha256"] == (
-        "4b8835107800c5a368e4073aade1fee5b94e436693e13ab351fe8c2a250d898e"
+        "ad0df684209014c52421dc213cd0e15ddbb47214c00fac264e829f68dc17812d"
     )
+    assert container["qualified_image"]["numpy"] == "1.23.5"
+    assert container["checkpoint_load_evidence"]["numpy"] == "1.23.5"
     assert container["checkpoint_load_evidence"]["compatible_fraction"] == 1.0
     assert config["gates"]["held_out_authorised"] is False
 

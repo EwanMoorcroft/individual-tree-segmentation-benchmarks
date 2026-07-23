@@ -76,14 +76,16 @@ The checkpoint and source were independently acquired on Barkla and passed the
 frozen size, hash and commit checks. The pinned relocatable Apptainer 1.3.6
 toolchain then passed its fakeroot package-install probe. The completed A100
 image has SHA-256
-`4b8835107800c5a368e4073aade1fee5b94e436693e13ab351fe8c2a250d898e`.
+`ad0df684209014c52421dc213cd0e15ddbb47214c00fac264e829f68dc17812d`.
+It pins NumPy 1.23.5 because the official evaluation code uses the legacy
+`np.int` API removed in NumPy 1.24.
 
 The official checkpoint was loaded on an A100 80 GB with Python 3.8.10,
-PyTorch 1.9.0+cu111, MinkowskiEngine 0.5.4, torch-geometric 1.7.2,
+NumPy 1.23.5, PyTorch 1.9.0+cu111, MinkowskiEngine 0.5.4, torch-geometric 1.7.2,
 TorchSparse 1.4.0 and hdbscan 0.8.28. All 755 checkpoint tensors matched all
 755 model tensors; there were no missing, unexpected or shape-mismatched keys.
 The retained load report has SHA-256
-`37c9396574da0fd6a9338d312304986e9bc9b08e6145cdb9bd570df7edca0989`.
+`693c9e69f99d943a74ecf7318c5eb1c3968a437616fcc909fde5130579c93b1c`.
 
 The committed definition derives from official Dockerfile blob
 `1daea67cfae9e44a0de439f06896320d9723c209`. It pins the CUDA base image and

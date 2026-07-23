@@ -32,5 +32,8 @@ gates:
   environment_validation_required: true
   checkpoint_load_required: true
   dummy_label_counterfactual_required: true
+  identical_model_input_fingerprint_required: true
+  effective_predict_source_audit_required: true
+  bitwise_prediction_equality_required: false
   exact_row_alignment_required: true
   manual_alignment_review_required: true

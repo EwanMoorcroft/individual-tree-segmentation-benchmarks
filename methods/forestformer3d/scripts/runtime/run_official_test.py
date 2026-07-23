@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import os
@@ -18,6 +19,9 @@ TEST_SHA256 = "e05fd7a449d4fd4f2c1bb091e29d09fba21e2942b64790aed63b49f0bba51c96"
 CONFIG_SHA256 = "cdf6bff5269dfbd73f4b4c7fe30deffdbfed7fd73668ca2f0bc5bb792f04ec1f"
 CHECKPOINT_SHA256 = (
     "01037a648596832238ac72ea2f5eef87ceaf5aeb399e56ff4b760ba1ed1c777e"
+)
+MODEL_SOURCE_SHA256 = (
+    "aad9cb8d5b2cd2405fe3b4499d88bd8e02dd95241a93b8af2a10e59135160462"
 )
 
 
@@ -45,6 +49,115 @@ def verify_source(source_root: Path, config: Path) -> Path:
     if sha256_file(config.resolve()) != CONFIG_SHA256:
         raise ValueError("Official config SHA-256 mismatch")
     return test_py
+
+
+def audit_effective_predict(source_root: Path, output_dir: Path) -> dict[str, object]:
+    """Fail closed on the manually audited label-use structure."""
+
+    model_source = source_root / "oneformer3d/oneformer3d.py"
+    observed_sha256 = sha256_file(model_source)
+    if observed_sha256 != MODEL_SOURCE_SHA256:
+        raise ValueError("Official model source SHA-256 mismatch")
+    tree = ast.parse(model_source.read_text(encoding="utf-8"))
+    classes = [
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef)
+        and node.name == "ForAINetV2OneFormer3D_XAwarequery"
+    ]
+    if len(classes) != 1:
+        raise ValueError("Could not identify the audited ForestFormer3D class")
+    predicts = [
+        node
+        for node in classes[0].body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == "predict"
+    ]
+    if len(predicts) != 1:
+        raise ValueError("Could not identify the effective predict method")
+    predict = predicts[0]
+
+    load_lines: dict[str, list[int]] = {}
+    for name in ("pts_semantic_gt", "pts_instance_gt", "all_instance_labels"):
+        load_lines[name] = sorted(
+            node.lineno
+            for node in ast.walk(predict)
+            if isinstance(node, ast.Name)
+            and node.id == name
+            and isinstance(node.ctx, ast.Load)
+        )
+    expected_load_lines = {
+        "pts_semantic_gt": [2574],
+        "pts_instance_gt": [2290, 2574],
+        "all_instance_labels": [],
+    }
+    if load_lines != expected_load_lines:
+        raise ValueError(
+            "Effective predict label-use structure differs from the audited source"
+        )
+
+    evidence: dict[str, object] = {
+        "schema": "forestformer3d_effective_predict_audit_v1",
+        "status": "passed",
+        "model_source": str(model_source),
+        "model_source_sha256": observed_sha256,
+        "class": classes[0].name,
+        "predict_first_line": predict.lineno,
+        "label_load_lines": load_lines,
+        "finding": (
+            "Ground-truth arrays are loaded for output serialization only; "
+            "the instance-label unique set is assigned but never consumed."
+        ),
+        "prediction_uses_ground_truth": False,
+    }
+    (output_dir / "effective_predict_audit.json").write_text(
+        json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return evidence
+
+
+def install_model_input_fingerprint(output_dir: Path) -> None:
+    """Hash the exact point tensor presented to the effective predict method."""
+
+    import numpy as np
+    from oneformer3d.oneformer3d import ForAINetV2OneFormer3D_XAwarequery
+
+    original_predict = ForAINetV2OneFormer3D_XAwarequery.predict
+
+    def audited_predict(
+        self: object,
+        batch_inputs_dict: dict[str, object],
+        batch_data_samples: list[object],
+        **kwargs: object,
+    ) -> object:
+        points = batch_inputs_dict.get("points")
+        if not isinstance(points, list) or len(points) != 1:
+            raise ValueError("Expected one model-facing point tensor")
+        tensor = points[0]
+        array = tensor.detach().cpu().contiguous().numpy()
+        if array.ndim != 2 or array.shape[1] != 3:
+            raise ValueError(f"Unexpected model-facing point shape: {array.shape}")
+        digest = hashlib.sha256()
+        digest.update(str(array.dtype).encode("ascii"))
+        digest.update(np.asarray(array.shape, dtype=np.int64).tobytes())
+        digest.update(array.tobytes(order="C"))
+        evidence = {
+            "schema": "forestformer3d_model_input_fingerprint_v1",
+            "batch_input_keys": sorted(batch_inputs_dict),
+            "point_count": int(array.shape[0]),
+            "point_dimensions": int(array.shape[1]),
+            "dtype": str(array.dtype),
+            "point_tensor_sha256": digest.hexdigest(),
+        }
+        (output_dir / "model_input_fingerprint.json").write_text(
+            json.dumps(evidence, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        return original_predict(
+            self, batch_inputs_dict, batch_data_samples, **kwargs
+        )
+
+    ForAINetV2OneFormer3D_XAwarequery.predict = audited_predict
 
 
 def prepare_entrypoint_checkpoint(checkpoint_path: Path, output_dir: Path) -> Path:
@@ -133,6 +246,10 @@ def main(argv: list[str] | None = None) -> int:
             raise FileNotFoundError(path)
     args.work_dir.mkdir(parents=True, exist_ok=False)
 
+    sys.path.insert(0, str(args.source_root.resolve()))
+    audit_effective_predict(args.source_root.resolve(), args.work_dir)
+    install_model_input_fingerprint(args.work_dir)
+
     # The pinned official file uses torch.load/torch.save but omits import torch.
     # Supplying the missing global preserves the exact upstream file and model
     # path; no model logic or source file is patched.
@@ -156,7 +273,6 @@ def main(argv: list[str] | None = None) -> int:
     entrypoint_checkpoint = prepare_entrypoint_checkpoint(
         args.checkpoint, args.work_dir
     )
-    sys.path.insert(0, str(args.source_root.resolve()))
     sys.argv = [
         str(test_py),
         str(args.config.resolve()),

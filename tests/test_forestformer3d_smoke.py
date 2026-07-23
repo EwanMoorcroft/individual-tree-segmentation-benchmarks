@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import importlib.util
+import json
 import subprocess
 from pathlib import Path
 
@@ -92,6 +93,31 @@ def _prepared(tmp_path: Path) -> Path:
     return output
 
 
+def _runtime_evidence(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
+    fingerprint = {
+        "schema": "forestformer3d_model_input_fingerprint_v1",
+        "batch_input_keys": ["points"],
+        "point_count": 4,
+        "point_dimensions": 3,
+        "dtype": "float32",
+        "point_tensor_sha256": "same-model-input",
+    }
+    audit = {
+        "schema": "forestformer3d_effective_predict_audit_v1",
+        "status": "passed",
+        "prediction_uses_ground_truth": False,
+    }
+    paths = (
+        tmp_path / "reference_input.json",
+        tmp_path / "dummy_input.json",
+        tmp_path / "reference_audit.json",
+        tmp_path / "dummy_audit.json",
+    )
+    for path, value in zip(paths, (fingerprint, fingerprint, audit, audit)):
+        path.write_text(json.dumps(value), encoding="utf-8")
+    return paths
+
+
 def test_preparation_is_development_only_and_preserves_identity(tmp_path: Path) -> None:
     output = _prepared(tmp_path)
     with np.load(output / "evaluation_sidecar.npz") as sidecar:
@@ -116,9 +142,14 @@ def test_validation_proves_counterfactual_and_writes_contract(tmp_path: Path) ->
     dummy = tmp_path / "raw/dummy.ply"
     _write_ply(reference, xyz, ref_sem, ref_ins)
     _write_ply(dummy, xyz, np.zeros(4), np.zeros(4))
+    evidence = _runtime_evidence(tmp_path)
 
     result = validate_one_plot_smoke.validate(
-        reference, dummy, staged / "evaluation_sidecar.npz", tmp_path / "validated"
+        reference,
+        dummy,
+        *evidence,
+        staged / "evaluation_sidecar.npz",
+        tmp_path / "validated",
     )
     assert result["status"] == "passed"
     assert result["exact_row_alignment"] is True
@@ -139,7 +170,9 @@ def test_validation_proves_counterfactual_and_writes_contract(tmp_path: Path) ->
 @pytest.mark.skipif(
     importlib.util.find_spec("plyfile") is None, reason="plyfile is not installed"
 )
-def test_validation_rejects_label_dependent_prediction(tmp_path: Path) -> None:
+def test_validation_records_nondeterministic_prediction_difference(
+    tmp_path: Path,
+) -> None:
     sidecar = tmp_path / "sidecar.npz"
     xyz = np.zeros((4, 3), dtype=np.float32)
     np.savez(
@@ -166,9 +199,51 @@ def test_validation_rejects_label_dependent_prediction(tmp_path: Path) -> None:
         np.zeros(4),
         change_prediction=True,
     )
-    with pytest.raises(ValueError, match="counterfactual changed instance_pred"):
+    evidence = _runtime_evidence(tmp_path)
+    result = validate_one_plot_smoke.validate(
+        reference,
+        dummy,
+        *evidence,
+        sidecar,
+        tmp_path / "validated",
+    )
+    counterfactual = result["label_counterfactual"]
+    assert counterfactual["prediction_equality_required"] is False
+    assert (
+        counterfactual["observed_prediction_differences"]["instance_pred"][
+            "different_rows"
+        ]
+        == 1
+    )
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("plyfile") is None, reason="plyfile is not installed"
+)
+def test_validation_rejects_different_model_input_fingerprint(
+    tmp_path: Path,
+) -> None:
+    staged = _prepared(tmp_path)
+    with np.load(staged / "evaluation_sidecar.npz") as sidecar:
+        xyz = sidecar["model_xyz"].copy()
+        ref_sem = sidecar["reference_semantic"].copy()
+        ref_ins = sidecar["reference_instance"].copy()
+    reference = tmp_path / "raw/reference.ply"
+    dummy = tmp_path / "raw/dummy.ply"
+    _write_ply(reference, xyz, ref_sem, ref_ins)
+    _write_ply(dummy, xyz, np.zeros(4), np.zeros(4))
+    evidence = _runtime_evidence(tmp_path)
+    dummy_fingerprint = json.loads(evidence[1].read_text(encoding="utf-8"))
+    dummy_fingerprint["point_tensor_sha256"] = "different-model-input"
+    evidence[1].write_text(json.dumps(dummy_fingerprint), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="input fingerprints differ"):
         validate_one_plot_smoke.validate(
-            reference, dummy, sidecar, tmp_path / "validated"
+            reference,
+            dummy,
+            *evidence,
+            staged / "evaluation_sidecar.npz",
+            tmp_path / "validated",
         )
 
 
@@ -199,6 +274,10 @@ def test_smoke_submitter_is_guarded_development_only_and_monitored() -> None:
     assert '"randomness.deterministic=False"' in runner
     assert "ForestFormer3DSmokeNoOpMetric" in runner
     assert "test_evaluator.type=ForestFormer3DSmokeNoOpMetric" in runner
+    assert "audit_effective_predict" in runner
+    assert "install_model_input_fingerprint" in runner
+    assert "model_input_fingerprint.json" in job
+    assert "effective_predict_audit.json" in job
 
 
 def test_preparation_cli_resolves_shared_package() -> None:

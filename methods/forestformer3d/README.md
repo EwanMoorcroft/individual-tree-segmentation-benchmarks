@@ -112,8 +112,11 @@ until a frozen readiness record is reviewed and explicitly authorised.
 
 The official inference code selects its whole-plot route using a filename
 substring and reads ground-truth arrays for output bookkeeping. The smoke
-retains the required `test` filename and validates the bookkeeping
-counterfactually. The official `tools/test.py` uses `torch.load` without
+retains the required `test` filename, pins and audits the effective prediction
+source, and verifies identical model-facing point tensors counterfactually.
+Prediction differences caused by the upstream nondeterministic CUDA reduction
+are measured in the validation record rather than treated as label dependence.
+The official `tools/test.py` uses `torch.load` without
 importing `torch`; the adapter supplies that missing module through
 `runpy.init_globals` after hashing the unchanged file. No upstream modelling
 source is patched. The published checkpoint is already in the fixed sparse
@@ -131,5 +134,6 @@ to the versions that passed A100 validation.
 
 Upstream source, base environment, checkpoint identity, checkpoint exposure and
 the composite A100 runtime are qualified. The development-only official-runner
-smoke workflow is implemented but has not yet passed on Barkla. No held-out
+smoke workflow is implemented and its revised label-independence gate awaits a
+fresh Barkla run. No held-out
 inference is available, and no ForestFormer3D accuracy result exists.

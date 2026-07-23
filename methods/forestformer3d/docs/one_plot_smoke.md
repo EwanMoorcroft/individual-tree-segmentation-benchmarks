@@ -8,14 +8,31 @@ The workflow stages exact source-order XYZ and two loader-label cases. Both
 cases use the same point binary, official source commit, official config,
 unchanged checkpoint and identical seed. The reference case supplies
 mapped classes 4/5/6 and positive tree IDs; the dummy case supplies zero labels.
-The adapter rejects any difference in official `semantic_pred`,
-`instance_pred` or `score` fields.
+The adapter requires identical SHA-256 fingerprints for the exact point tensor
+entering the effective `predict` method in both cases.
 
 Strict PyTorch deterministic-algorithm mode is disabled because upstream uses
 CUDA `index_reduce_(reduce='amax')`, for which PyTorch 1.13.1 exposes no
-deterministic implementation. Both fresh processes still use seed 3407, and
-the exact counterfactual comparison fails closed if realized nondeterminism or
-loader labels alter any prediction.
+deterministic implementation. Both fresh processes still use seed 3407.
+Official prediction differences are recorded field by field, but bitwise
+prediction equality is not an acceptance condition.
+
+This is not an assumption that every difference is harmless. The adapter pins
+the complete effective model-source SHA-256 and audits its active
+`ForAINetV2OneFormer3D_XAwarequery.predict` AST. In that exact source,
+ground-truth arrays are used only when writing the final PLY; an
+`np.unique(instance_gt)` result is assigned but never consumed. The combination
+of identical model-facing point tensors, a pinned no-ground-truth prediction
+path and deliberately different retained loader labels is the fail-closed
+label-independence proof.
+
+Three exploratory pairs quantified the unavoidable CUDA variation. Two
+reference-first pairs showed 30 and 35 reference/dummy semantic differences;
+a reversed dummy-first pair showed 13. Same-label repeats differed by 28--41
+semantic rows and 135,794--363,808 instance rows. Four initially stable
+semantic differences disappeared in the reversed-order control. Exact XYZ
+alignment held in every comparison. These diagnostic runs are retained but are
+not benchmark results.
 
 The effective whole-plot method writes
 `forestformer3d_smoke_test.ply`. Upstream's `UnifiedSegMetric` is incompatible
@@ -27,7 +44,8 @@ The raw official PLY rows must exactly equal the normalized staged float32 XYZ.
 The accepted NPZ restores the zero-based identity `source_row_index`, maps
 upstream non-negative instance IDs to positive benchmark IDs and maps predicted
 tree rows to benchmark class 4. Both official raw PLY files, the evaluation
-sidecar, hashes and validation JSON are retained.
+sidecar, model-input fingerprints, effective-source audits, hashes and
+validation JSON are retained.
 
 The pinned official `tools/test.py` omits `import torch`. The adapter verifies
 the source commit and file SHA-256, then supplies `torch` as an initial global

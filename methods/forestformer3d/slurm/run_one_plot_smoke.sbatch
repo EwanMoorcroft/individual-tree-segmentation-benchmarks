@@ -100,12 +100,20 @@ apptainer exec --cleanenv \
   /benchmark/methods/forestformer3d/scripts/evaluation/validate_one_plot_smoke.py \
     --reference-ply /ff3d_output/reference/forestformer3d_smoke_test.ply \
     --dummy-ply /ff3d_output/dummy/forestformer3d_smoke_test.ply \
+    --reference-input-fingerprint /ff3d_output/reference/model_input_fingerprint.json \
+    --dummy-input-fingerprint /ff3d_output/dummy/model_input_fingerprint.json \
+    --reference-source-audit /ff3d_output/reference/effective_predict_audit.json \
+    --dummy-source-audit /ff3d_output/dummy/effective_predict_audit.json \
     --sidecar /ff3d_input/evaluation_sidecar.npz \
     --output-root /run/validation
 
 sha256sum \
   "$FF3D_RUN_ROOT/raw/reference/forestformer3d_smoke_test.ply" \
   "$FF3D_RUN_ROOT/raw/dummy/forestformer3d_smoke_test.ply" \
+  "$FF3D_RUN_ROOT/raw/reference/model_input_fingerprint.json" \
+  "$FF3D_RUN_ROOT/raw/dummy/model_input_fingerprint.json" \
+  "$FF3D_RUN_ROOT/raw/reference/effective_predict_audit.json" \
+  "$FF3D_RUN_ROOT/raw/dummy/effective_predict_audit.json" \
   "$FF3D_RUN_ROOT/validation/forestformer3d_smoke_predictions.npz" \
   > "$FF3D_RUN_ROOT/artifact_sha256.txt"
 touch "$FF3D_RUN_ROOT/one_plot_smoke.complete"

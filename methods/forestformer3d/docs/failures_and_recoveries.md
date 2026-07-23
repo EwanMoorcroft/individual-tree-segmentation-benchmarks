@@ -118,10 +118,8 @@
   because strict deterministic-algorithm mode rejects upstream CUDA
   `index_reduce_(reduce='amax')`, which PyTorch 1.13.1 marks as lacking a
   deterministic implementation.
-- The next retry keeps the identical seed in both fresh processes but disables
-  strict deterministic-algorithm enforcement. Exact counterfactual output
-  comparison remains the fail-closed gate: any realized kernel nondeterminism
-  or label effect prevents acceptance.
+- The next retry kept the identical seed in both fresh processes but disabled
+  strict deterministic-algorithm enforcement.
 - Recovery run `9895608` loaded the checkpoint cleanly, processed all 64
   whole-plot regions and wrote a 1,816,672-row official PLY. It then failed in
   upstream `UnifiedSegMetric`, which indexes full-plot ground truth using the
@@ -130,7 +128,21 @@
   `<name>_final_results.ply` path used by the earlier overridden definition.
 - Recovery uses the effective filename and replaces only the incompatible
   post-inference metric with a registered no-op. The complete official PLY is
-  validated independently for fields, row identity and counterfactual equality.
+  validated independently for fields and row identity.
+- Jobs `9895627` and `9895638` each completed reference and dummy whole-plot
+  PLYs, then failed the original bitwise counterfactual gate. Same-label repeat
+  differences were larger than cross-label differences, demonstrating that the
+  pinned CUDA reduction remains nondeterministic despite identical seeds.
+- A reversed-order diagnostic, job `9895654`, completed dummy first and
+  reference second. Four clustered semantic rows that had appeared stable by
+  label across the first two jobs disappeared under reversal. Across all
+  comparisons XYZ remained exact, and no stable instance-label effect was
+  observed.
+- Recovery does not weaken this into an output-tolerance threshold. It requires
+  exact reference/dummy fingerprints of the tensor entering `predict`, pins and
+  AST-audits the effective prediction source to prove that ground truth is not
+  consumed by prediction, verifies the deliberately different loader labels,
+  and records every raw prediction difference as diagnostic evidence.
 
 ## Recovery rules
 

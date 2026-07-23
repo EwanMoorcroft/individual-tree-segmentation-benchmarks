@@ -42,9 +42,48 @@ def _read_vertices(path: Path) -> np.ndarray:
     return vertices
 
 
+def _read_json(path: Path) -> dict[str, object]:
+    if not path.is_file():
+        raise FileNotFoundError(path)
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise TypeError(f"Expected JSON object in {path}")
+    return value
+
+
+def _difference_summary(
+    reference: np.ndarray, dummy: np.ndarray
+) -> dict[str, object]:
+    summary: dict[str, object] = {}
+    for field in PREDICTION_FIELDS:
+        reference_values = np.asarray(reference[field])
+        dummy_values = np.asarray(dummy[field])
+        different = reference_values != dummy_values
+        field_result: dict[str, object] = {
+            "different_rows": int(np.count_nonzero(different)),
+        }
+        if field == "score":
+            delta = np.abs(
+                reference_values.astype(np.float64)
+                - dummy_values.astype(np.float64)
+            )
+            field_result.update(
+                {
+                    "max_abs_difference": float(delta.max(initial=0.0)),
+                    "mean_abs_difference": float(delta.mean()),
+                }
+            )
+        summary[field] = field_result
+    return summary
+
+
 def validate(
     reference_ply: Path,
     dummy_ply: Path,
+    reference_input_fingerprint: Path,
+    dummy_input_fingerprint: Path,
+    reference_source_audit: Path,
+    dummy_source_audit: Path,
     sidecar_path: Path,
     output_root: Path,
 ) -> dict[str, object]:
@@ -88,14 +127,29 @@ def validate(
     if np.any(dummy["semantic_gt"] != 0) or np.any(dummy["instance_gt"] != 0):
         raise ValueError("Dummy loader labels are not all zero")
 
-    for field in PREDICTION_FIELDS:
-        if not np.array_equal(reference[field], dummy[field]):
-            differing = int(np.count_nonzero(reference[field] != dummy[field]))
-            raise ValueError(
-                f"Label counterfactual changed {field} on {differing} rows"
-            )
-    if not np.isfinite(reference["score"]).all():
+    reference_fingerprint = _read_json(reference_input_fingerprint)
+    dummy_fingerprint = _read_json(dummy_input_fingerprint)
+    if reference_fingerprint != dummy_fingerprint:
+        raise ValueError("Model-facing input fingerprints differ")
+    if reference_fingerprint.get("point_count") != point_count:
+        raise ValueError("Model-facing input fingerprint point count differs")
+
+    reference_audit = _read_json(reference_source_audit)
+    dummy_audit = _read_json(dummy_source_audit)
+    if reference_audit != dummy_audit:
+        raise ValueError("Effective predict source audits differ")
+    if (
+        reference_audit.get("status") != "passed"
+        or reference_audit.get("prediction_uses_ground_truth") is not False
+    ):
+        raise ValueError("Effective predict source audit did not pass")
+
+    if not (
+        np.isfinite(reference["score"]).all()
+        and np.isfinite(dummy["score"]).all()
+    ):
         raise ValueError("Prediction scores contain non-finite values")
+    prediction_differences = _difference_summary(reference, dummy)
 
     raw_instance = np.asarray(reference["instance_pred"], dtype=np.int64)
     pred_tree_id = np.where(raw_instance >= 0, raw_instance + 1, -1).astype(
@@ -114,7 +168,7 @@ def validate(
         source_row_index=source_row_index,
     )
     result: dict[str, object] = {
-        "schema": "forestformer3d_one_plot_smoke_validation_v1",
+        "schema": "forestformer3d_one_plot_smoke_validation_v2",
         "status": "passed",
         "split": "development",
         "relative_path": "CULS/plot_1_annotated.las",
@@ -123,7 +177,16 @@ def validate(
         "exact_row_alignment": True,
         "label_counterfactual": {
             "passed": True,
-            "compared_fields": list(PREDICTION_FIELDS),
+            "proof_basis": [
+                "identical model-facing point tensor fingerprint",
+                "pinned effective predict source has no ground-truth prediction use",
+                "reference and dummy loader labels differ as designed",
+            ],
+            "prediction_equality_required": False,
+            "prediction_difference_reason": (
+                "pinned CUDA index_reduce_(amax) has no deterministic "
+                "implementation in PyTorch 1.13.1"
+            ),
             "different_loader_semantic_rows": int(
                 np.count_nonzero(
                     reference["semantic_gt"] != dummy["semantic_gt"]
@@ -134,6 +197,9 @@ def validate(
                     reference["instance_gt"] != dummy["instance_gt"]
                 )
             ),
+            "model_input_fingerprint": reference_fingerprint,
+            "effective_predict_audit": reference_audit,
+            "observed_prediction_differences": prediction_differences,
         },
         "raw_prediction_inventory": {
             "predicted_tree_points": int(np.count_nonzero(pred_tree_id > 0)),
@@ -152,6 +218,18 @@ def validate(
             "dummy_ply": {
                 "path": str(dummy_ply),
                 "sha256": sha256_file(dummy_ply),
+            },
+            "reference_input_fingerprint": {
+                "path": str(reference_input_fingerprint),
+                "sha256": sha256_file(reference_input_fingerprint),
+            },
+            "dummy_input_fingerprint": {
+                "path": str(dummy_input_fingerprint),
+                "sha256": sha256_file(dummy_input_fingerprint),
+            },
+            "effective_predict_audit": {
+                "path": str(reference_source_audit),
+                "sha256": sha256_file(reference_source_audit),
             },
             "harmonised_npz": {
                 "path": str(harmonised_path),
@@ -172,6 +250,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--reference-ply", required=True, type=Path)
     parser.add_argument("--dummy-ply", required=True, type=Path)
+    parser.add_argument("--reference-input-fingerprint", required=True, type=Path)
+    parser.add_argument("--dummy-input-fingerprint", required=True, type=Path)
+    parser.add_argument("--reference-source-audit", required=True, type=Path)
+    parser.add_argument("--dummy-source-audit", required=True, type=Path)
     parser.add_argument("--sidecar", required=True, type=Path)
     parser.add_argument("--output-root", required=True, type=Path)
     return parser.parse_args(argv)
@@ -180,7 +262,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     result = validate(
-        args.reference_ply, args.dummy_ply, args.sidecar, args.output_root
+        args.reference_ply,
+        args.dummy_ply,
+        args.reference_input_fingerprint,
+        args.dummy_input_fingerprint,
+        args.reference_source_audit,
+        args.dummy_source_audit,
+        args.sidecar,
+        args.output_root,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0

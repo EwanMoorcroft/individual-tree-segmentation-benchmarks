@@ -11,6 +11,18 @@
   and submits a new immutable run root.
 - A structural regression test requires the parent creation in the submitter.
 
+## 2026-07-23 development raw-work-directory collision
+
+- Recovery attempt `9895714` successfully prepared development inputs, then
+  failed because the adapter pre-created and bind-mounted `raw/` while the
+  guarded official runner requires its work directory not to exist.
+- No official inference began. Tasks 0 through 8 failed at the identical
+  guard; task 9 and the remaining elements were cancelled, along with summary
+  job `9895715`.
+- Recovery bind-mounts the existing task root and passes its absent `raw`
+  child as the runner work directory. The runner therefore creates the child
+  atomically while outputs still land in the immutable task root.
+
 ## 2026-07-23 rootful Apptainer build
 
 - Build job: `9894850`

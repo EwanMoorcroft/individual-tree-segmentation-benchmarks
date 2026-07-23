@@ -114,6 +114,8 @@ def test_development_workflow_is_guarded_bounded_and_development_only() -> None:
     assert "prepare_development_plot.py" in task
     assert "validate_development_plot.py" in task
     assert "evaluate_development_plot.py" in task
+    assert "--bind \"$TASK_ROOT:/ff3d_task\"" in task
+    assert "--work-dir /ff3d_task/raw" in task
     assert "dummy" not in task
     assert "#SBATCH --partition=nodes" in summary
     assert "summarise_development.py" in summary

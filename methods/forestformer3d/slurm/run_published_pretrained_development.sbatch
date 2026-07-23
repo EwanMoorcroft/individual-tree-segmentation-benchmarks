@@ -56,13 +56,12 @@ nvidia-smi -L
 
 module purge
 module load apptainer/1.3.6
-mkdir "$TASK_ROOT/raw"
 apptainer exec --nv --cleanenv \
   --bind "$FF3D_BENCHMARK_ROOT:/benchmark:ro" \
   --bind "$FF3D_ENV_ROOT:/ff3d_environment:ro" \
   --bind "$FF3D_CHECKPOINT:/inputs/epoch_3000_fix.pth:ro" \
   --bind "$TASK_ROOT/staged_input:/ff3d_input:ro" \
-  --bind "$TASK_ROOT/raw:/ff3d_output" \
+  --bind "$TASK_ROOT:/ff3d_task" \
   --env PATH="/ff3d_environment/venv/bin:/ff3d_environment/toolchain/bin:/usr/local/cuda/bin:/opt/conda/bin:/usr/bin:/bin" \
   --env LD_LIBRARY_PATH="/ff3d_environment/toolchain/lib:/usr/local/cuda/lib64" \
   --env PYTHONPATH="/ff3d_environment/source/ForestFormer3D" \
@@ -80,7 +79,7 @@ apptainer exec --nv --cleanenv \
     --checkpoint /inputs/epoch_3000_fix.pth \
     --data-root /ff3d_input \
     --ann-file reference.pkl \
-    --work-dir /ff3d_output
+    --work-dir /ff3d_task/raw
 
 apptainer exec --cleanenv \
   --bind "$FF3D_BENCHMARK_ROOT:/benchmark:ro" \

@@ -3,7 +3,7 @@ project:
   dataset_slug: for-instance
   method_slug: forestformer3d
   protocol_id: for_instance_pointwise_v1
-  status: upstream_and_exposure_qualified_environment_pending
+  status: upstream_exposure_and_environment_qualified
 
 dataset:
   slug: for-instance
@@ -39,7 +39,8 @@ method:
     sha256: 01037a648596832238ac72ea2f5eef87ceaf5aeb399e56ff4b760ba1ed1c777e
     zenodo_licence_statement: GPL-3.0-or-later
     training_dataset_statement: FOR-instanceV2 training split
-    inference_load_status: pending_composite_environment_validation
+    checkpoint_mapping_load_status: passed
+    inference_load_status: pending_official_runner_validation
     fine_tuning_initialisation_status: pending_official_runner_validation
   official_config:
     path: configs/oneformer3d_qs_radius16_qp300_2many.py
@@ -90,7 +91,14 @@ container:
     base_python: 3.10.8
     base_pip: 22.3.1
     base_conda: 22.11.1
-    environment_validation_status: pending_composite_build
+    toolchain_lock: methods/forestformer3d/locks/conda_toolchain_explicit_linux-64.txt
+    toolchain_lock_sha256: 2ed0298fc8dbeae38dc0d431c614647af5acde80b2c878b1d12858042c850f71
+    qualified_build_input_sha256: 741e13d08e51773a81e7c4f29cf65c74377a7405d6f6a9c43d7b37ca850a5790
+    qualified_pip_freeze_sha256: b48648ead7fe20afad5af9cc1a2a272277dd34988d82a5a1159fd0ac78578456
+    qualified_validation_sha256: 378aaa25faec5c81a5a900aa2ae41e2f0765fa7aa5d46ae921e369b3622bb517
+    environment_validation_status: passed
+    environment_validation_job: 9895306
+    environment_validation_device: NVIDIA A100-SXM4-80GB
 
 eligibility:
   exposure_protocol: forestformer3d_checkpoint_exposure_v1

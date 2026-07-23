@@ -83,6 +83,11 @@ followed by an A100 validation job. It refuses dirty or incorrect benchmark
 branches, existing environment/run roots, build-script drift, base-SIF drift
 and checkpoint hash mismatch.
 
+The qualified chain completed as jobs `9895305` and `9895306`. It imported the
+official runtime stack, loaded the checkpoint as a mapping and confirmed CUDA
+11.6 on an A100 at compute capability 8.0. The observed Conda toolchain
+resolution is now the exact checked-in lock used by subsequent builds.
+
 Every submission writes a shell-safe state file and starts
 `slurm/monitor_workflow.sh --watch 30` automatically. The monitor refreshes
 queue, accounting and expected-file state every 30 seconds and exits on a
@@ -106,12 +111,14 @@ be patched to conceal these issues.
 
 Several official Docker dependencies are intentionally unpinned. The branch
 therefore records the qualified base-SIF hash, Conda explicit specification
-and complete pip inventory. The first successful resolution must become an
-exact reusable lock before prediction runs.
+and complete pip inventory. The first successful Conda resolution is now the
+exact reusable lock, and previously floating direct pip requirements are pinned
+to the versions that passed A100 validation.
 
 ## Current Benchmark Status
 
-Upstream source, base environment, checkpoint identity, checkpoint exposure
-and rootless feasibility are qualified. The composite dependency build and
-checkpoint-load validation are the next gate. No development or held-out inference has run,
-and no ForestFormer3D accuracy result exists.
+Upstream source, base environment, checkpoint identity, checkpoint exposure and
+the composite A100 runtime are qualified. The next gate is a development-only
+official-runner smoke proving label independence, deterministic conversion and
+exact source-row alignment. No development or held-out inference has run, and
+no ForestFormer3D accuracy result exists.

@@ -12,6 +12,7 @@ set -euo pipefail
 : "${FF3D_BENCHMARK_COMMIT:?Missing FF3D_BENCHMARK_COMMIT}"
 : "${FF3D_ROOTLESS_BUILDER:?Missing FF3D_ROOTLESS_BUILDER}"
 : "${FF3D_ROOTLESS_BUILDER_SHA256:?Missing FF3D_ROOTLESS_BUILDER_SHA256}"
+: "${FF3D_TOOLCHAIN_LOCK_SHA256:?Missing FF3D_TOOLCHAIN_LOCK_SHA256}"
 : "${FF3D_BUILD_INPUT_SHA256:?Missing FF3D_BUILD_INPUT_SHA256}"
 : "${FF3D_BASE_SIF:?Missing FF3D_BASE_SIF}"
 : "${FF3D_BASE_SIF_SHA256:?Missing FF3D_BASE_SIF_SHA256}"
@@ -29,6 +30,9 @@ test "$(git branch --show-current)" = "method/forestformer3d"
 test -z "$(git status --porcelain)"
 test "$(sha256sum "$FF3D_ROOTLESS_BUILDER" | cut -d ' ' -f 1)" = \
   "$FF3D_ROOTLESS_BUILDER_SHA256"
+TOOLCHAIN_LOCK="$FF3D_BENCHMARK_ROOT/methods/forestformer3d/locks/conda_toolchain_explicit_linux-64.txt"
+test "$(sha256sum "$TOOLCHAIN_LOCK" | cut -d ' ' -f 1)" = \
+  "$FF3D_TOOLCHAIN_LOCK_SHA256"
 
 module purge
 module load apptainer/1.3.6

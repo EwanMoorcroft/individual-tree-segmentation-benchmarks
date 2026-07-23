@@ -53,6 +53,10 @@ def test_upstream_config_freezes_observed_identities_and_remaining_gates() -> No
     )
     assert container["full_image_status"].startswith("blocked_barkla_")
     assert container["barkla_runtime"]["rootless_probe_status"] == "passed"
+    assert container["barkla_runtime"]["environment_validation_status"] == "passed"
+    assert container["barkla_runtime"]["toolchain_lock_sha256"] == (
+        "2ed0298fc8dbeae38dc0d431c614647af5acde80b2c878b1d12858042c850f71"
+    )
     assert config["eligibility"]["exposure_gate"] == "passed"
     assert config["eligibility"]["overall_admission"].startswith("conditional_")
 
@@ -90,10 +94,8 @@ def test_rootless_builder_preserves_official_dependency_and_source_pins() -> Non
 
     assert "apt-get" not in builder
     assert "fakeroot" not in builder
-    assert "gcc_linux-64=9" in builder
-    assert "openblas=0.3.21" in builder
-    assert "libgl=1.7.0" in builder
-    assert "libglx=1.7.0" in builder
+    assert "conda_toolchain_explicit_linux-64.txt" in builder
+    assert '--file "$TOOLCHAIN_LOCK"' in builder
     assert '--install-option="--blas_include_dirs=$TOOLCHAIN/include"' in builder
     assert '--install-option="--blas_library_dirs=$TOOLCHAIN/lib"' in builder
     assert 'test -f "$TOOLCHAIN/include/cblas.h"' in builder
@@ -111,11 +113,24 @@ def test_rootless_builder_preserves_official_dependency_and_source_pins() -> Non
     )
     assert "mmengine==0.7.3" in builder
     assert "mmcv==2.0.0" in builder
+    assert "debugpy==1.8.21" in builder
+    assert "torch-cluster==1.6.3" in builder
     assert validate_environment.SOURCE_COMMIT in builder
     for digest in validate_environment.INSTALLED_REPLACEMENTS.values():
         assert digest in builder
     assert "conda_explicit.txt" in builder
     assert "pip_freeze.txt" in builder
+
+
+def test_successful_conda_resolution_is_promoted_as_exact_lock() -> None:
+    lock = METHOD / "locks/conda_toolchain_explicit_linux-64.txt"
+    assert validate_environment.sha256_file(lock) == (
+        "2ed0298fc8dbeae38dc0d431c614647af5acde80b2c878b1d12858042c850f71"
+    )
+    text = lock.read_text(encoding="utf-8")
+    assert "@EXPLICIT" in text
+    assert "libgl-1.7.0-ha4b6fd6_3.conda" in text
+    assert "libglx-1.7.0-ha4b6fd6_3.conda" in text
 
 
 def test_hash_validator_and_retention_inventory_are_fail_closed(

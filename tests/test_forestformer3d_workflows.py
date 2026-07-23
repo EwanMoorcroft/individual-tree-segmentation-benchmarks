@@ -84,6 +84,9 @@ def test_live_monitor_combines_scheduler_and_expected_file_state() -> None:
 
 def test_build_and_validation_jobs_freeze_identity_and_dependency_outputs() -> None:
     build = (METHOD / "slurm/build_environment.sbatch").read_text(encoding="utf-8")
+    submit = (METHOD / "slurm/submit_environment_build.sh").read_text(
+        encoding="utf-8"
+    )
     validate = (METHOD / "slurm/validate_environment.sbatch").read_text(
         encoding="utf-8"
     )
@@ -97,6 +100,8 @@ def test_build_and_validation_jobs_freeze_identity_and_dependency_outputs() -> N
     assert '--bind "$FF3D_ENV_ROOT:/ff3d_environment"' in build
     assert "--env FF3D_ENV_ROOT=/ff3d_environment" in build
     assert "FF3D_ROOTLESS_BUILDER_SHA256" in build
+    assert "FF3D_TOOLCHAIN_LOCK_SHA256" in build
+    assert "FF3D_TOOLCHAIN_LOCK_SHA256" in submit
 
     assert "#SBATCH --partition=gpu-a100-lowbig" in validate
     assert "#SBATCH --gres=gpu:a100:1" in validate

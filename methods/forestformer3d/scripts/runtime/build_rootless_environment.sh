@@ -9,6 +9,7 @@ VENV="$FF3D_ENV_ROOT/venv"
 SOURCE_ROOT="$FF3D_ENV_ROOT/source"
 CACHE_ROOT="$FF3D_ENV_ROOT/cache"
 BUILD_HOME="$FF3D_ENV_ROOT/home"
+TOOLCHAIN_LOCK="/benchmark/methods/forestformer3d/locks/conda_toolchain_explicit_linux-64.txt"
 
 printf 'stage=rootless_builder_start environment_root=%s\n' "$FF3D_ENV_ROOT"
 test -d "$FF3D_ENV_ROOT"
@@ -37,24 +38,10 @@ mkdir -p \
   "$MPLCONFIGDIR"
 
 echo "stage=conda_toolchain_create"
+test -f "$TOOLCHAIN_LOCK"
 /opt/conda/bin/conda create --yes \
   --prefix "$TOOLCHAIN" \
-  --override-channels \
-  --channel conda-forge \
-  ffmpeg=4.4 \
-  gcc_linux-64=9 \
-  gxx_linux-64=9 \
-  git=2.40 \
-  glib \
-  libgl=1.7.0 \
-  libglvnd \
-  libglx=1.7.0 \
-  ninja=1.11.1 \
-  openblas=0.3.21 \
-  pkg-config=0.29.2 \
-  xorg-libsm=1.2.4 \
-  xorg-libxext=1.3.4 \
-  xorg-libxrender
+  --file "$TOOLCHAIN_LOCK"
 
 # Conda compiler activation scripts reference variables before assigning them.
 # Limit nounset suspension to activation, then restore the fail-closed shell.
@@ -128,7 +115,7 @@ test "$(git -C "$SOURCE_ROOT/segmentator" rev-parse HEAD)" = \
   "76efe46d03dd27afa78df972b17d07f2c6cfb696"
 
 echo "stage=python_dependencies_install"
-python -m pip install debugpy
+python -m pip install debugpy==1.8.21
 
 python -m pip install --no-deps \
   mmengine==0.7.3 \
@@ -214,20 +201,20 @@ python -m pip install --no-deps \
   zipp==3.17.0 \
   tensorboard==2.15.1 \
   tensorboard-data-server==0.7.2 \
-  protobuf \
-  absl-py \
-  future \
+  protobuf==7.35.1 \
+  absl-py==2.5.0 \
+  future==0.18.2 \
   MarkupSafe==2.0.1 \
-  markdown \
-  grpcio \
-  google-auth-oauthlib \
-  google-auth \
-  requests-oauthlib \
-  oauthlib
+  markdown==3.10.2 \
+  grpcio==1.83.0 \
+  google-auth-oauthlib==1.4.0 \
+  google-auth==2.56.2 \
+  requests-oauthlib==2.0.0 \
+  oauthlib==3.3.1
 
 python -m pip install --no-deps --no-cache-dir torch-points-kernels==0.7.0
 python -m pip uninstall -y torch-cluster || true
-python -m pip install --no-deps --no-cache-dir torch-cluster
+python -m pip install --no-deps --no-cache-dir torch-cluster==1.6.3
 
 SITE_PACKAGES="$(
   python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])'

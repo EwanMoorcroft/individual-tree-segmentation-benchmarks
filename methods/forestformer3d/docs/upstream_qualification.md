@@ -28,9 +28,10 @@ and verifies each replacement file before copying it. Barkla executes the same
 Python/source route through a verified base SIF and rootless external
 environment because rootful package installation is unavailable.
 
-The full composite environment must still prove that the checkpoint loads through the official
-framework for inference and can initialise the official training runner.
-Loading the file with `torch.load` is necessary but not sufficient.
+The composite A100 environment imports the official framework and loads the
+checkpoint as a mapping. It must still prove checkpoint loading through the
+official inference runner and initialisation of the official training runner.
+Direct loading with `torch.load` is necessary but not sufficient.
 
 ## Environment evidence
 
@@ -41,6 +42,10 @@ A converted base SIF was verified with SHA-256
 On Barkla it exposed PyTorch 1.13.1, CUDA 11.6 and cuDNN 8.4.0.27 to an
 A100-SXM4-80GB at compute capability 8.0.
 
+The complete composite environment passed A100 validation in job `9895306`.
+The exact Conda lock, source and replacement hashes, pip-manifest hash,
+checkpoint hash and validation-record hash are retained.
+
 ## Licensing
 
 The code repository states CC BY-NC 4.0. The Zenodo record labels its files
@@ -50,7 +55,7 @@ No third-party source or binary artifact is redistributed through Git.
 
 ## Qualification status
 
-The upstream identity and checkpoint byte identity are qualified. Final
-upstream qualification remains conditional on full-environment imports, official
-runner checkpoint loading, prediction-label independence and source-row output
+The upstream identity, checkpoint byte identity and full-environment imports
+are qualified. Final admission remains conditional on official-runner
+checkpoint loading, prediction-label independence and source-row output
 alignment without modifying upstream modelling code.

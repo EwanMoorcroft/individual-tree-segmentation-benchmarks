@@ -77,6 +77,11 @@
   retrieval. Because the completed environment is immutable, this correction
   requires a fresh timestamped environment build rather than an in-place
   package amendment.
+- Fresh build job `9895305` passed the GL soname gate and completed the
+  rootless environment in 35 minutes 50 seconds. Dependent A100 job `9895306`
+  completed in 36 seconds with all required imports, exact source and
+  replacement hashes, official checkpoint mapping load, CUDA availability and
+  compute capability 8.0. The recovery is accepted.
 
 ## Recorded observations
 

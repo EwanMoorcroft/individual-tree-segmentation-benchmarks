@@ -40,7 +40,11 @@ support used by the rootless extractor.
 The guarded toolchain job downloads the official Apptainer v1.3.6
 `install-unprivileged.sh`, verifies SHA-256
 `41574717e85e03cdf40597819c927250d0772186b943b8869c8ec8dfcb5b86d1`, and
-installs its EL8 compatibility bundle outside Git. This supplies the
+installs its EL8 compatibility bundle outside Git. The installer's automatic
+Koji lookup no longer locates the 1.3.6 EL8 package, so the job instead downloads
+the official GitHub release RPM and verifies its published SHA-256
+`1890dd3df87b06b0a9b2845b81b5709c0033fcca5673b03cc69ce9cb755e9605` before
+passing that local RPM to the official installer. This supplies the
 old-glibc-compatible fakeroot helper recommended for older Ubuntu containers.
 It must install a package into the exact digest-pinned CUDA base before the
 ForAINet image can be retried. Both the toolchain probe and full image build use

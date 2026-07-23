@@ -80,7 +80,10 @@ namespace. The account has no `/etc/subuid` entry and no system fakeroot helper.
 Barkla does provide the prerequisites for the official relocatable
 unprivileged Apptainer installer and a large node-local ext filesystem. A
 pinned user-local Apptainer 1.3.6 plus fakeroot `apt` probe is therefore the
-next gate; the failed build evidence remains retained.
+next gate. The official installer's automatic Koji lookup did not locate a
+1.3.6 EL8 package, so the retry uses the checksum-verified RPM published on the
+official v1.3.6 GitHub release. The failed build and installer evidence remain
+retained.
 
 The committed definition derives from official Dockerfile blob
 `1daea67cfae9e44a0de439f06896320d9723c209`. It pins the CUDA base image and

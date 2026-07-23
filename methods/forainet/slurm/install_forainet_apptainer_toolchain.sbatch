@@ -19,6 +19,8 @@ set -euo pipefail
 
 installer_url="https://raw.githubusercontent.com/apptainer/apptainer/v1.3.6/tools/install-unprivileged.sh"
 installer_sha256="41574717e85e03cdf40597819c927250d0772186b943b8869c8ec8dfcb5b86d1"
+release_rpm_url="https://github.com/apptainer/apptainer/releases/download/v1.3.6/apptainer-1.3.6-1.x86_64.rpm"
+release_rpm_sha256="1890dd3df87b06b0a9b2845b81b5709c0033fcca5673b03cc69ce9cb755e9605"
 probe_definition="$FORAINET_BENCHMARK_ROOT/methods/forainet/containers/fakeroot-apt-probe.def"
 
 test ! -e "$FORAINET_TOOLCHAIN_ROOT"
@@ -37,7 +39,11 @@ installer="$FORAINET_TOOLCHAIN_EVIDENCE_ROOT/install-unprivileged-v1.3.6.sh"
 curl --fail --location --silent --show-error "$installer_url" --output "$installer"
 printf '%s  %s\n' "$installer_sha256" "$installer" | sha256sum --check
 
-bash "$installer" -e -d el8 -v 1.3.6 "$FORAINET_TOOLCHAIN_ROOT" \
+release_rpm="$FORAINET_TOOLCHAIN_EVIDENCE_ROOT/apptainer-1.3.6-1.x86_64.rpm"
+curl --fail --location --silent --show-error "$release_rpm_url" --output "$release_rpm"
+printf '%s  %s\n' "$release_rpm_sha256" "$release_rpm" | sha256sum --check
+
+bash "$installer" -e -d el8 -v "$release_rpm" "$FORAINET_TOOLCHAIN_ROOT" \
   > "$FORAINET_TOOLCHAIN_EVIDENCE_ROOT/install.stdout" \
   2> "$FORAINET_TOOLCHAIN_EVIDENCE_ROOT/install.stderr"
 

@@ -10,9 +10,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-import torch
-
-
 EXPECTED_EPOCHS = (30, 60, 90, 120, 149)
 EXPECTED_TENSOR_COUNT = 755
 
@@ -26,6 +23,8 @@ def sha256(path: Path) -> str:
 
 
 def checkpoint_epoch(path: Path) -> tuple[int, int]:
+    import torch
+
     archive = torch.load(path, map_location="cpu")
     if not isinstance(archive, dict):
         raise ValueError("rolling checkpoint is not a dictionary")

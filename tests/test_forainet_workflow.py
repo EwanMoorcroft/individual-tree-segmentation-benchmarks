@@ -72,6 +72,10 @@ finetune_training_config = load_script(
     "scripts/provenance/stage_finetune_training_config.py",
     "forainet_finetune_training_config",
 )
+finetune_snapshots = load_script(
+    "scripts/provenance/snapshot_finetune_checkpoints.py",
+    "forainet_finetune_snapshots",
+)
 
 
 def test_scaffold_and_configs_are_method_local() -> None:
@@ -525,6 +529,52 @@ def test_full_finetune_is_smoke_gated_and_retains_frozen_candidates() -> None:
     assert '"held_out_access": False' in watcher
     assert "epoch-149 candidate differs" in validator
     assert '"next_gate": "canonical_five_plot_candidate_validation"' in validator
+
+
+def test_finetune_checkpoint_watcher_retains_rolling_candidates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    checkpoint = tmp_path / "PointGroup-PAPER.pt"
+    candidates = tmp_path / "candidates"
+    completion = tmp_path / "training.complete"
+
+    def write_checkpoint(epoch: int) -> None:
+        checkpoint.write_text(f"{epoch}\n", encoding="utf-8")
+
+    def checkpoint_epoch(path: Path) -> tuple[int, int]:
+        epoch = int(path.read_text(encoding="utf-8").strip())
+        return epoch, epoch
+
+    write_checkpoint(1)
+    monkeypatch.setattr(finetune_snapshots, "EXPECTED_EPOCHS", (1, 2))
+    monkeypatch.setattr(finetune_snapshots, "EXPECTED_TENSOR_COUNT", 1)
+    monkeypatch.setattr(finetune_snapshots, "checkpoint_epoch", checkpoint_epoch)
+    sleep_calls = 0
+
+    def advance(_: int) -> None:
+        nonlocal sleep_calls
+        sleep_calls += 1
+        if sleep_calls == 1:
+            write_checkpoint(2)
+        elif sleep_calls == 2:
+            completion.write_text("complete\n", encoding="utf-8")
+
+    monkeypatch.setattr(finetune_snapshots.time, "sleep", advance)
+    records = finetune_snapshots.snapshot(
+        checkpoint,
+        candidates,
+        completion,
+        poll_seconds=5,
+        timeout_seconds=30,
+    )
+
+    assert [row["epoch"] for row in records] == [1, 2]
+    assert all((candidates / row["filename"]).is_file() for row in records)
+    index = json.loads((candidates / "index.json").read_text(encoding="utf-8"))
+    assert index["status"] == "complete"
+    assert index["expected_epochs"] == [1, 2]
+    assert index["candidate_count"] == 2
+    assert index["held_out_access"] is False
 
 
 def test_finetune_validation_is_five_by_five_and_test_locked() -> None:

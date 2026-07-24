@@ -41,7 +41,7 @@ def configure(
     configured["train_dataloader"]["dataset"]["data_root"] = data_root
     configured["train_dataloader"]["dataset"]["ann_file"] = train_ann
     configured["train_dataloader"]["dataset"]["filter_empty_gt"] = False
-    configured["train_dataloader"]["batch_size"] = 1 if smoke else 2
+    configured["train_dataloader"]["batch_size"] = 1
     configured["train_dataloader"]["num_workers"] = 4 if smoke else 12
     configured["train_dataloader"]["prefetch_factor"] = 2
     configured["val_dataloader"]["dataset"]["data_root"] = data_root
@@ -56,10 +56,11 @@ def configure(
     configured["model"]["prepare_epoch"] = -1
     configured["optim_wrapper"]["optimizer"]["lr"] = 1e-5
     configured["optim_wrapper"]["optimizer"]["weight_decay"] = 0.05
+    configured["optim_wrapper"]["accumulative_counts"] = 1 if smoke else 2
     configured["param_scheduler"] = {
         "type": "PolyLR",
         "begin": 0,
-        "end": 1 if smoke else 280,
+        "end": 1 if smoke else 560,
         "power": 0.9,
         "by_epoch": False,
     }
@@ -121,7 +122,10 @@ def build(
             "relative_path": path.name,
             "sha256": sha256_file(path),
             "max_epochs": 1 if smoke else 35,
-            "batch_size": 1 if smoke else 2,
+            "batch_size": 1,
+            "gradient_accumulation": 1 if smoke else 2,
+            "effective_batch_size": 1 if smoke else 2,
+            "data_loader_iterations": 1 if smoke else 560,
             "optimizer_steps": 1 if smoke else 280,
         }
     manifest = {

@@ -251,3 +251,16 @@ the exact upstream block.
   frozen benchmark commit differs from the submitting checkout. Its initial
   runtime estimate is 75--120 minutes for 280 steps plus startup and
   checkpointing.
+- Full-training job `9912276` completed two epochs, then an instance-dense
+  batch exceeded the 80 GiB A100 while allocating a 492 MiB mask-loss tensor.
+  The job failed after 4 minutes 2 seconds, wrote its failure marker, and
+  produced no selectable checkpoint. At the failure PyTorch reported 75.05 GiB
+  allocated, 77.24 GiB reserved and 474.69 MiB free, so allocator tuning alone
+  would not provide a defensible margin.
+- Recovery uses micro-batch 1 with gradient accumulation 2. This preserves the
+  frozen effective batch size 2, 560-example exposure and 280 optimizer steps
+  without changing the learning rate, model, crop, sampling, epochs or
+  checkpoint set. PolyLR spans all 560 data-loader iterations, while checkpoint
+  inventory reports both 16 iterations and 8 optimizer steps per epoch and
+  applies the audited sparse-weight layout mapping. The failed root remains
+  immutable and no validation or held-out data was read.

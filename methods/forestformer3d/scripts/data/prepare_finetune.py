@@ -26,7 +26,9 @@ EXPECTED_TRAIN_PLOTS = 16
 EXPECTED_VALIDATION_PLOTS = 5
 SPLIT_SEED = 42
 MAX_EPOCHS = 35
-BATCH_SIZE = 2
+MICRO_BATCH_SIZE = 1
+GRADIENT_ACCUMULATION = 2
+EFFECTIVE_BATCH_SIZE = MICRO_BATCH_SIZE * GRADIENT_ACCUMULATION
 CHECKPOINT_EPOCHS = (7, 14, 21, 28, 35)
 LEARNING_RATE = 1e-5
 
@@ -217,7 +219,10 @@ def prepare(
         writer.writerows({name: row[name] for name in fields} for row in rows)
 
     examples_per_epoch = len(train_rows)
-    optimizer_steps_per_epoch = examples_per_epoch // BATCH_SIZE
+    data_loader_iterations_per_epoch = examples_per_epoch // MICRO_BATCH_SIZE
+    optimizer_steps_per_epoch = (
+        data_loader_iterations_per_epoch // GRADIENT_ACCUMULATION
+    )
     freeze: dict[str, Any] = {
         "schema": "forestformer3d_fine_tune_freeze_v1",
         "status": "frozen_for_initialisation_smoke",
@@ -245,8 +250,13 @@ def prepare(
             "configuration_count": 1,
             "epochs": MAX_EPOCHS,
             "examples_per_epoch": examples_per_epoch,
-            "batch_size": BATCH_SIZE,
-            "gradient_accumulation": 1,
+            "batch_size": MICRO_BATCH_SIZE,
+            "gradient_accumulation": GRADIENT_ACCUMULATION,
+            "effective_batch_size": EFFECTIVE_BATCH_SIZE,
+            "data_loader_iterations_per_epoch": data_loader_iterations_per_epoch,
+            "total_data_loader_iterations": (
+                data_loader_iterations_per_epoch * MAX_EPOCHS
+            ),
             "optimizer_steps_per_epoch": optimizer_steps_per_epoch,
             "total_examples": examples_per_epoch * MAX_EPOCHS,
             "total_optimizer_steps": optimizer_steps_per_epoch * MAX_EPOCHS,

@@ -33,7 +33,7 @@ echo "host=$(hostname)"
 echo "benchmark_commit=$FF3D_BENCHMARK_COMMIT"
 echo "split=development_training"
 echo "training_plots=16 validation_plots_read=0 held_out_access=false"
-echo "epochs=35 examples_per_epoch=16 batch_size=2 optimizer_steps=280"
+echo "epochs=35 examples_per_epoch=16 micro_batch_size=1 gradient_accumulation=2 effective_batch_size=2 optimizer_steps=280"
 echo "checkpoint_epochs=7,14,21,28,35"
 nvidia-smi -L
 touch "$FF3D_RUN_ROOT/fine_tune_training.started"

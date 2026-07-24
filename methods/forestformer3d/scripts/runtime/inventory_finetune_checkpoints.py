@@ -8,9 +8,12 @@ from pathlib import Path
 
 import torch
 
+from checkpoint_layout import checkpoint_tensor_for_runtime
+
 
 EPOCHS = (7, 14, 21, 28, 35)
-STEPS_PER_EPOCH = 8
+DATA_LOADER_ITERATIONS_PER_EPOCH = 16
+OPTIMIZER_STEPS_PER_EPOCH = 8
 
 
 def sha256_file(path: Path) -> str:
@@ -44,15 +47,18 @@ def inventory(
         if not isinstance(state, dict) or set(state) != set(initial_state):
             raise ValueError(f"Checkpoint state_dict mismatch at epoch {epoch}")
         for name in state:
+            initial_tensor = checkpoint_tensor_for_runtime(
+                name, initial_state[name]
+            )
             if (
-                state[name].shape != initial_state[name].shape
-                or state[name].dtype != initial_state[name].dtype
+                state[name].shape != initial_tensor.shape
+                or state[name].dtype != initial_tensor.dtype
             ):
                 raise ValueError(
                     f"Checkpoint tensor metadata mismatch: epoch={epoch} key={name}"
                 )
         metadata = checkpoint.get("meta", {})
-        expected_iter = epoch * STEPS_PER_EPOCH
+        expected_iter = epoch * DATA_LOADER_ITERATIONS_PER_EPOCH
         if (
             int(metadata.get("epoch", -1)) != epoch
             or int(metadata.get("iter", -1)) != expected_iter
@@ -66,7 +72,8 @@ def inventory(
         rows.append(
             {
                 "epoch": epoch,
-                "optimizer_steps": expected_iter,
+                "data_loader_iterations": expected_iter,
+                "optimizer_steps": epoch * OPTIMIZER_STEPS_PER_EPOCH,
                 "relative_path": path.relative_to(training_root.parent).as_posix(),
                 "size_bytes": path.stat().st_size,
                 "sha256": sha256_file(path),
@@ -78,9 +85,15 @@ def inventory(
         "initial_checkpoint_sha256": sha256_file(initial_path),
         "epochs": list(EPOCHS),
         "examples_per_epoch": 16,
-        "batch_size": 2,
-        "optimizer_steps_per_epoch": STEPS_PER_EPOCH,
-        "total_optimizer_steps": EPOCHS[-1] * STEPS_PER_EPOCH,
+        "batch_size": 1,
+        "gradient_accumulation": 2,
+        "effective_batch_size": 2,
+        "data_loader_iterations_per_epoch": DATA_LOADER_ITERATIONS_PER_EPOCH,
+        "total_data_loader_iterations": (
+            EPOCHS[-1] * DATA_LOADER_ITERATIONS_PER_EPOCH
+        ),
+        "optimizer_steps_per_epoch": OPTIMIZER_STEPS_PER_EPOCH,
+        "total_optimizer_steps": EPOCHS[-1] * OPTIMIZER_STEPS_PER_EPOCH,
         "held_out_access": False,
         "checkpoints": rows,
     }

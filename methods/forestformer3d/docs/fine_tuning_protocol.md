@@ -45,19 +45,23 @@ The one permitted configuration is:
   first fine-tuning step;
 - optimizer: AdamW, learning rate `1e-5`, weight decay `0.05`, gradient norm
   limit 10;
-- schedule: PolyLR, power `0.9`, over exactly 280 optimizer steps;
+- schedule: PolyLR, power `0.9`, over exactly 560 data-loader iterations
+  corresponding to 280 optimizer steps;
 - precision: official float32;
 - seed: 42;
-- 35 epochs, 16 examples per epoch, batch size 2, no gradient accumulation,
-  560 examples and 280 optimizer steps; and
+- 35 epochs, 16 examples per epoch, micro-batch size 1, accumulation 2,
+  effective batch size 2, 560 examples and 280 optimizer steps; and
 - checkpoints after epochs 7, 14, 21, 28 and 35, retaining optimizer state.
 
 The lower learning rate is the sole optimization change from the upstream
 `1e-4` default. It is a conservative single-configuration adaptation from an
-already converged checkpoint. Thirty-five epochs follow the repository's
-current development-fine-tune precedent, but epochs are not treated as equal
-across methods; the exact example and optimizer-step budget above is the
-auditable exposure.
+already converged checkpoint. Gradient accumulation preserves the frozen
+effective batch size after a real batch of two exceeded the 80 GiB A100 on an
+instance-dense crop; it is a resource implementation, not a tuned
+configuration. Thirty-five epochs follow the repository's current
+development-fine-tune precedent, but epochs are not treated as equal across
+methods; the exact example and optimizer-step budget above is the auditable
+exposure.
 
 Before the 35-epoch job, a technical smoke must prove that the official
 checkpoint loads tensor-for-tensor through the official training Runner with

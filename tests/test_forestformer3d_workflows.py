@@ -482,6 +482,10 @@ def test_finetune_preparation_freezes_canonical_development_only_split(
     assert result["split"]["held_out_access"] is False
     assert result["training"]["total_examples"] == 560
     assert result["training"]["total_optimizer_steps"] == 280
+    assert result["training"]["batch_size"] == 1
+    assert result["training"]["gradient_accumulation"] == 2
+    assert result["training"]["effective_batch_size"] == 2
+    assert result["training"]["total_data_loader_iterations"] == 560
     assert (tmp_path / "finetune/preparation.complete").is_file()
 
 
@@ -519,7 +523,9 @@ def test_effective_finetune_config_preserves_architecture_and_freezes_budget() -
     assert configured["model"]["prepare_epoch"] == -1
     assert configured["optim_wrapper"]["optimizer"]["lr"] == 1e-5
     assert configured["train_cfg"]["max_epochs"] == 35
-    assert configured["param_scheduler"]["end"] == 280
+    assert configured["param_scheduler"]["end"] == 560
+    assert configured["train_dataloader"]["batch_size"] == 1
+    assert configured["optim_wrapper"]["accumulative_counts"] == 2
     assert configured["default_hooks"]["checkpoint"]["interval"] == 7
     assert configured["load_from"] == "/inputs/checkpoint.pth"
     assert configured["resume"] is False
@@ -542,5 +548,16 @@ def test_full_finetune_submission_freezes_commit_and_inherits_error_trap() -> No
     job = (METHOD / "slurm/run_finetune_training.sbatch").read_text()
     assert 'p["benchmark_commit"] == sys.argv[2]' in submit
     assert 'p["split"]["held_out_access"] is False' in submit
-    assert "75-120 minutes" in submit
+    assert "90-150 minutes" in submit
     assert "set -Eeuo pipefail" in job
+    assert "micro_batch_size=1" in job
+    assert "gradient_accumulation=2" in job
+
+
+def test_checkpoint_inventory_distinguishes_iterations_from_optimizer_steps() -> None:
+    inventory = (
+        METHOD / "scripts/runtime/inventory_finetune_checkpoints.py"
+    ).read_text()
+    assert "DATA_LOADER_ITERATIONS_PER_EPOCH = 16" in inventory
+    assert "OPTIMIZER_STEPS_PER_EPOCH = 8" in inventory
+    assert "checkpoint_tensor_for_runtime" in inventory

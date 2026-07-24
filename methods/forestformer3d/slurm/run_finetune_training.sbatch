@@ -12,6 +12,7 @@ set -euo pipefail
 : "${FF3D_BENCHMARK_ROOT:?Missing FF3D_BENCHMARK_ROOT}"
 : "${FF3D_BENCHMARK_COMMIT:?Missing FF3D_BENCHMARK_COMMIT}"
 : "${FF3D_BASE_SIF:?Missing FF3D_BASE_SIF}"
+: "${FF3D_BASE_SIF_SHA256:?Missing FF3D_BASE_SIF_SHA256}"
 : "${FF3D_ENV_ROOT:?Missing FF3D_ENV_ROOT}"
 : "${FF3D_CHECKPOINT:?Missing FF3D_CHECKPOINT}"
 : "${FF3D_RUN_ROOT:?Missing FF3D_RUN_ROOT}"
@@ -26,6 +27,7 @@ test -f "$FF3D_RUN_ROOT/fine_tune_preparation.complete"
 test -f "$FF3D_RUN_ROOT/fine_tune_initialization_smoke.complete"
 test ! -e "$FF3D_RUN_ROOT/training_full"
 test ! -e "$FF3D_RUN_ROOT/fine_tune_training.complete"
+echo "$FF3D_BASE_SIF_SHA256  $FF3D_BASE_SIF" | sha256sum --check --status
 
 echo "host=$(hostname)"
 echo "benchmark_commit=$FF3D_BENCHMARK_COMMIT"

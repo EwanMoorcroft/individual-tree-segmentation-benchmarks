@@ -21,7 +21,6 @@ cd "$BENCHMARK_ROOT"
 test "$(git branch --show-current)" = "method/forestformer3d"
 test -z "$(git status --porcelain)"
 BENCHMARK_COMMIT="$(git rev-parse HEAD)"
-echo "$BASE_SIF_SHA256  $BASE_SIF" | sha256sum --check --status
 echo "$CHECKPOINT_SHA256  $CHECKPOINT" | sha256sum --check --status
 test -f "$ENV_ROOT/environment_build.complete"
 test -f "$FF3D_RUN_ROOT/fine_tune_preparation.complete"
@@ -35,7 +34,7 @@ JOB="$(
   sbatch --parsable \
     --output="$FF3D_RUN_ROOT/logs/initialization_smoke_%j.out" \
     --error="$FF3D_RUN_ROOT/logs/initialization_smoke_%j.err" \
-    --export=ALL,FF3D_FINETUNE_SMOKE_CONFIRMED=1,FF3D_BENCHMARK_ROOT="$BENCHMARK_ROOT",FF3D_BENCHMARK_COMMIT="$BENCHMARK_COMMIT",FF3D_BASE_SIF="$BASE_SIF",FF3D_ENV_ROOT="$ENV_ROOT",FF3D_CHECKPOINT="$CHECKPOINT",FF3D_RUN_ROOT="$FF3D_RUN_ROOT" \
+    --export=ALL,FF3D_FINETUNE_SMOKE_CONFIRMED=1,FF3D_BENCHMARK_ROOT="$BENCHMARK_ROOT",FF3D_BENCHMARK_COMMIT="$BENCHMARK_COMMIT",FF3D_BASE_SIF="$BASE_SIF",FF3D_BASE_SIF_SHA256="$BASE_SIF_SHA256",FF3D_ENV_ROOT="$ENV_ROOT",FF3D_CHECKPOINT="$CHECKPOINT",FF3D_RUN_ROOT="$FF3D_RUN_ROOT" \
     "$METHOD_ROOT/slurm/run_finetune_initialization_smoke.sbatch"
 )"
 {

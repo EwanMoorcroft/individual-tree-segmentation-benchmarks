@@ -199,3 +199,8 @@ the exact upstream block.
 - The failed run root and logs remain unchanged. The recovery accepts either
   established development-field spelling while still requiring every one of
   the 21 values to equal `development`; a replacement uses a new run ID.
+- The first replacement submission attempt stopped at the login-node hash of
+  the 8 GiB base SIF and did not create a Slurm job or run root. CPU-node probe
+  `9912264` independently reproduced the qualified SHA-256. Fine-tuning
+  wrappers now pass the expected hash into each compute job, which verifies
+  the image before use without performing the large read on the login node.

@@ -11,6 +11,7 @@ set -euo pipefail
 : "${FF3D_BENCHMARK_ROOT:?Missing FF3D_BENCHMARK_ROOT}"
 : "${FF3D_BENCHMARK_COMMIT:?Missing FF3D_BENCHMARK_COMMIT}"
 : "${FF3D_BASE_SIF:?Missing FF3D_BASE_SIF}"
+: "${FF3D_BASE_SIF_SHA256:?Missing FF3D_BASE_SIF_SHA256}"
 : "${FF3D_ENV_ROOT:?Missing FF3D_ENV_ROOT}"
 : "${FF3D_CHECKPOINT:?Missing FF3D_CHECKPOINT}"
 : "${FF3D_CHECKPOINT_SHA256:?Missing FF3D_CHECKPOINT_SHA256}"
@@ -28,6 +29,7 @@ test -f "$FF3D_ENV_ROOT/environment_build.complete"
 test -f "$FF3D_SOURCE_RUN_ROOT/development.complete"
 test -f "$FF3D_VERIFICATION_JSON"
 test ! -e "$FF3D_RUN_ROOT"
+echo "$FF3D_BASE_SIF_SHA256  $FF3D_BASE_SIF" | sha256sum --check --status
 
 PREPARATION_STDOUT="$(mktemp "${TMPDIR:-/tmp}/ff3d_finetune_prepare.XXXXXX")"
 trap 'rm -f "$PREPARATION_STDOUT"' EXIT

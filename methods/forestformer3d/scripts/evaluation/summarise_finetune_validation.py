@@ -185,6 +185,8 @@ def summarise(
         "validation_plot_count": len(plots),
         "validation_evaluation_count": len(per_plot),
         "evaluation_protocol": "for_instance_pointwise_v1",
+        "training_benchmark_commit": freeze["benchmark_commit"],
+        "validation_benchmark_commit": benchmark_commit,
         "freeze_sha256": sha256_file(freeze_path),
         "checkpoint_inventory_sha256": sha256_file(inventory_path),
         "source_development_run_id": source_run_root.name,

@@ -95,6 +95,7 @@ def test_validation_submission_is_development_only_and_frozen() -> None:
         METHOD / "scripts/evaluation/summarise_finetune_validation.py"
     ).read_text()
     assert "--array=0-24%2" in submit
+    assert 're.fullmatch(r"[0-9a-f]{40}", f["benchmark_commit"])' in submit
     assert "5 checkpoints x 5 frozen development-validation plots" in submit
     assert "held-out access false" in submit
     assert "--checkpoint-sha256" in task

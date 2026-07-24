@@ -25,10 +25,9 @@ test -f "$ENV_ROOT/environment_build.complete"
 test -f "$FF3D_RUN_ROOT/fine_tune_training.complete"
 test ! -f "$FF3D_RUN_ROOT/fine_tune_training.failed"
 "$TREEBENCH_PYTHON" -c \
-  'import json,sys; f=json.load(open(sys.argv[1])); i=json.load(open(sys.argv[2])); assert f["benchmark_commit"] == sys.argv[3]; assert f["split"]["held_out_access"] is False; assert i["status"] == "complete"; assert i["epochs"] == [7,14,21,28,35]; assert i["held_out_access"] is False' \
+  'import json,re,sys; f=json.load(open(sys.argv[1])); i=json.load(open(sys.argv[2])); assert re.fullmatch(r"[0-9a-f]{40}", f["benchmark_commit"]); assert f["split"]["held_out_access"] is False; assert i["status"] == "complete"; assert i["epochs"] == [7,14,21,28,35]; assert i["held_out_access"] is False' \
   "$FF3D_RUN_ROOT/fine_tune_freeze.json" \
-  "$FF3D_RUN_ROOT/checkpoint_inventory.json" \
-  "$BENCHMARK_COMMIT"
+  "$FF3D_RUN_ROOT/checkpoint_inventory.json"
 
 SOURCE_RUN_ID="$("$TREEBENCH_PYTHON" -c \
   'import json,sys; print(json.load(open(sys.argv[1]))["source_development_run_id"])' \

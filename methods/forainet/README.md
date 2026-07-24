@@ -45,6 +45,12 @@ hard-codes training RNG seed 2022; seed 42 is used separately by the official
 micro-F1, then lower false positives and earlier epoch. No training or held-out
 inference has been run by this branch.
 
+The official TreeMix training YAML places its existing Hydra package directive
+on line two, which Hydra 1.0.7 does not recognise. The Barkla route stages a
+hash-verified copy with that directive moved to line one; every training value
+remains byte-identical. This compatibility staging and the separate
+author-local checkpoint-path staging are both recorded in the run metadata.
+
 ## Input Requirements
 
 The source of truth is the original 32-file FOR-instance LAS catalogue. Every

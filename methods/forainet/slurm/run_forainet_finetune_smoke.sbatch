@@ -59,6 +59,8 @@ smoke_root="$(readlink -f "$smoke_root")"
 pointcloud_root="$upstream_root/PointCloudSegmentation"
 official_model_config="$pointcloud_root/conf/models/panoptic/FORpartseg_3heads.yaml"
 staged_model_config="$smoke_root/config_stage/FORpartseg_3heads.yaml"
+official_training_config="$pointcloud_root/conf/training/treeins_set1_mixtree.yaml"
+staged_training_config="$smoke_root/config_stage/treeins_set1_mixtree.yaml"
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-12}"
 
 module load apptainer/1.3.6
@@ -68,6 +70,11 @@ python3 \
   --checkpoint "$checkpoint" \
   --output-yaml "$staged_model_config" \
   --metadata-json "$smoke_root/config_stage/model_config.json"
+python3 \
+  "$benchmark_root/methods/forainet/scripts/provenance/stage_finetune_training_config.py" \
+  --official-config "$official_training_config" \
+  --output-yaml "$staged_training_config" \
+  --metadata-json "$smoke_root/config_stage/training_config.json"
 
 apptainer exec --nv --cleanenv \
   --env "OMP_NUM_THREADS=$OMP_NUM_THREADS" \
@@ -78,6 +85,7 @@ apptainer exec --nv --cleanenv \
   --bind "$qualification_root:$qualification_root:ro" \
   --bind "$finetune_root:$finetune_root" \
   --bind "$staged_model_config:$official_model_config:ro" \
+  --bind "$staged_training_config:$official_training_config:ro" \
   --pwd "$pointcloud_root" \
   "$image" python3.8 train.py \
     task=panoptic \

@@ -68,6 +68,10 @@ finetune_validation_task = load_script(
     "scripts/provenance/resolve_finetune_validation_task.py",
     "forainet_finetune_validation_task",
 )
+finetune_training_config = load_script(
+    "scripts/provenance/stage_finetune_training_config.py",
+    "forainet_finetune_training_config",
+)
 
 
 def test_scaffold_and_configs_are_method_local() -> None:
@@ -421,8 +425,13 @@ def test_finetune_smoke_is_development_gated_and_official() -> None:
     assert "models=panoptic/FORpartseg_3heads" in smoke
     assert "training=treeins_set1_mixtree" in smoke
     assert "stage_finetune_model_config.py" in smoke
+    assert "stage_finetune_training_config.py" in smoke
     assert (
         '--bind "$staged_model_config:$official_model_config:ro"' in smoke
+    )
+    assert (
+        '--bind "$staged_training_config:$official_training_config:ro"'
+        in smoke
     )
     assert "models.PointGroup-PAPER.path_pretrained=" not in smoke
     assert "training.epochs=2" in smoke
@@ -443,6 +452,43 @@ def test_finetune_smoke_is_development_gated_and_official() -> None:
     )
     assert '"models.PointGroup-PAPER.path_pretrained_only"' in stage
     assert "differences != [177]" in stage
+    training_stage = (
+        METHOD / "scripts/provenance/stage_finetune_training_config.py"
+    ).read_text(encoding="utf-8")
+    assert (
+        "7f491d8e4060974fafba1401ac38cec23c3476160decefd64ce60099c230ae96"
+        in training_stage
+    )
+    assert '"training_values_changed": False' in training_stage
+    assert "differences != [1, 2]" in training_stage
+
+
+def test_finetune_training_config_stage_changes_header_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    official = tmp_path / "treeins_set1_mixtree.yaml"
+    official.write_text(
+        f"{finetune_training_config.REFERENCE_LINE}\n"
+        f"{finetune_training_config.PACKAGE_LINE}\n"
+        "epochs: 150\n"
+        "batch_size: 4\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        finetune_training_config,
+        "EXPECTED_OFFICIAL_CONFIG_SHA256",
+        finetune_training_config.sha256(official),
+    )
+    staged = tmp_path / "staged.yaml"
+    metadata = tmp_path / "metadata.json"
+    payload = finetune_training_config.stage(official, staged, metadata)
+    source_lines = official.read_text(encoding="utf-8").splitlines()
+    staged_lines = staged.read_text(encoding="utf-8").splitlines()
+
+    assert staged_lines == [source_lines[1], source_lines[0], *source_lines[2:]]
+    assert payload["changed_lines"] == [1, 2]
+    assert payload["training_values_changed"] is False
+    assert json.loads(metadata.read_text(encoding="utf-8")) == payload
 
 
 def test_full_finetune_is_smoke_gated_and_retains_frozen_candidates() -> None:
@@ -465,6 +511,11 @@ def test_full_finetune_is_smoke_gated_and_retains_frozen_candidates() -> None:
     assert "#SBATCH --time=3-00:00:00" in task
     assert 'test -f "$FORAINET_FINETUNE_ROOT/smoke/final_gate.json"' in task
     assert "training.epochs=150" in task
+    assert "stage_finetune_training_config.py" in task
+    assert (
+        '--bind "$staged_training_config:$official_training_config:ro"'
+        in task
+    )
     assert "debugging.early_break=false" in task
     assert "snapshot_finetune_checkpoints.py" in task
     assert "validate_finetune_full.py" in task
@@ -1140,6 +1191,7 @@ def test_cli_help_is_available() -> None:
         METHOD / "scripts/provenance/prepare_development_manifest.py",
         METHOD / "scripts/provenance/resolve_development_task.py",
         METHOD / "scripts/provenance/summarise_development_run.py",
+        METHOD / "scripts/provenance/stage_finetune_training_config.py",
     ]
     for path in scripts:
         completed = subprocess.run(

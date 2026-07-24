@@ -326,6 +326,12 @@ def test_full_development_route_is_guarded_and_development_only() -> None:
     assert '--array="0-20%2"' in submit
     assert '--dependency="afterok:$prepare_job"' in submit
     assert '--dependency="afterany:$array_job"' in submit
+    recovery = (
+        METHOD / "slurm/submit_forainet_development_recovery.sh"
+    ).read_text(encoding="utf-8")
+    assert '--array="16,20%2"' in recovery
+    assert '--dependency="afterok:$array_job"' in recovery
+    assert ')" = "19"' in recovery
     monitor = (METHOD / "slurm/monitor_forainet_development.sh").read_text(
         encoding="utf-8"
     )
@@ -710,6 +716,24 @@ def test_alignment_reorders_by_exact_source_index() -> None:
     assert result.source_row_index.tolist() == [0, 1, 2, 3]
     assert result.pred_classification.tolist() == [0, 4, 6, 0]
     assert result.pred_tree_id.tolist() == [0, 12, 23, 0]
+
+
+def test_alignment_maps_verified_uncovered_sentinel_to_background() -> None:
+    result = contract.align_full_resolution_prediction(
+        source_row_index=np.arange(3),
+        pred_semantic_internal=np.asarray([2, -1, 4]),
+        pred_instance_id=np.asarray([7, -1, 9]),
+        expected_point_count=3,
+    )
+    assert result.pred_classification.tolist() == [4, 0, 6]
+    assert result.pred_tree_id.tolist() == [8, 0, 10]
+    with pytest.raises(ValueError, match="must be paired"):
+        contract.align_full_resolution_prediction(
+            source_row_index=np.arange(2),
+            pred_semantic_internal=np.asarray([2, -1]),
+            pred_instance_id=np.asarray([7, 0]),
+            expected_point_count=2,
+        )
 
 
 @pytest.mark.parametrize(
@@ -1106,6 +1130,8 @@ def test_development_summary_requires_all_plots_and_hash_complete_retention(
     manifest_root.mkdir()
     manifest_rows = []
     benchmark_commit = "a" * 40
+    recovery_commit = "c" * 40
+    recovery_root = tmp_path / "recovery"
     run_id = (
         "forainet__for-instance__published-pretrained__none__development__"
         "20260723T210000"
@@ -1122,7 +1148,8 @@ def test_development_summary_requires_all_plots_and_hash_complete_retention(
                 "point_count": 10,
             }
         )
-        plot_root = run_root / "plots" / f"task_{task_index:03d}"
+        plot_base = recovery_root if task_index in {16, 20} else run_root
+        plot_root = plot_base / "plots" / f"task_{task_index:03d}"
         metrics_path = plot_root / "evaluation" / "metrics.json"
         plot_metadata_path = plot_root / "metadata" / "plot.json"
         metrics_path.parent.mkdir(parents=True)
@@ -1150,7 +1177,11 @@ def test_development_summary_requires_all_plots_and_hash_complete_retention(
             json.dumps(
                 {
                     "route": "development",
-                    "benchmark_commit": benchmark_commit,
+                    "benchmark_commit": (
+                        recovery_commit
+                        if task_index in {16, 20}
+                        else benchmark_commit
+                    ),
                     "relative_path": relative_path,
                     "reference_labels_supplied_to_model": False,
                     "point_count": 10,
@@ -1216,12 +1247,19 @@ def test_development_summary_requires_all_plots_and_hash_complete_retention(
         manifest_csv,
         manifest_json,
         benchmark_commit,
+        recovery_root,
+        recovery_commit,
     )
     assert payload["completed_plots"] == 21
     assert payload["overall"]["true_positives"] == 42
     assert payload["overall"]["false_positives"] == 21
     assert payload["overall"]["false_negatives"] == 21
     assert payload["overall"]["f1"] == pytest.approx(2 / 3)
+    assert payload["recovered_task_indices"] == [16, 20]
+    assert payload["implementation_commits"] == [
+        benchmark_commit,
+        recovery_commit,
+    ]
     final_gate = json.loads((run_root / "final_gate.json").read_text())
     assert final_gate["held_out_access"] is False
     assert final_gate["completed_plots"] == 21

@@ -139,6 +139,10 @@ def export(run_root: Path, output_root: Path) -> dict[str, Any]:
         "status": "complete",
         "run_id": run_id,
         "benchmark_commit": benchmark_commit,
+        "implementation_commits": metrics.get(
+            "implementation_commits", [benchmark_commit]
+        ),
+        "recovered_task_indices": metrics.get("recovered_task_indices", []),
         "upstream_commit": EXPECTED_UPSTREAM_COMMIT,
         "checkpoint_sha256": EXPECTED_CHECKPOINT_SHA256,
         "image_sha256": EXPECTED_IMAGE_SHA256,

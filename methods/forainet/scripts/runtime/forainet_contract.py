@@ -15,6 +15,7 @@ FORAINET_CLASS_NAMES = {
     4: "branches",
 }
 FORAINET_TO_BENCHMARK_CLASS = {0: 0, 1: 0, 2: 4, 3: 5, 4: 6}
+UNCOVERED_PREDICTION_SENTINEL = -1
 REFERENCE_TREE_CLASSES = (4, 5, 6)
 IGNORED_REFERENCE_CLASSES = (0, 1, 2, 3)
 IGNORED_INSTANCE_IDS = (-1, 0)
@@ -83,9 +84,18 @@ def align_full_resolution_prediction(
     if len(np.unique(rows)) != expected_point_count:
         raise ValueError("source_row_index contains duplicated or missing rows")
 
-    unknown = sorted(set(np.unique(semantics)) - set(FORAINET_CLASS_NAMES))
+    unknown = sorted(
+        set(np.unique(semantics))
+        - set(FORAINET_CLASS_NAMES)
+        - {UNCOVERED_PREDICTION_SENTINEL}
+    )
     if unknown:
         raise ValueError(f"unknown ForAINet semantic class IDs: {unknown}")
+    uncovered = semantics == UNCOVERED_PREDICTION_SENTINEL
+    if np.any(uncovered & (instances != UNCOVERED_PREDICTION_SENTINEL)):
+        raise ValueError(
+            "uncovered semantic sentinel must be paired with instance sentinel -1"
+        )
 
     order = np.argsort(rows, kind="stable")
     aligned_rows = rows[order]
@@ -101,8 +111,13 @@ def align_full_resolution_prediction(
     if np.any(stuff_with_instance):
         raise ValueError("positive instance IDs occur on ForAINet stuff classes")
 
-    pred_classification = np.asarray(
-        [FORAINET_TO_BENCHMARK_CLASS[int(value)] for value in aligned_semantics],
+    pred_classification = np.zeros(expected_point_count, dtype=np.uint8)
+    covered = aligned_semantics != UNCOVERED_PREDICTION_SENTINEL
+    pred_classification[covered] = np.asarray(
+        [
+            FORAINET_TO_BENCHMARK_CLASS[int(value)]
+            for value in aligned_semantics[covered]
+        ],
         dtype=np.uint8,
     )
     if np.any(aligned_instances < -1):

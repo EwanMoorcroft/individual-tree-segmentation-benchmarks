@@ -18,13 +18,24 @@ trap 'status=$?; printf "ForAINet development summary failed at line %s: %s\n" "
 test "$(git -C "$FORAINET_BENCHMARK_ROOT" rev-parse HEAD)" = \
   "$FORAINET_EXPECTED_BENCHMARK_COMMIT"
 test -z "$(git -C "$FORAINET_BENCHMARK_ROOT" status --porcelain)"
-python3 \
-  "$FORAINET_BENCHMARK_ROOT/methods/forainet/scripts/provenance/summarise_development_run.py" \
+original_commit="${FORAINET_DEVELOPMENT_ORIGINAL_BENCHMARK_COMMIT:-$FORAINET_EXPECTED_BENCHMARK_COMMIT}"
+summary_args=(
   --run-root "$FORAINET_DEVELOPMENT_ROOT" \
   --run-id "$FORAINET_DEVELOPMENT_RUN_ID" \
   --manifest-csv "$FORAINET_DEVELOPMENT_ROOT/manifest/development.csv" \
   --manifest-json "$FORAINET_DEVELOPMENT_ROOT/manifest/development.json" \
-  --benchmark-commit "$FORAINET_EXPECTED_BENCHMARK_COMMIT"
+  --benchmark-commit "$original_commit"
+)
+if [[ -n "${FORAINET_DEVELOPMENT_RECOVERY_ROOT:-}" ]]; then
+  test -d "$FORAINET_DEVELOPMENT_RECOVERY_ROOT"
+  summary_args+=(
+    --recovery-root "$FORAINET_DEVELOPMENT_RECOVERY_ROOT"
+    --recovery-benchmark-commit "$FORAINET_EXPECTED_BENCHMARK_COMMIT"
+  )
+fi
+python3 \
+  "$FORAINET_BENCHMARK_ROOT/methods/forainet/scripts/provenance/summarise_development_run.py" \
+  "${summary_args[@]}"
 
 test -f "$FORAINET_DEVELOPMENT_ROOT/final_gate.json"
 test -f "$FORAINET_DEVELOPMENT_ROOT/summary/metrics.json"

@@ -121,6 +121,8 @@ def summarise(
     manifest_csv: Path,
     manifest_json: Path,
     benchmark_commit: str,
+    recovery_root: Path | None = None,
+    recovery_benchmark_commit: str | None = None,
 ) -> dict[str, Any]:
     if (run_root / "final_gate.json").exists():
         raise FileExistsError("development final gate already exists")
@@ -139,10 +141,30 @@ def summarise(
 
     plot_rows = []
     child_manifests = []
+    recovered_task_indices = []
     for manifest_row in manifest_rows:
         task_index = int(manifest_row["task_index"])
         relative_path = manifest_row["relative_path"]
-        plot_root = run_root / "plots" / f"task_{task_index:03d}"
+        canonical_plot_root = run_root / "plots" / f"task_{task_index:03d}"
+        recovery_plot_root = (
+            recovery_root / "plots" / f"task_{task_index:03d}"
+            if recovery_root is not None
+            else None
+        )
+        plot_root = canonical_plot_root
+        result_source = "original"
+        expected_plot_commit = benchmark_commit
+        if not (canonical_plot_root / "final_gate.json").is_file():
+            if (
+                recovery_plot_root is None
+                or recovery_benchmark_commit is None
+                or not (recovery_plot_root / "final_gate.json").is_file()
+            ):
+                raise FileNotFoundError(canonical_plot_root / "final_gate.json")
+            plot_root = recovery_plot_root
+            result_source = "recovery"
+            expected_plot_commit = recovery_benchmark_commit
+            recovered_task_indices.append(task_index)
         gate_path = plot_root / "final_gate.json"
         metrics_path = plot_root / "evaluation" / "metrics.json"
         plot_metadata_path = plot_root / "metadata" / "plot.json"
@@ -169,7 +191,7 @@ def summarise(
             or metrics.get("split") != "dev"
             or metrics.get("coordinate_matching") is not False
             or plot_metadata.get("route") != "development"
-            or plot_metadata.get("benchmark_commit") != benchmark_commit
+            or plot_metadata.get("benchmark_commit") != expected_plot_commit
             or plot_metadata.get("relative_path") != relative_path
             or plot_metadata.get("reference_labels_supplied_to_model") is not False
         ):
@@ -177,6 +199,8 @@ def summarise(
         plot_rows.append(
             {
                 "task_index": task_index,
+                "result_source": result_source,
+                "benchmark_commit": expected_plot_commit,
                 "relative_path": relative_path,
                 "site": relative_path.split("/", 1)[0],
                 "point_count": int(plot_metadata["point_count"]),
@@ -204,6 +228,7 @@ def summarise(
             {
                 "task_index": task_index,
                 "relative_path": relative_path,
+                "result_source": result_source,
                 "retention_manifest_sha256": sha256(retention_path),
             }
         )
@@ -235,6 +260,11 @@ def summarise(
         "split": "dev",
         "protocol_id": EXPECTED_PROTOCOL,
         "benchmark_commit": benchmark_commit,
+        "recovery_benchmark_commit": recovery_benchmark_commit,
+        "recovered_task_indices": recovered_task_indices,
+        "implementation_commits": sorted(
+            {str(row["benchmark_commit"]) for row in plot_rows}
+        ),
         "expected_plots": EXPECTED_PLOTS,
         "completed_plots": len(plot_rows),
         "held_out_access": False,
@@ -263,6 +293,7 @@ def summarise(
         "status": "complete",
         "run_id": run_id,
         "held_out_access": False,
+        "recovered_task_indices": recovered_task_indices,
         "development_manifest_csv_sha256": sha256(manifest_csv),
         "development_manifest_json_sha256": sha256(manifest_json),
         "plot_summary_sha256": sha256(plot_csv),
@@ -284,6 +315,8 @@ def summarise(
         "completed_plots": len(plot_rows),
         "protocol_id": EXPECTED_PROTOCOL,
         "benchmark_commit": benchmark_commit,
+        "recovery_benchmark_commit": recovery_benchmark_commit,
+        "recovered_task_indices": recovered_task_indices,
         "held_out_access": False,
         "summary_metrics_sha256": sha256(summary_json),
         "retention_manifest_sha256": sha256(retention_path),
@@ -303,13 +336,23 @@ def main() -> int:
     parser.add_argument("--manifest-csv", required=True, type=Path)
     parser.add_argument("--manifest-json", required=True, type=Path)
     parser.add_argument("--benchmark-commit", required=True)
+    parser.add_argument("--recovery-root", type=Path)
+    parser.add_argument("--recovery-benchmark-commit")
     args = parser.parse_args()
+    if (args.recovery_root is None) != (
+        args.recovery_benchmark_commit is None
+    ):
+        raise ValueError(
+            "recovery root and recovery benchmark commit must be supplied together"
+        )
     payload = summarise(
         args.run_root,
         args.run_id,
         args.manifest_csv,
         args.manifest_json,
         args.benchmark_commit,
+        args.recovery_root,
+        args.recovery_benchmark_commit,
     )
     print(json.dumps(payload, indent=2, sort_keys=True))
     return 0

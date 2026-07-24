@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+: "${FORAINET_BENCHMARK_ROOT:?set FORAINET_BENCHMARK_ROOT}"
+: "${FORAINET_EXPECTED_BENCHMARK_COMMIT:?set current recovery commit}"
+: "${FORAINET_DEVELOPMENT_ORIGINAL_BENCHMARK_COMMIT:?set original run commit}"
+: "${FORAINET_UPSTREAM_ROOT:?set FORAINET_UPSTREAM_ROOT}"
+: "${FORAINET_CHECKPOINT:?set FORAINET_CHECKPOINT}"
+: "${FORAINET_IMAGE:?set FORAINET_IMAGE}"
+: "${FORAINET_QUALIFICATION_ROOT:?set FORAINET_QUALIFICATION_ROOT}"
+: "${FORAINET_DATASET_ROOT:?set FORAINET_DATASET_ROOT}"
+: "${FORAINET_DEVELOPMENT_ROOT:?set original development root}"
+: "${FORAINET_DEVELOPMENT_RECOVERY_ROOT:?set recovery root}"
+: "${FORAINET_DEVELOPMENT_RUN_ID:?set FORAINET_DEVELOPMENT_RUN_ID}"
+: "${FORAINET_DEVELOPMENT_RECOVERY_STATE_FILE:?set recovery state file}"
+
+test "$(git -C "$FORAINET_BENCHMARK_ROOT" rev-parse HEAD)" = \
+  "$FORAINET_EXPECTED_BENCHMARK_COMMIT"
+test -z "$(git -C "$FORAINET_BENCHMARK_ROOT" status --porcelain)"
+test -f "$FORAINET_DEVELOPMENT_ROOT/manifest/development.csv"
+test -f "$FORAINET_DEVELOPMENT_ROOT/manifest/development.json"
+test ! -e "$FORAINET_DEVELOPMENT_ROOT/final_gate.json"
+test ! -e "$FORAINET_DEVELOPMENT_RECOVERY_ROOT"
+test ! -e "$FORAINET_DEVELOPMENT_RECOVERY_STATE_FILE"
+test ! -e "$FORAINET_DEVELOPMENT_ROOT/plots/task_016/final_gate.json"
+test ! -e "$FORAINET_DEVELOPMENT_ROOT/plots/task_020/final_gate.json"
+test "$(find "$FORAINET_DEVELOPMENT_ROOT/plots" -mindepth 2 -maxdepth 2 \
+  -name final_gate.json -type f | wc -l | tr -d ' ')" = "19"
+
+mkdir -p "$FORAINET_BENCHMARK_ROOT/logs" \
+  "$(dirname "$FORAINET_DEVELOPMENT_RECOVERY_STATE_FILE")"
+mkdir -p "$FORAINET_DEVELOPMENT_RECOVERY_ROOT/manifest"
+cp "$FORAINET_DEVELOPMENT_ROOT/manifest/development.csv" \
+  "$FORAINET_DEVELOPMENT_RECOVERY_ROOT/manifest/development.csv"
+cp "$FORAINET_DEVELOPMENT_ROOT/manifest/development.json" \
+  "$FORAINET_DEVELOPMENT_RECOVERY_ROOT/manifest/development.json"
+
+original_root="$FORAINET_DEVELOPMENT_ROOT"
+export FORAINET_DEVELOPMENT_CONFIRMED=1
+export FORAINET_DEVELOPMENT_ROOT="$FORAINET_DEVELOPMENT_RECOVERY_ROOT"
+array_exports="ALL,FORAINET_BENCHMARK_ROOT,FORAINET_EXPECTED_BENCHMARK_COMMIT,FORAINET_UPSTREAM_ROOT,FORAINET_CHECKPOINT,FORAINET_IMAGE,FORAINET_QUALIFICATION_ROOT,FORAINET_DATASET_ROOT,FORAINET_DEVELOPMENT_ROOT,FORAINET_DEVELOPMENT_RUN_ID,FORAINET_DEVELOPMENT_CONFIRMED"
+array_job="$(
+  cd "$FORAINET_BENCHMARK_ROOT"
+  sbatch --parsable \
+    --array="16,20%2" \
+    --export="$array_exports" \
+    methods/forainet/slurm/run_forainet_development.sbatch
+)"
+
+export FORAINET_DEVELOPMENT_ROOT="$original_root"
+summary_exports="ALL,FORAINET_BENCHMARK_ROOT,FORAINET_EXPECTED_BENCHMARK_COMMIT,FORAINET_DEVELOPMENT_ORIGINAL_BENCHMARK_COMMIT,FORAINET_DEVELOPMENT_ROOT,FORAINET_DEVELOPMENT_RECOVERY_ROOT,FORAINET_DEVELOPMENT_RUN_ID"
+summary_job="$(
+  cd "$FORAINET_BENCHMARK_ROOT"
+  sbatch --parsable \
+    --dependency="afterok:$array_job" \
+    --export="$summary_exports" \
+    methods/forainet/slurm/summarise_forainet_development.sbatch
+)"
+
+{
+  printf 'FORAINET_DEVELOPMENT_RECOVERY_ARRAY_JOB_ID=%q\n' "$array_job"
+  printf 'FORAINET_DEVELOPMENT_RECOVERY_SUMMARY_JOB_ID=%q\n' "$summary_job"
+  printf 'FORAINET_DEVELOPMENT_ROOT=%q\n' "$FORAINET_DEVELOPMENT_ROOT"
+  printf 'FORAINET_DEVELOPMENT_RECOVERY_ROOT=%q\n' \
+    "$FORAINET_DEVELOPMENT_RECOVERY_ROOT"
+  printf 'FORAINET_DEVELOPMENT_RUN_ID=%q\n' "$FORAINET_DEVELOPMENT_RUN_ID"
+  printf 'FORAINET_EXPECTED_BENCHMARK_COMMIT=%q\n' \
+    "$FORAINET_EXPECTED_BENCHMARK_COMMIT"
+  printf 'FORAINET_SUBMITTED_AT_EPOCH=%q\n' "$(date +%s)"
+} > "$FORAINET_DEVELOPMENT_RECOVERY_STATE_FILE"
+printf 'recovery_array_job=%s recovery_summary_job=%s\n' \
+  "$array_job" "$summary_job"

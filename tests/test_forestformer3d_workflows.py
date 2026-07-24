@@ -10,6 +10,8 @@ import numpy as np
 import pytest
 
 from methods.forestformer3d.scripts.evaluation import verify_development_run
+from methods.forestformer3d.scripts.data import prepare_finetune
+from methods.forestformer3d.scripts.runtime import build_finetune_configs
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -389,3 +391,132 @@ def test_independent_development_verifier_rejects_changed_prediction(
     output = run / "verification"
     with pytest.raises(ValueError, match="outside the immutable run root"):
         verify_development_run.verify(run, output)
+
+
+def test_finetune_preparation_freezes_canonical_development_only_split(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source_run"
+    plots = []
+    for index in range(21):
+        plot_id = f"SITE/plot_{index}"
+        safe = f"SITE_plot_{index}"
+        relative = f"{plot_id}.las"
+        plots.append(
+            {
+                "task_index": index,
+                "plot_id": plot_id,
+                "safe_plot_id": safe,
+                "relative_path": relative,
+                "dataset_split": "development",
+                "point_count": 2,
+                "input_sha256": f"{index:064x}",
+            }
+        )
+        staged = source / "tasks" / safe / "staged_input"
+        for name in (
+            "points/forestformer3d_development_test.bin",
+            "semantic_mask/reference.bin",
+            "instance_mask/reference.bin",
+        ):
+            path = staged / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(f"{index}:{name}".encode())
+        (staged / "input_manifest.json").write_text(
+            json.dumps(
+                {
+                    "plot_id": plot_id,
+                    "relative_path": relative,
+                    "split": "development",
+                    "held_out_access": False,
+                    "source_row_index": "zero_based_identity",
+                }
+            ),
+            encoding="utf-8",
+        )
+    (source / "development_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema": "forestformer3d_development_manifest_v1",
+                "dataset_split": "development",
+                "held_out_access": False,
+                "plots": plots,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (source / "development.complete").touch()
+    verification = tmp_path / "verification.json"
+    verification.write_text(
+        json.dumps(
+            {
+                "schema": "forestformer3d_development_verification_v1",
+                "status": "verified",
+                "run_id": source.name,
+                "held_out_access": False,
+                "exact_source_row_alignment": True,
+                "task_count": 21,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = prepare_finetune.prepare(
+        source,
+        verification,
+        tmp_path / "finetune",
+        benchmark_commit="b" * 40,
+        checkpoint_sha256="c" * 64,
+    )
+    frozen_rows = prepare_finetune.assign_roles(plots)
+    assert {
+        row["task_index"]
+        for row in frozen_rows
+        if row["fine_tune_role"] == "validation"
+    } == {0, 3, 7, 8, 20}
+    assert result["split"]["training_plots"] == 16
+    assert result["split"]["validation_plots"] == 5
+    assert result["split"]["held_out_access"] is False
+    assert result["training"]["total_examples"] == 560
+    assert result["training"]["total_optimizer_steps"] == 280
+    assert (tmp_path / "finetune/preparation.complete").is_file()
+
+
+def test_effective_finetune_config_preserves_architecture_and_freezes_budget() -> None:
+    base = {
+        "model": {"prepare_epoch": 1000, "radius": 16, "query_point_num": 300},
+        "train_dataloader": {
+            "batch_size": 2,
+            "num_workers": 12,
+            "prefetch_factor": 10,
+            "dataset": {"data_root": "old", "ann_file": "train.pkl"},
+        },
+        "val_dataloader": {
+            "dataset": {"data_root": "old", "ann_file": "val.pkl"}
+        },
+        "test_dataloader": {
+            "dataset": {"data_root": "old", "ann_file": "test.pkl"}
+        },
+        "optim_wrapper": {
+            "optimizer": {"type": "AdamW", "lr": 1e-4, "weight_decay": 0.05}
+        },
+        "param_scheduler": {"end": 450000},
+        "train_cfg": {"max_epochs": 3000, "val_interval": 100},
+        "default_hooks": {"checkpoint": {"interval": 1}},
+    }
+    configured = build_finetune_configs.configure(
+        base,
+        data_root="/run/data/",
+        checkpoint="/inputs/checkpoint.pth",
+        work_dir="/run/training",
+        smoke=False,
+    )
+    assert configured["model"]["radius"] == 16
+    assert configured["model"]["query_point_num"] == 300
+    assert configured["model"]["prepare_epoch"] == -1
+    assert configured["optim_wrapper"]["optimizer"]["lr"] == 1e-5
+    assert configured["train_cfg"]["max_epochs"] == 35
+    assert configured["param_scheduler"]["end"] == 280
+    assert configured["default_hooks"]["checkpoint"]["interval"] == 7
+    assert configured["load_from"] == "/inputs/checkpoint.pth"
+    assert configured["resume"] is False

@@ -177,3 +177,16 @@ validation submission from running.
 Model-source defects are not repaired silently. If official interfaces cannot
 produce row-aligned predictions without changing model logic, work stops with
 the exact upstream block.
+
+## Independent development-retention verification
+
+- Verification job `9912217` failed in two seconds before reading any retained
+  artefact. Direct execution of the new verifier did not place the repository
+  root on `sys.path`, so `shared.for_instance_manifest` could not be imported.
+- Commit `2a2b8cf` added the same explicit repository-root import used by the
+  other method scripts. The failed verification root and scheduler logs remain
+  unchanged as provenance.
+- Immutable replacement job `9912219` completed in 40 seconds. It re-hashed all
+  294 retained artefacts (16,565,931,840 bytes), loaded all 21 harmonised
+  predictions, verified exact source-row identity, reconciled the aggregate
+  counts and confirmed `held_out_access=false`.

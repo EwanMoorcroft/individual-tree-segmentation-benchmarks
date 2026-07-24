@@ -25,11 +25,35 @@ method:
 
 selection:
   validation_only: true
-  schedule_status: pending_environment_and_smoke_measurements
-  checkpoint_rule_status: must_be_frozen_before_training_submission
+  schedule_status: frozen_for_initialisation_smoke
+  checkpoint_rule_status: frozen_before_training_submission
+  checkpoint_epochs:
+    - 7
+    - 14
+    - 21
+    - 28
+    - 35
+  primary_rule: maximum_mean_plot_f1
+  tie_breakers:
+    - maximum_micro_f1
+    - earliest_checkpoint_epoch
   manual_test_inspection_permitted: false
 
 budget:
-  status: pending_measured_smoke_throughput
+  status: frozen_for_initialisation_smoke
   configurations: 1
+  epochs: 35
+  examples_per_epoch: 16
+  total_examples: 560
+  batch_size: 2
+  gradient_accumulation: 1
+  optimizer_steps_per_epoch: 8
+  total_optimizer_steps: 280
+  optimizer: AdamW
+  learning_rate: 0.00001
+  weight_decay: 0.05
+  scheduler: PolyLR
+  scheduler_power: 0.9
+  precision: float32
+  seed: 42
   test_evaluations: 0

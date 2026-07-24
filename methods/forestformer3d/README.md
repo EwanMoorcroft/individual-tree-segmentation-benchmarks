@@ -24,10 +24,11 @@ a legal resolution. No upstream source, checkpoint or container is committed.
 ## Training Mode Support
 
 `published_pretrained` uses `epoch_3000_fix.pth` unchanged.
-`fine_tuned_on_dev` will start from the identical checkpoint and may update
-weights only on the canonical seed-42 16/5 subdivision of the 21 original
-development plots. Its schedule and checkpoint-selection rule remain locked
-until environment qualification and development smoke timing are complete.
+`fine_tuned_on_dev` starts from the identical checkpoint and may update weights
+only on the canonical seed-42 16/5 subdivision of the 21 original development
+plots. Its single-configuration 35-epoch schedule, 280-step budget and
+five-checkpoint validation-only selection rule are frozen in
+[`docs/fine_tuning_protocol.md`](docs/fine_tuning_protocol.md).
 
 The checkpoint exposure audit passes: all 11 original held-out plots map
 exactly to the official V2 test inventory, none maps to V2 training or
@@ -112,6 +113,11 @@ CPU completeness, aggregation and retention gate. Both submitters start the
 30-second live monitor. See
 [`docs/published_pretrained_development.md`](docs/published_pretrained_development.md).
 
+The published-pretrained development run completed and an independent CPU
+verification re-hashed every retained artefact and rechecked all source-row
+identity arrays. Fine-tuning preparation, exact-load smoke and full training
+have separate guarded submitters; none can read held-out data.
+
 ## Evaluation Route
 
 Development smoke and full evaluation will use the shared
@@ -147,6 +153,7 @@ to the versions that passed A100 validation.
 Upstream source, base environment, checkpoint identity, checkpoint exposure,
 the composite A100 runtime, label-independence evidence, exact row alignment
 and the manually reviewed one-plot development smoke are qualified. The full
-21-plot published-pretrained development diagnostic workflow is implemented
-and awaits its frozen preflight. No held-out inference is available. No
+21-plot published-pretrained development diagnostic and independent retention
+verification are complete. Development-only fine-tuning is frozen at the
+preparation and exact-load-smoke gate. No held-out inference is available. No
 held-out ForestFormer3D accuracy result exists.

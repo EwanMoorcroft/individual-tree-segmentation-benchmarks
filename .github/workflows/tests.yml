@@ -36,4 +36,4 @@ jobs:
             | xargs -0 -n1 bash -n
 
       - name: Run tests
-        run: python -m pytest
+        run: python -m pytest tests

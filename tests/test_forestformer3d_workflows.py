@@ -408,7 +408,7 @@ def test_finetune_preparation_freezes_canonical_development_only_split(
                 "plot_id": plot_id,
                 "safe_plot_id": safe,
                 "relative_path": relative,
-                "dataset_split": "development",
+                "split": "development",
                 "point_count": 2,
                 "input_sha256": f"{index:064x}",
             }

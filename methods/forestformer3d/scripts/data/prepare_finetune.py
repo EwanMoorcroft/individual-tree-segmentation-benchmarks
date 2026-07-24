@@ -34,7 +34,10 @@ LEARNING_RATE = 1e-5
 def assign_roles(plots: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if (
         len(plots) != EXPECTED_DEVELOPMENT_PLOTS
-        or any(row.get("dataset_split") != "development" for row in plots)
+        or any(
+            row.get("split", row.get("dataset_split")) != "development"
+            for row in plots
+        )
     ):
         raise ValueError("Fine-tuning requires exactly 21 development plots")
     validation_indices = set(

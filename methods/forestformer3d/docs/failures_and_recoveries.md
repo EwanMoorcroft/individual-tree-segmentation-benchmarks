@@ -190,3 +190,12 @@ the exact upstream block.
   294 retained artefacts (16,565,931,840 bytes), loaded all 21 harmonised
   predictions, verified exact source-row identity, reconciled the aggregate
   counts and confirmed `held_out_access=false`.
+
+## First fine-tuning preparation
+
+- Preparation job `9912261` failed in three seconds before staging data. The
+  fine-tuning splitter expected the outer manifest's `dataset_split` field on
+  each plot, while the frozen per-plot records correctly use `split`.
+- The failed run root and logs remain unchanged. The recovery accepts either
+  established development-field spelling while still requiring every one of
+  the 21 values to equal `development`; a replacement uses a new run ID.

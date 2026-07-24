@@ -60,6 +60,10 @@ development_summary = load_script(
     "scripts/provenance/summarise_development_run.py",
     "forainet_development_summary",
 )
+development_export = load_script(
+    "scripts/provenance/export_development_results.py",
+    "forainet_development_export",
+)
 finetune_data = load_script(
     "scripts/data/prepare_finetune_data.py",
     "forainet_finetune_data",
@@ -1221,6 +1225,29 @@ def test_development_summary_requires_all_plots_and_hash_complete_retention(
     final_gate = json.loads((run_root / "final_gate.json").read_text())
     assert final_gate["held_out_access"] is False
     assert final_gate["completed_plots"] == 21
+    public_root = tmp_path / "public"
+    provenance = development_export.export(run_root, public_root)
+    assert provenance["run_id"] == run_id
+    assert provenance["held_out_access"] is False
+    assert provenance["ranking_eligible"] is False
+    assert {
+        path.name for path in public_root.iterdir() if path.is_file()
+    } == {
+        "forainet_development_plot_results.csv",
+        "forainet_development_site_results.csv",
+        "forainet_development_results.json",
+        "forainet_development_provenance.json",
+    }
+
+
+def test_development_export_rejects_private_markers(tmp_path: Path) -> None:
+    unsafe = tmp_path / "unsafe.json"
+    unsafe.write_text(
+        json.dumps({"run_root": "/users/private/fastscratch/result"}),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="private marker"):
+        development_export.ensure_public_text(unsafe)
 
 
 def test_no_test_submission_route_exists() -> None:

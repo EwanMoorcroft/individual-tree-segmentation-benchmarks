@@ -28,6 +28,21 @@ from summarise_development_run import (  # noqa: E402
 EXPECTED_EPOCHS = (30, 60, 90, 120, 149)
 
 
+def select_candidate(
+    candidate_summaries: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if not candidate_summaries:
+        raise ValueError("candidate summary is empty")
+    return min(
+        candidate_summaries,
+        key=lambda row: (
+            -float(row["f1"]),
+            int(row["false_positives"]),
+            int(row["candidate_epoch"]),
+        ),
+    )
+
+
 def summarise(
     validation_root: Path,
     validation_run_id: str,
@@ -167,14 +182,7 @@ def summarise(
                 **aggregate(rows),
             }
         )
-    selected = min(
-        candidate_summaries,
-        key=lambda row: (
-            -float(row["f1"]),
-            int(row["false_positives"]),
-            int(row["candidate_epoch"]),
-        ),
-    )
+    selected = select_candidate(candidate_summaries)
 
     summary_root = validation_root / "summary"
     retention_root = validation_root / "retention"

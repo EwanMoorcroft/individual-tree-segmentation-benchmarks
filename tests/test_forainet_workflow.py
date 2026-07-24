@@ -76,6 +76,10 @@ finetune_snapshots = load_script(
     "scripts/provenance/snapshot_finetune_checkpoints.py",
     "forainet_finetune_snapshots",
 )
+finetune_validation_summary = load_script(
+    "scripts/provenance/summarise_finetune_validation.py",
+    "forainet_finetune_validation_summary",
+)
 
 
 def test_scaffold_and_configs_are_method_local() -> None:
@@ -663,6 +667,19 @@ def test_finetune_validation_task_maps_candidate_major_order(
     assert task["development_task_index"] == 7
     assert task["relative_path"] == "SITE/plot_7.las"
     assert task["point_count"] == 1007
+
+
+def test_finetune_candidate_selection_uses_frozen_tie_breakers() -> None:
+    candidates = [
+        {"candidate_epoch": 30, "f1": 0.7, "false_positives": 30},
+        {"candidate_epoch": 60, "f1": 0.8, "false_positives": 40},
+        {"candidate_epoch": 90, "f1": 0.8, "false_positives": 20},
+        {"candidate_epoch": 120, "f1": 0.8, "false_positives": 20},
+    ]
+    selected = finetune_validation_summary.select_candidate(candidates)
+    assert selected["candidate_epoch"] == 90
+    with pytest.raises(ValueError, match="candidate summary is empty"):
+        finetune_validation_summary.select_candidate([])
 
 
 def test_exposure_validator_rejects_test_training_role(tmp_path: Path) -> None:

@@ -70,7 +70,7 @@ def validate(config_path: Path, checkpoint_path: Path, output_path: Path) -> dic
         "initial_checkpoint_sha256": sha256_file(checkpoint_path),
         "state_dict_key_count": len(expected),
         "exact_tensor_match": True,
-        "spconv_layout_conversion": "pinned_upstream_permute_1_2_3_4_0",
+        "spconv_layout_conversion": "archived_rskc_to_model_permute_4_0_1_2_3",
         "converted_spconv_tensor_count": converted_spconv_tensors,
         "runner_epoch": runner.epoch,
         "runner_iter": runner.iter,

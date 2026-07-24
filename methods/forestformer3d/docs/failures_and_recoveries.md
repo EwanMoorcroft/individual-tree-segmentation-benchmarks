@@ -216,10 +216,16 @@ the exact upstream block.
   layout. The 49 sparse-convolution tensors therefore appeared unequal even
   though the loader had applied the pinned upstream layout conversion.
 - Recovery compares those five-dimensional `input_conv` and `unet` weights
-  after the exact upstream `(1, 2, 3, 4, 0)` permutation, while continuing to
-  require byte-exact equality for every other state-dict tensor and zero epoch
-  and iteration counters. The evidence records the conversion rule and tensor
-  count explicitly.
+  after mapping the archived RSKC layout to spconv-v2's internal model layout,
+  while continuing to require byte-exact equality for every other state-dict
+  tensor and zero epoch and iteration counters. The evidence records the
+  conversion rule and tensor count explicitly.
 - The smoke job now enables inherited `ERR` traps so a failure inside the
   container helper writes its immutable failure marker. The failed run root and
   scheduler logs remain unchanged; the replacement must use a new run ID.
+- First recovery smoke `9912269` confirmed that the initially encoded
+  `(1, 2, 3, 4, 0)` direction was the upstream archive-fix operation, not the
+  loader's internal representation. It failed before an optimizer step and
+  wrote the expected immutable failure marker. The corrected comparison uses
+  its exact inverse `(4, 0, 1, 2, 3)`, consistent with the already-audited
+  published-checkpoint adapter.

@@ -529,8 +529,8 @@ def test_initialization_validator_applies_pinned_upstream_spconv_layout() -> Non
     torch = pytest.importorskip("torch")
     weight = torch.arange(2 * 3 * 4 * 5 * 6).reshape(2, 3, 4, 5, 6)
     converted = checkpoint_tensor_for_runtime("unet.block.weight", weight)
-    assert converted.shape == (3, 4, 5, 6, 2)
-    assert torch.equal(converted, weight.permute(1, 2, 3, 4, 0))
+    assert converted.shape == (6, 2, 3, 4, 5)
+    assert torch.equal(converted, weight.permute(4, 0, 1, 2, 3))
     assert (
         checkpoint_tensor_for_runtime("decoder.block.weight", weight) is weight
     )

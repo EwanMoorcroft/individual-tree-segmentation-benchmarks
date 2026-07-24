@@ -6,7 +6,7 @@
 #SBATCH --mem=128G
 #SBATCH --gres=gpu:a100:1
 
-set -euo pipefail
+set -Eeuo pipefail
 
 : "${FF3D_FINETUNE_TRAINING_CONFIRMED:?Missing FF3D_FINETUNE_TRAINING_CONFIRMED}"
 : "${FF3D_BENCHMARK_ROOT:?Missing FF3D_BENCHMARK_ROOT}"

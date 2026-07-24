@@ -535,3 +535,12 @@ def test_initialization_validator_applies_pinned_upstream_spconv_layout() -> Non
     assert (
         checkpoint_tensor_for_runtime("decoder.block.weight", weight) is weight
     )
+
+
+def test_full_finetune_submission_freezes_commit_and_inherits_error_trap() -> None:
+    submit = (METHOD / "slurm/submit_finetune_training.sh").read_text()
+    job = (METHOD / "slurm/run_finetune_training.sbatch").read_text()
+    assert 'p["benchmark_commit"] == sys.argv[2]' in submit
+    assert 'p["split"]["held_out_access"] is False' in submit
+    assert "75-120 minutes" in submit
+    assert "set -Eeuo pipefail" in job

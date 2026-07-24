@@ -25,6 +25,9 @@ echo "$CHECKPOINT_SHA256  $CHECKPOINT" | sha256sum --check --status
 test -f "$ENV_ROOT/environment_build.complete"
 test -f "$FF3D_RUN_ROOT/fine_tune_initialization_smoke.complete"
 test ! -e "$FF3D_RUN_ROOT/fine_tune_training.started"
+python -c \
+  'import json,sys; p=json.load(open(sys.argv[1])); assert p["benchmark_commit"] == sys.argv[2]; assert p["split"]["held_out_access"] is False' \
+  "$FF3D_RUN_ROOT/fine_tune_freeze.json" "$BENCHMARK_COMMIT"
 RUN_ID="$(basename "$FF3D_RUN_ROOT")"
 STATE_FILE="$RUNTIME_ROOT/state/${RUN_ID}__training.env"
 test ! -e "$STATE_FILE"
@@ -52,7 +55,7 @@ echo "cancel_command=scancel $JOB"
 echo "scope=16 development-training plots only; held-out access false"
 echo "resources=gpu-a100-lowbig, 1 A100, 12 CPUs, 128 GiB, 24 hours"
 echo "training_budget=35 epochs, 560 examples, 280 optimizer steps, checkpoints 7/14/21/28/35"
-echo "runtime_estimate=to be recalculated from the initialization smoke; queue waiting separate"
+echo "runtime_estimate=75-120 minutes from the accepted 14.974-second optimizer-step smoke; queue waiting separate"
 if [[ "${FF3D_NO_WATCH:-0}" != "1" ]]; then
   exec bash "$METHOD_ROOT/slurm/monitor_workflow.sh" \
     "$STATE_FILE" --watch "${FF3D_MONITOR_SECONDS:-30}"

@@ -242,3 +242,12 @@ the exact upstream block.
   also applies the same audited RSKC-to-model conversion before proving that
   exactly one optimizer step changed tensors. The failed root and its marker
   remain immutable, and no validation or held-out input was read.
+- Smoke `9912273` completed in 90 seconds. It proved exact initialization of
+  all 417 tensors, then one optimizer step changed all 417 tensors and retained
+  optimizer state in epoch 1. The measured optimizer step was 14.974 seconds
+  with 13,435 MiB reported GPU memory. All three retained smoke artefacts pass
+  their frozen SHA-256 checks and record `held_out_access=false`.
+- Full training now inherits `ERR` traps and refuses a prepared root whose
+  frozen benchmark commit differs from the submitting checkout. Its initial
+  runtime estimate is 75--120 minutes for 280 steps plus startup and
+  checkpointing.

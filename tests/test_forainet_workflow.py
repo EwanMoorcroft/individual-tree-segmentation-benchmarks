@@ -765,7 +765,7 @@ def test_alignment_rejects_unknown_semantics_and_stuff_instances() -> None:
         )
 
 
-def test_unassigned_tree_semantics_remain_in_prediction_union() -> None:
+def test_semantics_control_the_prediction_union_and_instance_ids() -> None:
     result = contract.align_full_resolution_prediction(
         source_row_index=np.arange(3),
         pred_semantic_internal=np.asarray([2, 3, 4]),
@@ -774,13 +774,14 @@ def test_unassigned_tree_semantics_remain_in_prediction_union() -> None:
     )
     assert result.pred_tree_id.tolist() == [0, 1, 100]
     assert result.pred_classification.tolist() == [4, 5, 6]
-    with pytest.raises(ValueError, match="stuff classes"):
-        contract.align_full_resolution_prediction(
-            source_row_index=np.arange(2),
-            pred_semantic_internal=np.asarray([0, 2]),
-            pred_instance_id=np.asarray([5, 7]),
-            expected_point_count=2,
-        )
+    stuff_result = contract.align_full_resolution_prediction(
+        source_row_index=np.arange(2),
+        pred_semantic_internal=np.asarray([0, 2]),
+        pred_instance_id=np.asarray([5, 7]),
+        expected_point_count=2,
+    )
+    assert stuff_result.pred_classification.tolist() == [0, 4]
+    assert stuff_result.pred_tree_id.tolist() == [0, 8]
     with pytest.raises(ValueError, match="must be -1 or non-negative"):
         contract.align_full_resolution_prediction(
             source_row_index=np.arange(2),

@@ -105,12 +105,6 @@ def align_full_resolution_prediction(
     aligned_semantics = semantics[order]
     aligned_instances = instances[order]
 
-    stuff_with_instance = np.isin(aligned_semantics, (0, 1)) & (
-        aligned_instances > 0
-    )
-    if np.any(stuff_with_instance):
-        raise ValueError("positive instance IDs occur on ForAINet stuff classes")
-
     pred_classification = np.zeros(expected_point_count, dtype=np.uint8)
     covered = aligned_semantics != UNCOVERED_PREDICTION_SENTINEL
     pred_classification[covered] = np.asarray(

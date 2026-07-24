@@ -161,7 +161,12 @@ def install_model_input_fingerprint(output_dir: Path) -> None:
     ForAINetV2OneFormer3D_XAwarequery.predict = audited_predict
 
 
-def prepare_entrypoint_checkpoint(checkpoint_path: Path, output_dir: Path) -> Path:
+def prepare_entrypoint_checkpoint(
+    checkpoint_path: Path,
+    output_dir: Path,
+    *,
+    expected_sha256: str = CHECKPOINT_SHA256,
+) -> Path:
     """Precondition the already-fixed archive for upstream's mandatory fix.
 
     The published archive contains RSKC sparse weights, which spconv 2.3.6
@@ -175,10 +180,10 @@ def prepare_entrypoint_checkpoint(checkpoint_path: Path, output_dir: Path) -> Pa
 
     checkpoint_path = checkpoint_path.resolve()
     observed_sha256 = sha256_file(checkpoint_path)
-    if observed_sha256 != CHECKPOINT_SHA256:
+    if observed_sha256 != expected_sha256:
         raise ValueError(
             "Official checkpoint SHA-256 mismatch: "
-            f"expected {CHECKPOINT_SHA256}, found {observed_sha256}"
+            f"expected {expected_sha256}, found {observed_sha256}"
         )
     checkpoint = torch.load(checkpoint_path, map_location="cpu")
     if not isinstance(checkpoint, dict) or not isinstance(
@@ -233,6 +238,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source-root", required=True, type=Path)
     parser.add_argument("--config", required=True, type=Path)
     parser.add_argument("--checkpoint", required=True, type=Path)
+    parser.add_argument("--checkpoint-sha256", default=CHECKPOINT_SHA256)
     parser.add_argument("--data-root", required=True, type=Path)
     parser.add_argument("--ann-file", required=True)
     parser.add_argument("--work-dir", required=True, type=Path)
@@ -272,7 +278,9 @@ def main(argv: list[str] | None = None) -> int:
             return {}
 
     entrypoint_checkpoint = prepare_entrypoint_checkpoint(
-        args.checkpoint, args.work_dir
+        args.checkpoint,
+        args.work_dir,
+        expected_sha256=args.checkpoint_sha256,
     )
     sys.argv = [
         str(test_py),

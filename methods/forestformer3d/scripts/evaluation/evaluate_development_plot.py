@@ -28,6 +28,7 @@ def evaluate(
     *,
     run_id: str,
     benchmark_commit: str,
+    training_mode: str = "published_pretrained",
 ) -> dict[str, object]:
     if output_root.exists():
         raise FileExistsError(f"Refusing existing evaluation root: {output_root}")
@@ -62,7 +63,7 @@ def evaluate(
         "schema": "forestformer3d_development_plot_metrics_v1",
         "status": "completed",
         "method": "ForestFormer3D",
-        "training_mode": "published_pretrained",
+        "training_mode": training_mode,
         "run_id": run_id,
         "split": "development",
         "held_out_access": False,
@@ -105,10 +106,17 @@ def main() -> int:
     parser.add_argument("--output-root", required=True, type=Path)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--benchmark-commit", required=True)
+    parser.add_argument(
+        "--training-mode",
+        choices=("published_pretrained", "fine_tuned_on_dev"),
+        default="published_pretrained",
+    )
     args = parser.parse_args()
     print(json.dumps(evaluate(
         args.prediction, args.validation, args.resource, args.output_root,
-        run_id=args.run_id, benchmark_commit=args.benchmark_commit,
+        run_id=args.run_id,
+        benchmark_commit=args.benchmark_commit,
+        training_mode=args.training_mode,
     ), indent=2, sort_keys=True))
     return 0
 

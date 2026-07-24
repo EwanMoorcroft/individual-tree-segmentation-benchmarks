@@ -10,6 +10,8 @@ import torch
 from mmengine.config import Config
 from mmengine.runner import Runner
 
+from checkpoint_layout import checkpoint_tensor_for_runtime
+
 
 def sha256_file(path: Path) -> str:
     import hashlib
@@ -43,8 +45,12 @@ def validate(config_path: Path, checkpoint_path: Path, output_path: Path) -> dic
             f"Training Runner key mismatch: missing={missing}, unexpected={unexpected}"
         )
     mismatched = []
+    converted_spconv_tensors = 0
     for name in sorted(expected):
-        source = expected[name].detach().cpu()
+        checkpoint_tensor = expected[name].detach().cpu()
+        source = checkpoint_tensor_for_runtime(name, checkpoint_tensor)
+        if source is not checkpoint_tensor:
+            converted_spconv_tensors += 1
         loaded = observed[name].detach().cpu()
         if source.shape != loaded.shape or source.dtype != loaded.dtype:
             mismatched.append(name)
@@ -64,6 +70,8 @@ def validate(config_path: Path, checkpoint_path: Path, output_path: Path) -> dic
         "initial_checkpoint_sha256": sha256_file(checkpoint_path),
         "state_dict_key_count": len(expected),
         "exact_tensor_match": True,
+        "spconv_layout_conversion": "pinned_upstream_permute_1_2_3_4_0",
+        "converted_spconv_tensor_count": converted_spconv_tensors,
         "runner_epoch": runner.epoch,
         "runner_iter": runner.iter,
         "resume": False,

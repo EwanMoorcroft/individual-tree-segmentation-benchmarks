@@ -12,6 +12,9 @@ import pytest
 from methods.forestformer3d.scripts.evaluation import verify_development_run
 from methods.forestformer3d.scripts.data import prepare_finetune
 from methods.forestformer3d.scripts.runtime import build_finetune_configs
+from methods.forestformer3d.scripts.runtime.checkpoint_layout import (
+    checkpoint_tensor_for_runtime,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -520,3 +523,14 @@ def test_effective_finetune_config_preserves_architecture_and_freezes_budget() -
     assert configured["default_hooks"]["checkpoint"]["interval"] == 7
     assert configured["load_from"] == "/inputs/checkpoint.pth"
     assert configured["resume"] is False
+
+
+def test_initialization_validator_applies_pinned_upstream_spconv_layout() -> None:
+    torch = pytest.importorskip("torch")
+    weight = torch.arange(2 * 3 * 4 * 5 * 6).reshape(2, 3, 4, 5, 6)
+    converted = checkpoint_tensor_for_runtime("unet.block.weight", weight)
+    assert converted.shape == (3, 4, 5, 6, 2)
+    assert torch.equal(converted, weight.permute(1, 2, 3, 4, 0))
+    assert (
+        checkpoint_tensor_for_runtime("decoder.block.weight", weight) is weight
+    )

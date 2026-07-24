@@ -204,3 +204,22 @@ the exact upstream block.
   `9912264` independently reproduced the qualified SHA-256. Fine-tuning
   wrappers now pass the expected hash into each compute job, which verifies
   the image before use without performing the large read on the login node.
+- Replacement preparation job `9912265` completed in 46 seconds and froze the
+  intended 16-training/5-validation split with `held_out_access=false`.
+
+## First fine-tuning initialization smoke
+
+- Initialization smoke job `9912266` failed after 37 seconds, before its first
+  optimizer step and without reading validation or held-out data. The Runner
+  loaded the official checkpoint, but the new audit compared the archived RSKC
+  sparse-convolution layout directly with spconv-v2's internal parameter
+  layout. The 49 sparse-convolution tensors therefore appeared unequal even
+  though the loader had applied the pinned upstream layout conversion.
+- Recovery compares those five-dimensional `input_conv` and `unet` weights
+  after the exact upstream `(1, 2, 3, 4, 0)` permutation, while continuing to
+  require byte-exact equality for every other state-dict tensor and zero epoch
+  and iteration counters. The evidence records the conversion rule and tensor
+  count explicitly.
+- The smoke job now enables inherited `ERR` traps so a failure inside the
+  container helper writes its immutable failure marker. The failed run root and
+  scheduler logs remain unchanged; the replacement must use a new run ID.

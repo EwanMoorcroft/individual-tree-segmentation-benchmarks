@@ -166,6 +166,7 @@ def prepare_entrypoint_checkpoint(
     output_dir: Path,
     *,
     expected_sha256: str = CHECKPOINT_SHA256,
+    checkpoint_layout: str = "published_rskc",
 ) -> Path:
     """Precondition the already-fixed archive for upstream's mandatory fix.
 
@@ -191,6 +192,8 @@ def prepare_entrypoint_checkpoint(
     ):
         raise TypeError("Official checkpoint does not contain a state_dict mapping")
 
+    if checkpoint_layout not in {"published_rskc", "runtime_saved"}:
+        raise ValueError(f"Unsupported checkpoint layout: {checkpoint_layout}")
     converted = 0
     for key in list(checkpoint["state_dict"]):
         tensor = checkpoint["state_dict"][key]
@@ -199,11 +202,14 @@ def prepare_entrypoint_checkpoint(
             and key.endswith("weight")
             and getattr(tensor, "ndim", None) == 5
         ):
-            preconditioned = tensor.permute(4, 0, 1, 2, 3).contiguous()
-            restored = preconditioned.permute(1, 2, 3, 4, 0)
-            if not torch.equal(restored, tensor):
-                raise ValueError(f"Checkpoint precondition is not lossless: {key}")
-            checkpoint["state_dict"][key] = preconditioned
+            if checkpoint_layout == "published_rskc":
+                preconditioned = tensor.permute(4, 0, 1, 2, 3).contiguous()
+                restored = preconditioned.permute(1, 2, 3, 4, 0)
+                if not torch.equal(restored, tensor):
+                    raise ValueError(
+                        f"Checkpoint precondition is not lossless: {key}"
+                    )
+                checkpoint["state_dict"][key] = preconditioned
             converted += 1
     if converted != 49:
         raise ValueError(f"Expected 49 sparse weights, found {converted}")
@@ -222,10 +228,21 @@ def prepare_entrypoint_checkpoint(
         "source_checkpoint_sha256": observed_sha256,
         "preconditioned_checkpoint_sha256": sha256_file(temporary_path),
         "sparse_tensor_count": converted,
-        "precondition_operation": "permute(4,0,1,2,3)",
+        "source_layout": checkpoint_layout,
+        "precondition_operation": (
+            "permute(4,0,1,2,3)"
+            if checkpoint_layout == "published_rskc"
+            else "identity"
+        ),
         "upstream_operation": "permute(1,2,3,4,0)",
         "round_trip_exact": True,
-        "reason": "published archive is already fixed; pinned test.py is unconditional",
+        "reason": (
+            "published archive is already fixed; cancel the pinned unconditional "
+            "test.py permutation before the loader conversion"
+            if checkpoint_layout == "published_rskc"
+            else "training checkpoints store runtime tensors; pinned test.py and "
+            "the loader together restore the saved runtime layout"
+        ),
     }
     (output_dir / "checkpoint_entrypoint_adapter.json").write_text(
         json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -239,6 +256,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--config", required=True, type=Path)
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--checkpoint-sha256", default=CHECKPOINT_SHA256)
+    parser.add_argument(
+        "--checkpoint-layout",
+        choices=("published_rskc", "runtime_saved"),
+        default="published_rskc",
+    )
     parser.add_argument("--data-root", required=True, type=Path)
     parser.add_argument("--ann-file", required=True)
     parser.add_argument("--work-dir", required=True, type=Path)
@@ -281,6 +303,7 @@ def main(argv: list[str] | None = None) -> int:
         args.checkpoint,
         args.work_dir,
         expected_sha256=args.checkpoint_sha256,
+        checkpoint_layout=args.checkpoint_layout,
     )
     sys.argv = [
         str(test_py),

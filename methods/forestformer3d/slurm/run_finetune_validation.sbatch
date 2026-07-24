@@ -86,6 +86,7 @@ apptainer exec --nv --cleanenv \
     --config /ff3d_environment/source/ForestFormer3D/configs/oneformer3d_qs_radius16_qp300_2many.py \
     --checkpoint /inputs/checkpoint.pth \
     --checkpoint-sha256 "$CHECKPOINT_SHA256" \
+    --checkpoint-layout runtime_saved \
     --data-root /ff3d_input \
     --ann-file reference.pkl \
     --work-dir /ff3d_task/raw

@@ -5,9 +5,14 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 from methods.forestformer3d.scripts.runtime.resolve_finetune_validation_task import (
     EPOCHS,
     resolve,
+)
+from methods.forestformer3d.scripts.runtime.run_official_test import (
+    prepare_entrypoint_checkpoint,
 )
 
 
@@ -99,8 +104,39 @@ def test_validation_submission_is_development_only_and_frozen() -> None:
     assert "5 checkpoints x 5 frozen development-validation plots" in submit
     assert "held-out access false" in submit
     assert "--checkpoint-sha256" in task
+    assert "--checkpoint-layout runtime_saved" in task
     assert "--training-mode fine_tuned_on_dev" in task
     assert "maximum_mean_plot_f1" in summary
     assert "maximum_micro_f1" in summary
     assert "earliest_checkpoint_epoch" in summary
     assert '"held_out_access": False' in summary
+
+
+def test_runtime_saved_checkpoint_is_not_preconditioned_twice(
+    tmp_path: Path,
+) -> None:
+    torch = pytest.importorskip("torch")
+    tensor = torch.arange(2 * 3 * 4 * 5 * 6).reshape(2, 3, 4, 5, 6)
+    checkpoint = tmp_path / "epoch_7.pth"
+    state = {f"unet.block_{index}.weight": tensor for index in range(49)}
+    torch.save({"state_dict": state}, checkpoint)
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    prepared = prepare_entrypoint_checkpoint(
+        checkpoint,
+        evidence,
+        expected_sha256=_sha(checkpoint),
+        checkpoint_layout="runtime_saved",
+    )
+    try:
+        observed = torch.load(prepared, map_location="cpu")["state_dict"][
+            "unet.block_0.weight"
+        ]
+        assert torch.equal(observed, tensor)
+        adapter = json.loads(
+            (evidence / "checkpoint_entrypoint_adapter.json").read_text()
+        )
+        assert adapter["precondition_operation"] == "identity"
+        assert adapter["source_layout"] == "runtime_saved"
+    finally:
+        prepared.unlink(missing_ok=True)

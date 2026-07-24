@@ -229,3 +229,16 @@ the exact upstream block.
   wrote the expected immutable failure marker. The corrected comparison uses
   its exact inverse `(4, 0, 1, 2, 3)`, consistent with the already-audited
   published-checkpoint adapter.
+- Smoke `9912271` then passed the complete 417-tensor initialization audit,
+  including all 49 converted sparse tensors, with epoch and iteration zero. Its
+  one-step training phase failed before the optimizer because the inherited
+  detection-dataset `filter_empty_gt=true` gate rejects metadata records with
+  no 3D boxes. ForestFormer3D supervision instead comes from the populated
+  per-point semantic and instance masks; the smoke plot contains 21 tree
+  instances and official 16 m crop simulations retain 6--22 instance labels.
+- Recovery disables only that irrelevant 3D-box metadata gate. The unchanged
+  `SkipEmptyScene_` point-mask gate remains in the official pipeline, so an
+  empty or single-instance crop is still rejected. Smoke-checkpoint comparison
+  also applies the same audited RSKC-to-model conversion before proving that
+  exactly one optimizer step changed tensors. The failed root and its marker
+  remain immutable, and no validation or held-out input was read.

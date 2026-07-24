@@ -8,6 +8,8 @@ from pathlib import Path
 
 import torch
 
+from checkpoint_layout import checkpoint_tensor_for_runtime
+
 
 def sha256_file(path: Path) -> str:
     import hashlib
@@ -32,9 +34,13 @@ def validate(initial_path: Path, trained_path: Path, output_path: Path) -> dict:
         raise ValueError("Smoke checkpoint state_dict keys changed")
     changed = 0
     unchanged = 0
+    converted_spconv_tensors = 0
     maximum_absolute_change = 0.0
     for name in sorted(initial_state):
-        before = initial_state[name].detach().cpu()
+        archived = initial_state[name].detach().cpu()
+        before = checkpoint_tensor_for_runtime(name, archived)
+        if before is not archived:
+            converted_spconv_tensors += 1
         after = trained_state[name].detach().cpu()
         if before.shape != after.shape or before.dtype != after.dtype:
             raise ValueError(f"Smoke checkpoint tensor metadata changed: {name}")
@@ -63,6 +69,8 @@ def validate(initial_path: Path, trained_path: Path, output_path: Path) -> dict:
         "initial_checkpoint_sha256": sha256_file(initial_path),
         "smoke_checkpoint_sha256": sha256_file(trained_path),
         "state_dict_key_count": len(initial_state),
+        "spconv_layout_conversion": "archived_rskc_to_model_permute_4_0_1_2_3",
+        "converted_spconv_tensor_count": converted_spconv_tensors,
         "changed_tensor_count": changed,
         "unchanged_tensor_count": unchanged,
         "maximum_absolute_change": maximum_absolute_change,

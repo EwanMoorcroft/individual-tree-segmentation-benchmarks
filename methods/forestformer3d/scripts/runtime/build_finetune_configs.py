@@ -40,6 +40,7 @@ def configure(
     )
     configured["train_dataloader"]["dataset"]["data_root"] = data_root
     configured["train_dataloader"]["dataset"]["ann_file"] = train_ann
+    configured["train_dataloader"]["dataset"]["filter_empty_gt"] = False
     configured["train_dataloader"]["batch_size"] = 1 if smoke else 2
     configured["train_dataloader"]["num_workers"] = 4 if smoke else 12
     configured["train_dataloader"]["prefetch_factor"] = 2

@@ -523,6 +523,7 @@ def test_effective_finetune_config_preserves_architecture_and_freezes_budget() -
     assert configured["default_hooks"]["checkpoint"]["interval"] == 7
     assert configured["load_from"] == "/inputs/checkpoint.pth"
     assert configured["resume"] is False
+    assert configured["train_dataloader"]["dataset"]["filter_empty_gt"] is False
 
 
 def test_initialization_validator_applies_pinned_upstream_spconv_layout() -> None:
